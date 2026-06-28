@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel Negocio – Los Dorados de Birria</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="index.html">
+    <div class="nav-logo-ic">🐄</div>
+    <div class="nav-logo-tx">
+      <strong>Los Dorados de Birria</strong>
+      <small><span class="live-dot"></span>Panel en vivo</small>
+    </div>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="order.html">Ordenar</a></li>
+    <li><a href="admin.html" class="active">Negocio</a></li>
+  </ul>
+</nav>
+
+<div class="admin-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <p class="sl">Principal</p>
+    <ul class="snav">
+      <li><a class="active" onclick="showView('vOrdenes',this)">📋 Órdenes en vivo</a></li>
+      <li><a onclick="showView('vDashboard',this)">📊 Dashboard</a></li>
+    </ul>
+    <p class="sl">Configuración</p>
+    <ul class="snav">
+      <li><a onclick="showView('vMenu',this)">🌮 Editar Menú</a></li>
+      <li><a onclick="showView('vHorarios',this)">🕐 Horarios</a></li>
+    </ul>
+    <p class="sl">Accesos rápidos</p>
+    <ul class="snav">
+      <li><a href="order.html">🛒 Ir a pedidos</a></li>
+      <li><a href="index.html">🏠 Ver sitio</a></li>
+    </ul>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="admin-main">
+
+    <!-- ══ ÓRDENES EN VIVO ══ -->
+    <div class="av active" id="vOrdenes">
+      <div class="adm-top">
+        <h2>📋 Órdenes <span style="font-size:.9rem;color:var(--g);font-weight:400;" id="liveLabel"></span></h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="toggleSound()" id="btnSound">🔔 Sonido: ON</button>
+          <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑 Limpiar todo</button>
+        </div>
+      </div>
+
+      <!-- Alerta nuevas órdenes -->
+      <div id="newAlert" style="display:none;" class="new-alert">
+        🔔 ¡Nuevo pedido recibido! <button class="btn btn-ghost btn-sm" onclick="dismissAlert()">Ver</button>
+      </div>
+
+      <div class="fbar">
+        <button class="fb active" onclick="setFilter('todas',this)">Todas</button>
+        <button class="fb" onclick="setFilter('nueva',this)">🆕 Nuevas</button>
+        <button class="fb" onclick="setFilter('preparando',this)">👨‍🍳 Preparando</button>
+        <button class="fb" onclick="setFilter('lista',this)">✅ Listas</button>
+        <button class="fb" onclick="setFilter('entregada',this)">🏁 Entregadas</button>
+        <button class="fb" onclick="setFilter('cancelada',this)">❌ Canceladas</button>
+      </div>
+
+      <div class="ocol" id="ordersList">
+        <div style="text-align:center;padding:56px 20px;color:var(--g);">
+          <div style="font-size:3rem;margin-bottom:10px;">📡</div>
+          <p>Conectando con Firebase...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="av" id="vDashboard">
+      <div class="adm-top"><h2>📊 Dashboard</h2></div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-ic i-org">📋</div><div><p>Total órdenes</p><h3 id="st1">–</h3></div></div>
+        <div class="stat"><div class="stat-ic i-yel">⏳</div><div><p>En proceso</p><h3 id="st2">–</h3></div></div>
+        <div class="stat"><div class="stat-ic i-grn">✅</div><div><p>Entregadas</p><h3 id="st3">–</h3></div></div>
+        <div class="stat"><div class="stat-ic i-caf">💰</div><div><p>Ingresos</p><h3 id="st4">–</h3></div></div>
+      </div>
+
+      <div style="background:var(--w);border-radius:var(--r);padding:22px;box-shadow:var(--sh);">
+        <h3 style="font-size:1rem;font-weight:700;color:var(--cafe);margin-bottom:14px;">Últimos 5 pedidos</h3>
+        <div id="recentOrders"><p style="color:var(--g);font-size:.87rem;">Cargando...</p></div>
+      </div>
+    </div>
+
+    <!-- ══ MENÚ ══ -->
+    <div class="av" id="vMenu">
+      <div class="adm-top">
+        <h2>🌮 Editar Precios</h2>
+        <button class="btn btn-primary btn-sm" onclick="saveMenu()">💾 Guardar</button>
+      </div>
+      <div class="ma-grid" id="maGrid"></div>
+    </div>
+
+    <!-- ══ HORARIOS ══ -->
+    <div class="av" id="vHorarios">
+      <div class="adm-top">
+        <h2>🕐 Horarios</h2>
+        <button class="btn btn-primary btn-sm" onclick="saveHorarios()">💾 Guardar</button>
+      </div>
+      <div style="background:var(--w);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;max-width:520px;" id="horariosWrap"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: Ver detalle orden -->
+<div class="modal-bg" id="mDetalle">
+  <div class="modal" style="max-width:500px;">
+    <h2 id="mDetalleTitle">Detalle</h2>
+    <div id="mDetalleBody"></div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-outline btn-full" onclick="closeM('mDetalle')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Sonido notificación (beep generado por Web Audio API) -->
+<script>
+const MENU_BASE = [
+  {id:1,  em:'🌮', name:'Taco de Birria',     p:25},
+  {id:2,  em:'🌮', name:'Taco Doble Carne',   p:35},
+  {id:3,  em:'🧀', name:'Quesabirria',        p:45},
+  {id:4,  em:'🥣', name:'Birria en Plato',    p:120},
+  {id:5,  em:'🫙', name:'Orden 5 Tacos',      p:110},
+  {id:6,  em:'🍲', name:'Consomé Chico',      p:25},
+  {id:7,  em:'🍲', name:'Consomé Grande',     p:35},
+  {id:8,  em:'🥤', name:'Agua Fresca',        p:20},
+  {id:9,  em:'🧃', name:'Refresco',           p:25},
+  {id:10, em:'🌶️',name:'Salsa Extra',         p:10},
+  {id:11, em:'🫓', name:'Tortillas (5 pzas)', p:15},
+  {id:12, em:'🧅', name:'Cebolla y Cilantro', p:5},
+];
+
+const SCHED_BASE = [
+  {d:'Lunes',o:'08:00',c:'20:00'},{d:'Martes',o:'08:00',c:'20:00'},
+  {d:'Miércoles',o:'08:00',c:'20:00'},{d:'Jueves',o:'08:00',c:'20:00'},
+  {d:'Viernes',o:'08:00',c:'21:00'},{d:'Sábado',o:'08:00',c:'21:00'},
+  {d:'Domingo',o:'08:00',c:'19:00'},
+];
+
+const CHIP = {
+  nueva:     {cls:'c-nueva',     lbl:'🆕 Nueva'},
+  preparando:{cls:'c-preparando',lbl:'👨‍🍳 Preparando'},
+  lista:     {cls:'c-lista',     lbl:'✅ Lista'},
+  entregada: {cls:'c-entregada', lbl:'🏁 Entregada'},
+  cancelada: {cls:'c-cancelada', lbl:'❌ Cancelada'},
+};
+const TIPO_L = {local:'🪑 Comer aquí', llevar:'🛍 Para llevar', domicilio:'🛵 A domicilio'};
+
+let currentFilter = 'todas';
+let soundOn = true;
+let allOrders = [];
+let knownIds = new Set();
+let unsub = null;
+
+// ── SONIDO ────────────────────────────────────────────────
+function playBeep() {
+  if (!soundOn) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1100, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.15);
+      osc.start(ctx.currentTime + i * 0.18);
+      osc.stop(ctx.currentTime + i * 0.18 + 0.15);
+    });
+  } catch(e) {}
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById('btnSound').textContent = `🔔 Sonido: ${soundOn ? 'ON' : 'OFF'}`;
+  showToast(soundOn ? '🔔 Sonido activado' : '🔕 Sonido desactivado', 'ok');
+}
+
+// ── NAVEGACIÓN ────────────────────────────────────────────
+function showView(id, btn) {
+  document.querySelectorAll('.av').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.snav a').forEach(a => a.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (id === 'vDashboard') renderDashboard();
+  if (id === 'vMenu')      renderMenuAdmin();
+  if (id === 'vHorarios')  renderHorariosAdmin();
+}
+
+// ── LISTENER EN TIEMPO REAL ───────────────────────────────
+function startListen() {
+  if (unsub) unsub();
+  unsub = db.collection('orders')
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(snap => {
+      allOrders = [];
+      const isFirst = knownIds.size === 0;
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        allOrders.push(data);
+
+        if (!isFirst && !knownIds.has(doc.id) && data.estado === 'nueva') {
+          playBeep();
+          showNewAlert(data);
+        }
+        knownIds.add(doc.id);
+      });
+
+      renderOrders();
+      document.getElementById('liveLabel').textContent =
+        `(${allOrders.length} total · actualizado ahora)`;
+    }, err => {
+      document.getElementById('ordersList').innerHTML = `
+        <div style="text-align:center;padding:40px;color:var(--red);">
+          <div style="font-size:2.5rem;margin-bottom:10px;">❌</div>
+          <p style="font-weight:700;">Error de conexión con Firebase</p>
+          <p style="font-size:.83rem;margin-top:6px;color:var(--g);">
+            Asegúrate de haber configurado <strong>firebase-config.js</strong> con los datos de tu proyecto.
+          </p>
+        </div>`;
+    });
+}
+
+// ── RENDER ÓRDENES ────────────────────────────────────────
+function renderOrders() {
+  const list = currentFilter === 'todas'
+    ? allOrders
+    : allOrders.filter(o => o.estado === currentFilter);
+
+  const col = document.getElementById('ordersList');
+
+  if (!list.length) {
+    col.innerHTML = `
+      <div style="text-align:center;padding:56px 20px;color:var(--g);">
+        <div style="font-size:3rem;margin-bottom:10px;">📭</div>
+        <p>${currentFilter === 'todas' ? 'No hay órdenes aún. ¡Espera que lleguen pedidos!' : 'No hay pedidos con este estado.'}</p>
+        ${currentFilter === 'todas' ? `<a href="order.html" class="btn btn-primary btn-sm" style="margin-top:14px;">Crear pedido de prueba</a>` : ''}
+      </div>`;
+    return;
+  }
+
+  col.innerHTML = list.map(o => {
+    const ch = CHIP[o.estado] || {};
+    const isNew = o.estado === 'nueva';
+    return `
+      <div class="ocard ${isNew ? 'is-new' : ''}" id="oc-${o.id}">
+        <div class="oc-top">
+          <div>
+            <div class="oc-id">Pedido <em>#${String(o.id).padStart(3,'0')}</em></div>
+            <div class="oc-meta">${o.fecha || ''} &nbsp;·&nbsp; ${TIPO_L[o.tipo] || o.tipo}</div>
+          </div>
+          <span class="chip ${ch.cls}">${ch.lbl}</span>
+        </div>
+        <div class="oc-body">
+          <div class="oc-cust">
+            <h4>${o.nombre}</h4>
+            <p>📞 ${o.tel}</p>
+            ${o.dir ? `<p>📍 ${o.dir}</p>` : ''}
+          </div>
+          <div class="oc-items">
+            <ul>${o.items.map(it => `<li>• ${it.name} ×${it.qty} — <strong>$${it.precio * it.qty}</strong></li>`).join('')}</ul>
+            ${o.notas ? `<p style="margin-top:5px;font-size:.75rem;color:var(--g);">📝 ${o.notas}</p>` : ''}
+          </div>
+          <div class="oc-price">$${o.total}.00</div>
+        </div>
+        <div class="oc-actions">
+          ${o.estado === 'nueva'       ? `<button class="btn btn-warning btn-sm" onclick="setEstado(${o.id},'preparando')">👨‍🍳 Preparando</button>` : ''}
+          ${o.estado === 'preparando'  ? `<button class="btn btn-success btn-sm" onclick="setEstado(${o.id},'lista')">✅ Lista</button>` : ''}
+          ${o.estado === 'lista'       ? `<button class="btn btn-dark btn-sm"    onclick="setEstado(${o.id},'entregada')">🏁 Entregada</button>` : ''}
+          ${!['cancelada','entregada'].includes(o.estado)
+            ? `<button class="btn btn-danger btn-sm" onclick="setEstado(${o.id},'cancelada')">❌ Cancelar</button>` : ''}
+          ${['cancelada','entregada'].includes(o.estado)
+            ? `<span style="font-size:.76rem;color:var(--g);">Finalizado</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function setEstado(id, estado) {
+  try {
+    await db.collection('orders').doc(String(id)).update({ estado });
+    const lbl = CHIP[estado]?.lbl || estado;
+    showToast(`Pedido #${String(id).padStart(3,'0')} → ${lbl}`, 'ok');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+}
+
+async function clearAll() {
+  if (!confirm('¿Eliminar TODAS las órdenes de Firebase? No se puede deshacer.')) return;
+  try {
+    const snap = await db.collection('orders').get();
+    const batch = db.batch();
+    snap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    knownIds.clear();
+    showToast('🗑 Órdenes eliminadas', 'warn');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+// ── ALERTA NUEVA ORDEN ────────────────────────────────────
+function showNewAlert(o) {
+  const el = document.getElementById('newAlert');
+  el.innerHTML = `🔔 Nuevo pedido de <strong>${o.nombre}</strong> — $${o.total}
+    <button class="btn btn-ghost btn-sm" onclick="dismissAlert()">OK</button>`;
+  el.style.display = 'flex';
+}
+function dismissAlert() {
+  document.getElementById('newAlert').style.display = 'none';
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+function renderDashboard() {
+  const total = allOrders.length;
+  const proceso = allOrders.filter(o => ['nueva','preparando','lista'].includes(o.estado)).length;
+  const entregadas = allOrders.filter(o => o.estado === 'entregada').length;
+  const ingresos = allOrders.filter(o => o.estado !== 'cancelada').reduce((s,o) => s + o.total, 0);
+
+  document.getElementById('st1').textContent = total;
+  document.getElementById('st2').textContent = proceso;
+  document.getElementById('st3').textContent = entregadas;
+  document.getElementById('st4').textContent = `$${ingresos}`;
+
+  const recent = allOrders.slice(0, 5);
+  document.getElementById('recentOrders').innerHTML = recent.length
+    ? recent.map(o => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gl);">
+          <div>
+            <strong style="font-size:.87rem;color:var(--cafe);">#${String(o.id).padStart(3,'0')} — ${o.nombre}</strong>
+            <p style="font-size:.74rem;color:var(--g);">${o.fecha || ''} · ${TIPO_L[o.tipo]||o.tipo}</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-weight:800;color:var(--org);">$${o.total}</span>
+            <span class="chip ${CHIP[o.estado]?.cls}">${CHIP[o.estado]?.lbl}</span>
+          </div>
+        </div>`).join('')
+    : '<p style="color:var(--g);font-size:.87rem;">Sin pedidos aún.</p>';
+}
+
+// ── MENÚ ADMIN ────────────────────────────────────────────
+function getMenuLocal() {
+  const s = localStorage.getItem('dorados_menu');
+  return s ? JSON.parse(s) : MENU_BASE.map(m => ({...m}));
+}
+
+function renderMenuAdmin() {
+  const menu = getMenuLocal();
+  document.getElementById('maGrid').innerHTML = menu.map(it => `
+    <div class="ma-card">
+      <span class="ma-em">${it.em}</span>
+      <span class="ma-nm">${it.name}</span>
+      <strong style="color:var(--org);font-size:.9rem;">$</strong>
+      <input type="number" id="mp-${it.id}" value="${it.p}" min="1" max="9999"/>
+    </div>`).join('');
+}
+
+function saveMenu() {
+  const menu = getMenuLocal();
+  menu.forEach(it => {
+    const el = document.getElementById(`mp-${it.id}`);
+    if (el) it.p = parseInt(el.value) || it.p;
+  });
+  localStorage.setItem('dorados_menu', JSON.stringify(menu));
+  showToast('💾 Precios guardados', 'ok');
+}
+
+// ── HORARIOS ADMIN ────────────────────────────────────────
+function getSchedLocal() {
+  const s = localStorage.getItem('dorados_sched');
+  return s ? JSON.parse(s) : SCHED_BASE.map(x => ({...x}));
+}
+
+function renderHorariosAdmin() {
+  const sched = getSchedLocal();
+  document.getElementById('horariosWrap').innerHTML = sched.map((s,i) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--gl);">
+      <span style="min-width:96px;font-weight:600;color:var(--cafe);font-size:.88rem;">${s.d}</span>
+      <input type="time" id="ho-${i}" value="${s.o}" style="padding:6px 9px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:.83rem;outline:none;"/>
+      <span style="color:var(--g);">–</span>
+      <input type="time" id="hc-${i}" value="${s.c}" style="padding:6px 9px;border:1.5px solid #ddd;border-radius:6px;font-family:inherit;font-size:.83rem;outline:none;"/>
+    </div>`).join('');
+}
+
+function saveHorarios() {
+  const sched = getSchedLocal();
+  sched.forEach((s,i) => {
+    const o = document.getElementById(`ho-${i}`);
+    const c = document.getElementById(`hc-${i}`);
+    if (o) s.o = o.value;
+    if (c) s.c = c.value;
+  });
+  localStorage.setItem('dorados_sched', JSON.stringify(sched));
+  showToast('💾 Horarios guardados', 'ok');
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function closeM(id) { document.getElementById(id).classList.remove('open'); }
+
+function showToast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// Init
+startListen();
+</script>
+</body>
+</html>

@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blue Dental | Consultorio Dental Premium en Ciudad Juárez</title>
+  <meta name="description" content="Blue Dental en Ciudad Juárez. Especialistas en odontología general y ortodoncia. Coronas de zirconia, limpiezas dentales y resinas. Agenda tu cita en línea.">
+  <meta property="og:title" content="Blue Dental | Ciudad Juárez">
+  <meta property="og:description" content="El consultorio dental premium en Ciudad Juárez. Tecnología moderna, atención personalizada y los mejores materiales.">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=1200">
+  <meta property="og:type" content="website">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+
+  <style>
+    :root {
+      --bg-dark:    #0a0d1a;
+      --bg-darker:  #05070e;
+      --bg-card:    #111633;
+      --primary:    #1565C8;
+      --primary-glow: rgba(21,101,200,0.4);
+      --secondary:  #00BFC8;
+      --secondary-glow: rgba(0,191,200,0.4);
+      --gold:       #f1c40f;
+      --text-white: #ffffff;
+      --text-gray:  #a0a6c5;
+      --text-muted: #676d8d;
+      --font-title: 'Bebas Neue', sans-serif;
+      --font-body:  'Montserrat', sans-serif;
+      --tr-slow:    all 0.6s cubic-bezier(0.16,1,0.3,1);
+      --tr-fast:    all 0.3s ease;
+      --radius:     12px;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth;overflow-x:hidden}
+    body{background:var(--bg-dark);color:var(--text-white);font-family:var(--font-body);line-height:1.6;overflow-x:hidden}
+    ::-webkit-scrollbar{width:10px}
+    ::-webkit-scrollbar-track{background:var(--bg-darker)}
+    ::-webkit-scrollbar-thumb{background:var(--primary);border-radius:5px;border:2px solid var(--bg-darker)}
+    ::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+
+    /* ── LOADER ── */
+    #loader{
+      position:fixed;inset:0;
+      background:var(--bg-darker);
+      display:flex;flex-direction:column;
+      justify-content:center;align-items:center;
+      z-index:9999;
+      transition:opacity .8s ease,visibility .8s ease;
+    }
+    .tooth-loader{font-size:4rem;animation:toothBounce 1s ease-in-out infinite}
+    @keyframes toothBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-20px) scale(1.1)}}
+    .loader-title{
+      font-family:var(--font-title);font-size:2.5rem;letter-spacing:3px;text-transform:uppercase;
+      margin-top:16px;
+      background:linear-gradient(90deg,var(--text-white),var(--secondary));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      animation:pulseText 1.5s ease-in-out infinite;
+    }
+    @keyframes pulseText{0%,100%{opacity:.6;transform:scale(.98)}50%{opacity:1;transform:scale(1.02)}}
+    .loader-bar{width:200px;height:4px;background:var(--bg-card);border-radius:2px;margin-top:20px;overflow:hidden;position:relative}
+    .loader-progress{width:100%;height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));position:absolute;left:-100%;animation:progAnim 2s cubic-bezier(.1,.8,.3,1) forwards}
+    @keyframes progAnim{to{left:0%}}
+
+    /* ── HEADER ── */
+    header{
+      position:fixed;top:0;left:0;width:100%;z-index:1000;
+      padding:25px 5%;display:flex;justify-content:space-between;align-items:center;
+      transition:var(--tr-slow);
+    }
+    header.scrolled{
+      padding:15px 5%;
+      background:rgba(10,13,26,.95);
+      backdrop-filter:blur(12px);
+      border-bottom:2px solid var(--primary);
+      box-shadow:0 10px 30px rgba(0,0,0,.5);
+    }
+    .logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none}
+    .logo-icon-spin{font-size:2rem;color:var(--secondary);animation:rotateLogo 8s linear infinite}
+    @keyframes rotateLogo{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    .logo-name{
+      font-family:var(--font-title);font-size:1.8rem;letter-spacing:2px;text-transform:uppercase;
+      background:linear-gradient(45deg,var(--text-white),var(--secondary));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .nav-links{display:flex;list-style:none;gap:30px;align-items:center}
+    .nav-links a{
+      color:var(--text-white);text-decoration:none;font-weight:500;font-size:.9rem;
+      text-transform:uppercase;letter-spacing:1px;
+      transition:var(--tr-fast);position:relative;padding:8px 0;
+    }
+    .nav-links a::after{
+      content:'';position:absolute;bottom:0;left:50%;width:0;height:2px;
+      background:linear-gradient(90deg,var(--primary),var(--secondary));
+      transition:var(--tr-fast);transform:translateX(-50%);
+    }
+    .nav-links a:hover,.nav-links a.active-link{color:var(--secondary)}
+    .nav-links a:hover::after,.nav-links a.active-link::after{width:100%}
+    .nav-cta{
+      background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 50%,var(--primary) 100%);
+      background-size:200% auto;
+      color:var(--text-white)!important;border:none;padding:10px 24px;border-radius:30px;
+      font-family:var(--font-body);font-weight:700;font-size:.85rem;letter-spacing:1px;
+      cursor:pointer;text-transform:uppercase;text-decoration:none;transition:.5s ease;
+      box-shadow:0 4px 15px var(--primary-glow);display:flex;align-items:center;gap:8px;
+    }
+    .nav-cta:hover{background-position:right center;transform:translateY(-3px);box-shadow:0 8px 25px var(--secondary-glow)}
+    .burger{display:none;cursor:pointer;z-index:1001}
+    .burger div{width:25px;height:3px;background:var(--text-white);margin:5px;transition:var(--tr-fast)}
+
+    /* ── HERO ── */
+    .hero{
+      position:relative;height:100vh;width:100%;
+      display:flex;justify-content:center;align-items:center;
+      text-align:center;padding:0 20px;overflow:hidden;
+    }
+    .hero-bg{
+      position:absolute;inset:0;
+      background:url('https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=1920') no-repeat center center/cover;
+      transform:scale(1.05);z-index:1;will-change:transform;
+    }
+    .hero-overlay{
+      position:absolute;inset:0;
+      background:linear-gradient(to bottom,rgba(10,13,26,.5) 0%,rgba(10,13,26,.88) 70%,rgba(10,13,26,1) 100%);
+      z-index:2;
+    }
+    #hero-particles{position:absolute;inset:0;z-index:3;pointer-events:none}
+    .hero-content{position:relative;z-index:4;max-width:900px;padding:20px;margin-top:50px}
+    .hero-sub{
+      font-size:1.1rem;font-weight:600;letter-spacing:4px;text-transform:uppercase;
+      color:var(--secondary);margin-bottom:20px;
+      text-shadow:0 0 10px var(--secondary-glow);display:inline-block;
+    }
+    .hero-title{
+      font-family:var(--font-title);font-size:5rem;line-height:1;letter-spacing:2px;
+      text-transform:uppercase;margin-bottom:25px;
+      background:linear-gradient(to right,var(--text-white) 40%,var(--secondary) 70%,var(--primary));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
+    }
+    .hero-desc{
+      font-size:1.1rem;font-weight:300;color:var(--text-gray);
+      margin:0 auto 40px;max-width:750px;line-height:1.8;
+    }
+    .hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+    .hero-cta{
+      display:inline-flex;align-items:center;gap:12px;
+      background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 50%,var(--primary) 100%);
+      background-size:200% auto;
+      color:var(--text-white);border:none;padding:18px 45px;border-radius:50px;
+      font-size:1rem;font-weight:800;letter-spacing:2px;
+      cursor:pointer;text-transform:uppercase;text-decoration:none;
+      transition:.5s ease;
+      box-shadow:0 10px 30px var(--primary-glow);
+      animation:pulseBtn 2s infinite;
+      position:relative;overflow:hidden;
+    }
+    .hero-cta::before{
+      content:'';position:absolute;top:0;left:-100%;width:50%;height:100%;
+      background:linear-gradient(to right,rgba(255,255,255,0),rgba(255,255,255,.3));
+      transform:skewX(-25deg);transition:.75s;
+    }
+    .hero-cta:hover::before{left:150%}
+    .hero-cta:hover{background-position:right center;transform:translateY(-5px);box-shadow:0 15px 40px var(--secondary-glow)}
+    .hero-cta-outline{
+      display:inline-flex;align-items:center;gap:12px;
+      border:2px solid rgba(255,255,255,.4);color:var(--text-white);
+      padding:16px 38px;border-radius:50px;font-size:1rem;font-weight:600;
+      letter-spacing:2px;text-transform:uppercase;text-decoration:none;
+      transition:var(--tr-fast);
+    }
+    .hero-cta-outline:hover{border-color:var(--secondary);color:var(--secondary);background:rgba(0,191,200,.05)}
+    @keyframes pulseBtn{
+      0%{box-shadow:0 10px 30px var(--primary-glow),0 0 0 0 rgba(21,101,200,.5)}
+      70%{box-shadow:0 10px 30px var(--primary-glow),0 0 0 15px rgba(21,101,200,0)}
+      100%{box-shadow:0 10px 30px var(--primary-glow),0 0 0 0 rgba(21,101,200,0)}
+    }
+
+    /* ── SECTIONS ── */
+    section{padding:100px 5%;position:relative}
+    .section-header{text-align:center;margin-bottom:70px}
+    .section-sub{font-size:.9rem;font-weight:700;color:var(--secondary);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;display:inline-block}
+    .section-title{
+      font-family:var(--font-title);font-size:3.5rem;letter-spacing:2px;text-transform:uppercase;
+      position:relative;display:inline-block;line-height:1.1;
+    }
+    .section-title::after{
+      content:'';display:block;width:80px;height:3px;
+      background:linear-gradient(90deg,var(--primary),var(--secondary));
+      margin:15px auto 0;border-radius:2px;
+    }
+
+    /* ── ABOUT ── */
+    .about{background:var(--bg-dark)}
+    .about-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:60px;align-items:center}
+    .about-content h3{font-family:var(--font-title);font-size:2.2rem;letter-spacing:1px;margin-bottom:20px}
+    .about-text{color:var(--text-gray);margin-bottom:25px;font-size:1.05rem;line-height:1.8}
+    .about-feats{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:35px}
+    .about-feat{display:flex;align-items:flex-start;gap:15px}
+    .about-feat-icon{
+      font-size:1.5rem;color:var(--secondary);
+      background:rgba(0,191,200,.1);padding:12px;border-radius:50%;
+      border:1px solid rgba(0,191,200,.2);
+    }
+    .about-feat h4{font-size:1rem;font-weight:700;margin-bottom:5px}
+    .about-feat p{font-size:.85rem;color:var(--text-muted)}
+    .about-img-wrap{position:relative;display:flex;justify-content:center;align-items:center}
+    .about-glow{
+      position:absolute;top:-15px;right:-15px;bottom:15px;left:15px;
+      border:2px solid var(--primary);border-radius:var(--radius);z-index:1;
+      pointer-events:none;transition:var(--tr-slow);
+    }
+    .about-img-wrap:hover .about-glow{transform:translate(-10px,10px);border-color:var(--secondary);box-shadow:0 0 30px var(--secondary-glow)}
+    .about-frame{
+      position:relative;border-radius:var(--radius);overflow:hidden;
+      box-shadow:0 20px 40px rgba(0,0,0,.5);z-index:2;border:3px solid rgba(255,255,255,.05);
+    }
+    .about-frame::before{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(to top,rgba(10,13,26,.5),transparent);z-index:1;
+    }
+    .about-frame img{width:100%;display:block;transition:var(--tr-slow)}
+    .about-img-wrap:hover .about-frame img{transform:scale(1.05)}
+
+    /* ── SERVICES ── */
+    .services{background:var(--bg-darker)}
+    .services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px}
+    .srv-card{
+      background:var(--bg-card);border:1px solid rgba(255,255,255,.05);border-radius:var(--radius);
+      padding:40px 30px;text-align:center;
+      transition:transform .15s ease-out,border-color .3s ease,box-shadow .3s ease;
+      position:relative;overflow:hidden;
+      display:flex;flex-direction:column;height:100%;
+      transform-style:preserve-3d;will-change:transform;
+    }
+    .srv-card::before{
+      content:'';position:absolute;top:0;left:0;width:100%;height:3px;
+      background:linear-gradient(90deg,var(--primary),var(--secondary));
+      transform:scaleX(0);transform-origin:left;transition:var(--tr-slow);
+    }
+    .srv-card:hover::before{transform:scaleX(1)}
+    .srv-card:hover{border-color:rgba(21,101,200,.3);box-shadow:0 20px 40px rgba(0,0,0,.4),0 0 20px rgba(21,101,200,.15)}
+    .srv-icon-box{
+      width:80px;height:80px;margin:0 auto 25px;
+      background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);
+      border-radius:50%;display:flex;justify-content:center;align-items:center;
+      font-size:2.2rem;color:var(--secondary);transition:var(--tr-fast);
+      position:relative;z-index:2;transform:translateZ(30px);
+    }
+    .srv-card:hover .srv-icon-box{color:var(--text-white);background:var(--primary);box-shadow:0 0 20px var(--primary-glow);transform:scale(1.1) rotate(15deg) translateZ(35px)}
+    .srv-name{font-family:var(--font-title);font-size:1.8rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:15px;position:relative;z-index:2;transform:translateZ(20px)}
+    .srv-desc{color:var(--text-gray);font-size:.95rem;margin-bottom:25px;flex-grow:1;position:relative;z-index:2;transform:translateZ(10px)}
+    .srv-price{
+      font-family:var(--font-title);font-size:2.2rem;color:var(--text-white);
+      margin-bottom:10px;letter-spacing:1px;
+      display:flex;justify-content:center;align-items:center;gap:5px;
+      position:relative;z-index:2;transform:translateZ(25px);
+    }
+    .srv-price span{font-size:1.2rem;color:var(--secondary);vertical-align:super}
+    .srv-price-sub{font-size:.8rem;font-family:var(--font-body);color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+    .srv-decor{
+      position:absolute;bottom:-30px;right:-30px;font-size:8rem;
+      color:rgba(255,255,255,.01);transform:rotate(-15deg);pointer-events:none;transition:var(--tr-slow);
+    }
+    .srv-card:hover .srv-decor{color:rgba(21,101,200,.03);transform:rotate(-5deg) scale(1.1)}
+
+    /* ── STATS ── */
+    .stats{
+      background:linear-gradient(135deg,rgba(10,13,26,.95) 0%,rgba(21,101,200,.18) 50%,rgba(0,191,200,.18) 100%),
+               url('https://images.unsplash.com/photo-1629909615184-74f495363b67?q=80&w=1920') no-repeat center center/cover;
+      background-attachment:fixed;padding:80px 5%;
+      border-top:2px solid var(--primary);border-bottom:2px solid var(--secondary);
+    }
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;text-align:center}
+    .stat-item{position:relative}
+    .stat-num-box{
+      font-family:var(--font-title);font-size:4.5rem;line-height:1;margin-bottom:10px;
+      background:linear-gradient(135deg,#fff 40%,var(--secondary) 70%,var(--primary));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      display:inline-block;
+    }
+    .stat-label{font-size:.9rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-white);font-weight:700}
+    .stat-div{width:40px;height:2px;background:var(--secondary);margin:15px auto 0;border-radius:2px}
+
+    /* ── GALLERY ── */
+    .gallery{background:var(--bg-dark)}
+    .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+    .gallery-item{
+      position:relative;border-radius:var(--radius);overflow:hidden;
+      aspect-ratio:1/1;box-shadow:0 10px 25px rgba(0,0,0,.3);cursor:pointer;
+    }
+    .gallery-img{width:100%;height:100%;object-fit:cover;transition:var(--tr-slow)}
+    .gallery-ov{
+      position:absolute;inset:0;
+      background:linear-gradient(to top,rgba(10,13,26,.9) 10%,rgba(21,101,200,.4) 100%);
+      opacity:0;display:flex;flex-direction:column;justify-content:center;align-items:center;
+      transition:var(--tr-fast);z-index:2;
+    }
+    .gallery-ico{font-size:2rem;color:#fff;transform:translateY(20px);transition:var(--tr-fast);margin-bottom:10px}
+    .gallery-cap-t{font-family:var(--font-title);font-size:1.6rem;letter-spacing:1px;color:#fff;text-transform:uppercase;transform:translateY(20px);transition:var(--tr-fast)}
+    .gallery-item:hover .gallery-img{transform:scale(1.08)}
+    .gallery-item:hover .gallery-ov{opacity:1}
+    .gallery-item:hover .gallery-ico,.gallery-item:hover .gallery-cap-t{transform:translateY(0)}
+    .lightbox{
+      position:fixed;inset:0;background:rgba(5,7,14,.95);z-index:2000;
+      display:flex;justify-content:center;align-items:center;
+      opacity:0;visibility:hidden;transition:var(--tr-fast);
+    }
+    .lightbox.active{opacity:1;visibility:visible}
+    .lb-content{position:relative;max-width:90%;max-height:80%;transform:scale(.9);transition:var(--tr-slow)}
+    .lightbox.active .lb-content{transform:scale(1)}
+    .lb-img{max-width:100%;max-height:80vh;border-radius:var(--radius);box-shadow:0 20px 50px rgba(0,0,0,.8);border:3px solid rgba(255,255,255,.05)}
+    .lb-close{position:absolute;top:-50px;right:0;font-size:2rem;color:#fff;cursor:pointer;transition:var(--tr-fast)}
+    .lb-close:hover{color:var(--secondary);transform:rotate(90deg)}
+    .lb-caption{color:#fff;text-align:center;margin-top:15px;font-family:var(--font-title);font-size:1.8rem;letter-spacing:1px;text-transform:uppercase}
+
+    /* ── TESTIMONIALS ── */
+    .testimonials{background:var(--bg-darker);position:relative;overflow:hidden}
+    .testi-slider{width:100%;padding:20px 0 50px}
+    .testi-card{
+      background:var(--bg-card);border-radius:var(--radius);
+      border:1px solid rgba(255,255,255,.03);padding:40px 30px;
+      box-shadow:0 15px 35px rgba(0,0,0,.3);transition:var(--tr-fast);
+      display:flex;flex-direction:column;position:relative;
+    }
+    .testi-card::after{
+      content:'\f10d';font-family:'Font Awesome 6 Free';font-weight:900;
+      position:absolute;top:30px;right:30px;font-size:3rem;
+      color:rgba(255,255,255,.02);pointer-events:none;
+    }
+    .testi-card:hover{border-color:rgba(21,101,200,.3);transform:translateY(-5px)}
+    .client-info{display:flex;align-items:center;gap:15px;margin-bottom:20px}
+    .client-av{
+      width:60px;height:60px;border-radius:50%;object-fit:cover;
+      border:2px solid var(--secondary);box-shadow:0 0 10px var(--secondary-glow);
+    }
+    .client-name{font-weight:700;font-size:1rem}
+    .client-plat{font-size:.8rem;color:var(--text-muted);display:flex;align-items:center;gap:5px}
+    .stars{color:var(--gold);margin-bottom:15px;display:flex;gap:3px}
+    .testi-text{color:var(--text-gray);font-size:.95rem;line-height:1.7;font-style:italic}
+    .swiper-pagination-bullet{background:var(--text-muted)!important;opacity:.5}
+    .swiper-pagination-bullet-active{background:var(--primary)!important;opacity:1;width:25px!important;border-radius:5px!important}
+    .swiper-button-next,.swiper-button-prev{color:var(--secondary)!important;transition:var(--tr-fast)}
+    .swiper-button-next:hover,.swiper-button-prev:hover{color:#fff!important;transform:scale(1.1)}
+
+    /* ── CONTACT ── */
+    .contact-section{background:var(--bg-dark)}
+    .contact-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:50px;align-items:stretch}
+    .contact-card{
+      background:var(--bg-card);border-radius:var(--radius);
+      border:1px solid rgba(255,255,255,.03);padding:40px;
+      box-shadow:0 20px 40px rgba(0,0,0,.4);position:relative;
+    }
+    .contact-card-title{font-family:var(--font-title);font-size:2.2rem;letter-spacing:1px;margin-bottom:15px;text-transform:uppercase}
+    .contact-card-desc{color:var(--text-gray);margin-bottom:30px;font-size:.95rem}
+    .form-group{margin-bottom:25px;position:relative}
+    .form-input,.form-select,.form-textarea{
+      width:100%;background:var(--bg-darker);
+      border:1px solid rgba(255,255,255,.1);border-radius:8px;
+      padding:15px 18px;color:var(--text-white);font-family:var(--font-body);
+      font-size:.95rem;transition:var(--tr-fast);outline:none;
+    }
+    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--secondary);box-shadow:0 0 12px var(--secondary-glow)}
+    .form-input:valid:not(:placeholder-shown){border-color:#27ae60}
+    .form-textarea{resize:none;height:120px}
+    .form-select{appearance:none;cursor:pointer;-webkit-appearance:none}
+    .select-arrow{position:absolute;top:50%;right:18px;transform:translateY(-50%);color:var(--text-gray);pointer-events:none}
+    .form-select option{background:var(--bg-card);color:var(--text-white)}
+    .btn-submit{
+      width:100%;
+      background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 50%,var(--primary) 100%);
+      background-size:200% auto;color:var(--text-white);border:none;padding:16px;
+      border-radius:8px;font-family:var(--font-body);font-weight:700;font-size:1rem;
+      letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.5s ease;
+      box-shadow:0 5px 15px var(--primary-glow);display:flex;justify-content:center;align-items:center;gap:10px;
+    }
+    .btn-submit:hover{background-position:right center;transform:translateY(-3px);box-shadow:0 10px 25px var(--secondary-glow)}
+    .form-success{
+      position:absolute;inset:0;background:rgba(17,22,51,.98);
+      border-radius:var(--radius);
+      display:flex;flex-direction:column;justify-content:center;align-items:center;
+      text-align:center;padding:30px;z-index:10;
+      opacity:0;visibility:hidden;transition:var(--tr-fast);
+    }
+    .form-success.active{opacity:1;visibility:visible}
+    .success-ico{
+      width:80px;height:80px;background:rgba(39,174,96,.1);border:2px solid #27ae60;
+      border-radius:50%;color:#27ae60;display:flex;justify-content:center;align-items:center;
+      font-size:2.5rem;margin-bottom:25px;animation:popSuccess .5s cubic-bezier(.175,.885,.32,1.275) forwards;
+    }
+    @keyframes popSuccess{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+    .success-title{font-family:var(--font-title);font-size:2rem;margin-bottom:10px;color:#27ae60;letter-spacing:1px}
+    .success-text{color:var(--text-gray);font-size:.95rem;margin-bottom:25px;max-width:320px}
+    .btn-close-success{
+      background:transparent;border:1px solid var(--text-gray);color:var(--text-white);
+      padding:8px 24px;border-radius:30px;cursor:pointer;font-family:var(--font-body);
+      font-weight:600;font-size:.85rem;transition:var(--tr-fast);
+    }
+    .btn-close-success:hover{background:var(--text-white);color:var(--bg-dark)}
+    .contact-info-col{display:flex;flex-direction:column;gap:30px}
+    .info-strip{
+      background:var(--bg-card);border-radius:var(--radius);
+      border:1px solid rgba(255,255,255,.03);padding:25px 30px;
+      display:flex;align-items:center;gap:20px;
+      box-shadow:0 10px 25px rgba(0,0,0,.3);transition:var(--tr-fast);
+      text-decoration:none;color:inherit;
+    }
+    .info-strip:hover{border-color:rgba(21,101,200,.3);transform:translateX(5px)}
+    .info-strip-ico{
+      font-size:1.6rem;color:var(--secondary);background:rgba(0,191,200,.1);
+      padding:15px;border-radius:12px;border:1px solid rgba(0,191,200,.2);
+      width:55px;height:55px;display:flex;justify-content:center;align-items:center;
+      flex-shrink:0;transition:var(--tr-fast);
+    }
+    .info-strip:hover .info-strip-ico{background:var(--secondary);color:var(--bg-dark);box-shadow:0 0 15px var(--secondary-glow)}
+    .info-strip-lbl{font-weight:700;font-size:.9rem;text-transform:uppercase;color:var(--text-gray);margin-bottom:5px}
+    .info-strip-val{font-size:1rem;font-weight:600}
+    .map-wrap{
+      flex-grow:1;border-radius:var(--radius);overflow:hidden;
+      box-shadow:0 15px 30px rgba(0,0,0,.4);border:2px solid rgba(255,255,255,.05);
+      position:relative;min-height:280px;
+    }
+    .map-wrap iframe{
+      width:100%;height:100%;border:0;display:block;
+      filter:grayscale(.8) contrast(1.1) invert(.9) hue-rotate(180deg);
+      transition:var(--tr-slow);
+    }
+    .map-wrap:hover iframe{filter:grayscale(0) contrast(1) invert(0) hue-rotate(0deg)}
+
+    /* ── FOOTER ── */
+    footer{background:var(--bg-darker);padding:80px 5% 30px;border-top:1px solid rgba(255,255,255,.05)}
+    .footer-grid{display:grid;grid-template-columns:1.2fr .9fr .9fr;gap:50px;margin-bottom:50px}
+    .footer-desc{color:var(--text-gray);font-size:.95rem;margin-bottom:25px;max-width:350px}
+    .social-icons{display:flex;gap:15px}
+    .soc-btn{
+      width:45px;height:45px;background:rgba(255,255,255,.02);
+      border:1px solid rgba(255,255,255,.05);border-radius:50%;
+      display:flex;justify-content:center;align-items:center;
+      color:var(--text-white);text-decoration:none;font-size:1.2rem;transition:var(--tr-fast);
+    }
+    .soc-btn.wa:hover{background:#25D366;color:#fff;box-shadow:0 0 15px rgba(37,211,102,.5);transform:translateY(-3px) rotate(10deg)}
+    .soc-btn.fb:hover{background:#3b5998;color:#fff;box-shadow:0 0 15px rgba(59,89,152,.5);transform:translateY(-3px) rotate(-10deg)}
+    .soc-btn.ig:hover{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;transform:translateY(-3px) rotate(10deg)}
+    .footer-heading{font-family:var(--font-title);font-size:1.8rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:25px;position:relative;display:inline-block}
+    .footer-heading::after{content:'';display:block;width:40px;height:2px;background:var(--secondary);margin-top:8px}
+    .footer-list{list-style:none}
+    .footer-list li{margin-bottom:12px;display:flex;align-items:center;gap:12px;color:var(--text-gray);font-size:.95rem}
+    .footer-list li i{color:var(--secondary);width:20px;font-size:1rem}
+    .footer-list.hrs li{justify-content:space-between;gap:20px;border-bottom:1px dashed rgba(255,255,255,.05);padding-bottom:8px}
+    .footer-list.hrs li span.day{font-weight:700;color:var(--text-white)}
+    .footer-bottom{border-top:1px solid rgba(255,255,255,.05);padding-top:30px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+    .copy{color:var(--text-muted);font-size:.85rem}
+
+    /* ── WA FLOAT ── */
+    .wa-fab{
+      position:fixed;bottom:30px;right:30px;
+      width:58px;height:58px;background:#25D366;border-radius:50%;
+      display:flex;justify-content:center;align-items:center;
+      font-size:1.6rem;text-decoration:none;z-index:999;
+      box-shadow:0 6px 24px rgba(37,211,102,.4);
+      animation:waPulse 2.5s infinite;transition:transform .2s;
+    }
+    .wa-fab:hover{transform:scale(1.1)}
+    @keyframes waPulse{0%,100%{box-shadow:0 6px 24px rgba(37,211,102,.4)}50%{box-shadow:0 6px 40px rgba(37,211,102,.65)}}
+    .wa-tip{
+      position:absolute;right:70px;background:var(--bg-card);color:#fff;
+      font-size:.75rem;font-weight:600;white-space:nowrap;
+      padding:7px 14px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;
+    }
+    .wa-fab:hover .wa-tip{opacity:1}
+
+    /* ── SCROLL TOP ── */
+    .btn-top{
+      position:fixed;bottom:30px;left:30px;
+      width:50px;height:50px;background:var(--primary);color:#fff;
+      border:none;border-radius:50%;display:flex;justify-content:center;align-items:center;
+      font-size:1.2rem;cursor:pointer;box-shadow:0 5px 15px var(--primary-glow);
+      transition:var(--tr-fast);opacity:0;visibility:hidden;z-index:999;
+    }
+    .btn-top.active{opacity:1;visibility:visible}
+    .btn-top:hover{transform:translateY(-5px);background:var(--secondary);box-shadow:0 10px 20px var(--secondary-glow)}
+
+    /* ── REVEAL ── */
+    .reveal{opacity:0;transition:opacity .8s ease,transform .8s cubic-bezier(.16,1,.3,1)}
+    .reveal-up{transform:translateY(50px)}.reveal-down{transform:translateY(-50px)}
+    .reveal-left{transform:translateX(-50px)}.reveal-right{transform:translateX(50px)}
+    .reveal-scale{transform:scale(.9)}
+    .reveal.active{opacity:1;transform:translate(0) scale(1)}
+    .delay-1{transition-delay:.1s}.delay-2{transition-delay:.2s}.delay-3{transition-delay:.3s}.delay-4{transition-delay:.4s}.delay-5{transition-delay:.5s}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:1024px){
+      .hero-title{font-size:4rem}
+      .about-grid,.contact-grid{grid-template-columns:1fr;gap:50px}
+      .footer-grid{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:768px){
+      header{padding:20px 5%}
+      header.scrolled{padding:12px 5%}
+      .burger{display:block}
+      .nav-links{
+        position:fixed;right:0;top:0;height:100vh;width:70%;
+        background:var(--bg-darker);border-left:2px solid var(--primary);
+        flex-direction:column;justify-content:center;align-items:center;
+        transform:translateX(100%);transition:var(--tr-slow);
+        box-shadow:-10px 0 30px rgba(0,0,0,.5);
+      }
+      .nav-links.open{transform:translateX(0)}
+      .nav-links li{opacity:0;margin:15px 0}
+      .hero-title{font-size:3rem}.hero-desc{font-size:1rem}
+      .section-title{font-size:2.8rem}
+      .stats-grid{grid-template-columns:1fr 1fr}
+      .footer-grid{grid-template-columns:1fr;gap:40px}
+      .footer-bottom{flex-direction:column;text-align:center}
+    }
+    @media(max-width:480px){
+      .hero-title{font-size:2.4rem}.section-title{font-size:2.2rem}
+      .stats-grid{grid-template-columns:1fr}.contact-card{padding:25px 20px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="tooth-loader">🦷</div>
+  <div class="loader-title">Blue Dental</div>
+  <div class="loader-bar"><div class="loader-progress"></div></div>
+</div>
+
+<!-- HEADER -->
+<header id="header">
+  <a href="#" class="logo-wrap">
+    <i class="fa-solid fa-tooth logo-icon-spin"></i>
+    <span class="logo-name">Blue Dental</span>
+  </a>
+  <ul class="nav-links" id="nav-links">
+    <li><a href="#hero">Inicio</a></li>
+    <li><a href="#nosotros">Nosotros</a></li>
+    <li><a href="#servicios">Servicios</a></li>
+    <li><a href="#galeria">Galería</a></li>
+    <li><a href="#testimonios">Opiniones</a></li>
+    <li><a href="#contacto">Contacto</a></li>
+    <li>
+      <a href="https://wa.me/526561802318" target="_blank" class="nav-cta">
+        <i class="fa-brands fa-whatsapp"></i> Agenda por WhatsApp
+      </a>
+    </li>
+  </ul>
+  <div class="burger" id="burger">
+    <div class="line1"></div><div class="line2"></div><div class="line3"></div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section id="hero" class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <canvas id="hero-particles" class="hero-canvas" style="position:absolute;inset:0;z-index:3;pointer-events:none"></canvas>
+  <div class="hero-content">
+    <span class="hero-sub reveal reveal-down">CONSULTORIO DENTAL PREMIUM · CIUDAD JUÁREZ</span>
+    <h1 class="hero-title reveal reveal-up delay-1">Tu sonrisa perfecta empieza aquí</h1>
+    <p class="hero-desc reveal reveal-up delay-2">
+      En <strong>Blue Dental CDJ</strong> combinamos tecnología de vanguardia con atención personalizada. Especialistas en odontología general y ortodoncia con los mejores materiales del mercado.
+    </p>
+    <div class="hero-btns reveal reveal-scale delay-3">
+      <a href="https://wa.me/526561802318" target="_blank" class="hero-cta">
+        <i class="fa-brands fa-whatsapp"></i> AGENDA POR WHATSAPP
+      </a>
+      <a href="#servicios" class="hero-cta-outline">
+        <i class="fa-solid fa-tooth"></i> VER SERVICIOS
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- NOSOTROS -->
+<section id="nosotros" class="about">
+  <div class="about-grid">
+    <div class="about-content reveal reveal-left">
+      <span class="section-sub">Sobre Nosotros</span>
+      <h2 class="section-title" style="margin-bottom:25px">Blue Dental</h2>
+      <h3>Donde el detalle hace la diferencia</h3>
+      <p class="about-text">
+        En Blue Dental CDJ redefinimos el concepto de consultorio dental en Ciudad Juárez. Fundada bajo los estándares más altos de calidad, nuestro objetivo es brindarte una experiencia premium en el cuidado de tu salud bucal.
+      </p>
+      <p class="about-text">
+        Creemos que una sonrisa no es solo estética, es una declaración de confianza y bienestar. Nuestro equipo de especialistas domina desde los tratamientos más clásicos hasta las últimas técnicas de la odontología moderna.
+      </p>
+      <div class="about-feats">
+        <div class="about-feat">
+          <i class="fa-solid fa-user-doctor about-feat-icon"></i>
+          <div><h4>Especialistas</h4><p>Doctores altamente certificados y dedicados al detalle.</p></div>
+        </div>
+        <div class="about-feat">
+          <i class="fa-solid fa-gem about-feat-icon"></i>
+          <div><h4>Servicio Premium</h4><p>Materiales de la más alta calidad y ambiente único.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="about-img-wrap reveal reveal-right delay-2">
+      <div class="about-glow"></div>
+      <div class="about-frame">
+        <img src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?q=80&w=800" alt="Consultorio Blue Dental">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICIOS -->
+<section id="servicios" class="services">
+  <div class="section-header reveal reveal-up">
+    <span class="section-sub">Nuestra especialidad</span>
+    <h2 class="section-title">Servicios & Tarifas</h2>
+  </div>
+  <div class="services-grid">
+
+    <div class="srv-card reveal reveal-scale delay-1">
+      <div class="srv-icon-box"><i class="fa-solid fa-tooth"></i></div>
+      <h3 class="srv-name">Limpieza Dental</h3>
+      <p class="srv-desc">Profilaxis profesional completa para eliminar sarro y mantener encías saludables. Incluye pulido y aplicación de flúor.</p>
+      <div class="srv-price"><span>$</span>500</div>
+      <span class="srv-price-sub">Pesos MXN</span>
+      <i class="fa-solid fa-tooth srv-decor"></i>
+    </div>
+
+    <div class="srv-card reveal reveal-scale delay-2">
+      <div class="srv-icon-box"><i class="fa-solid fa-crown"></i></div>
+      <h3 class="srv-name">Corona Metal Porcelana</h3>
+      <p class="srv-desc">Restauración resistente con apariencia natural. Ideal para molares y piezas con daño extenso.</p>
+      <div class="srv-price"><span>$</span>4,000</div>
+      <span class="srv-price-sub">Pesos MXN</span>
+      <i class="fa-solid fa-crown srv-decor"></i>
+    </div>
+
+    <div class="srv-card reveal reveal-scale delay-3">
+      <div class="srv-icon-box"><i class="fa-solid fa-star"></i></div>
+      <h3 class="srv-name">Corona Zirconia</h3>
+      <p class="srv-desc">La opción más estética y duradera. Material libre de metal, biocompatible y de alta resistencia.</p>
+      <div class="srv-price" style="color:var(--gold)"><span style="color:var(--gold)">$</span>320</div>
+      <span class="srv-price-sub" style="color:var(--gold)">USD · Recomendado</span>
+      <i class="fa-solid fa-star srv-decor"></i>
+    </div>
+
+    <div class="srv-card reveal reveal-scale delay-4">
+      <div class="srv-icon-box"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <h3 class="srv-name">Resinas Dentales</h3>
+      <p class="srv-desc">Restauración estética del color natural del diente. Corrección de caries, fracturas y manchas superficiales.</p>
+      <div class="srv-price"><span>$</span>600</div>
+      <span class="srv-price-sub">Pesos MXN</span>
+      <i class="fa-solid fa-wand-magic-sparkles srv-decor"></i>
+    </div>
+
+    <div class="srv-card reveal reveal-scale delay-5">
+      <div class="srv-icon-box"><i class="fa-solid fa-align-center"></i></div>
+      <h3 class="srv-name">Ortodoncia</h3>
+      <p class="srv-desc">Corrección de la alineación dental con brackets o alineadores. Plan personalizado con el Dr. Rafael Quiñónez.</p>
+      <div class="srv-price"><span></span>Consultar</div>
+      <span class="srv-price-sub">Presupuesto personalizado</span>
+      <i class="fa-solid fa-align-center srv-decor"></i>
+    </div>
+
+  </div>
+</section>
+
+<!-- STATS -->
+<section id="estadisticas" class="stats">
+  <div class="stats-grid">
+    <div class="stat-item reveal reveal-up">
+      <div class="stat-num-box" data-target="2" data-suffix="">0</div>
+      <div class="stat-label">Especialistas</div>
+      <div class="stat-div"></div>
+    </div>
+    <div class="stat-item reveal reveal-up delay-1">
+      <div class="stat-num-box" data-target="5" data-suffix="+">0</div>
+      <div class="stat-label">Años de Experiencia</div>
+      <div class="stat-div"></div>
+    </div>
+    <div class="stat-item reveal reveal-up delay-2">
+      <div class="stat-num-box" data-target="1200" data-suffix="+">0</div>
+      <div class="stat-label">Pacientes Atendidos</div>
+      <div class="stat-div"></div>
+    </div>
+    <div class="stat-item reveal reveal-up delay-3">
+      <div class="stat-num-box" data-target="100" data-suffix="%">0</div>
+      <div class="stat-label">Satisfacción</div>
+      <div class="stat-div"></div>
+    </div>
+  </div>
+</section>
+
+<!-- GALERÍA -->
+<section id="galeria" class="gallery">
+  <div class="section-header reveal reveal-up">
+    <span class="section-sub">Nuestro consultorio</span>
+    <h2 class="section-title">Galería</h2>
+  </div>
+  <div class="gallery-grid">
+    <div class="gallery-item reveal reveal-scale delay-1" data-img="https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=1200" data-cap="Consultorio Moderno">
+      <img class="gallery-img" src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=600" alt="Consultorio">
+      <div class="gallery-ov"><i class="fa-solid fa-magnifying-glass-plus gallery-ico"></i><span class="gallery-cap-t">Consultorio</span></div>
+    </div>
+    <div class="gallery-item reveal reveal-scale delay-2" data-img="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?q=80&w=1200" data-cap="Equipo de Alta Tecnología">
+      <img class="gallery-img" src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?q=80&w=600" alt="Equipo dental">
+      <div class="gallery-ov"><i class="fa-solid fa-magnifying-glass-plus gallery-ico"></i><span class="gallery-cap-t">Equipamiento</span></div>
+    </div>
+    <div class="gallery-item reveal reveal-scale delay-3" data-img="https://images.unsplash.com/photo-1588776814546-1ffedbc11a1f?q=80&w=1200" data-cap="Atención Premium">
+      <img class="gallery-img" src="https://images.unsplash.com/photo-1588776814546-1ffedbc11a1f?q=80&w=600" alt="Atención dental">
+      <div class="gallery-ov"><i class="fa-solid fa-magnifying-glass-plus gallery-ico"></i><span class="gallery-cap-t">Atención</span></div>
+    </div>
+    <div class="gallery-item reveal reveal-scale delay-4" data-img="https://images.unsplash.com/photo-1609840114035-3c981b782dfe?q=80&w=1200" data-cap="Resultados Reales">
+      <img class="gallery-img" src="https://images.unsplash.com/photo-1609840114035-3c981b782dfe?q=80&w=600" alt="Resultados">
+      <div class="gallery-ov"><i class="fa-solid fa-magnifying-glass-plus gallery-ico"></i><span class="gallery-cap-t">Resultados</span></div>
+    </div>
+    <div class="gallery-item reveal reveal-scale delay-5" data-img="https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=1200" data-cap="Instalaciones Premium">
+      <img class="gallery-img" src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=600" alt="Instalaciones">
+      <div class="gallery-ov"><i class="fa-solid fa-magnifying-glass-plus gallery-ico"></i><span class="gallery-cap-t">Instalaciones</span></div>
+    </div>
+    <div class="gallery-item reveal reveal-scale delay-1" data-img="https://images.unsplash.com/photo-1571772996211-2f02c9727629?q=80&w=1200" data-cap="Ortodoncia & Especialidades">
+      <img class="gallery-img" src="https://images.unsplash.com/photo-1571772996211-2f02c9727629?q=80&w=600" alt="Ortodoncia">
+      <div class="gallery-ov"><i class="fa-solid fa-magnifying-glass-plus gallery-ico"></i><span class="gallery-cap-t">Ortodoncia</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" class="lightbox">
+  <div class="lb-content">
+    <i class="fa-solid fa-xmark lb-close" id="lb-close"></i>
+    <img class="lb-img" src="" alt="Zoom">
+    <div class="lb-caption" id="lb-caption"></div>
+  </div>
+</div>
+
+<!-- TESTIMONIOS -->
+<section id="testimonios" class="testimonials">
+  <div class="section-header reveal reveal-up">
+    <span class="section-sub">Opiniones de pacientes</span>
+    <h2 class="section-title">Testimonios</h2>
+  </div>
+  <div class="swiper testi-slider reveal reveal-scale delay-2">
+    <div class="swiper-wrapper">
+
+      <div class="swiper-slide">
+        <div class="testi-card">
+          <div class="client-info">
+            <img class="client-av" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150" alt="María G.">
+            <div><h4 class="client-name">María G.</h4><div class="client-plat"><i class="fa-brands fa-google" style="color:#EA4335"></i> Google Review</div></div>
+          </div>
+          <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+          <p class="testi-text">"El mejor consultorio dental en Juárez. El Dr. Macías me explicó todo el procedimiento paso a paso. Mi corona de zirconia quedó perfecta, no se nota nada. Sin duda mi dentista de confianza."</p>
+        </div>
+      </div>
+
+      <div class="swiper-slide">
+        <div class="testi-card">
+          <div class="client-info">
+            <img class="client-av" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150" alt="Carlos R.">
+            <div><h4 class="client-name">Carlos R.</h4><div class="client-plat"><i class="fa-brands fa-facebook" style="color:#3b5998"></i> Facebook Review</div></div>
+          </div>
+          <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+          <p class="testi-text">"Llevé a mis hijos y el trato fue increíble. Instalaciones muy limpias y modernas. Ya agendamos la cita de ortodoncia con el Dr. Quiñónez. Precios muy accesibles para la calidad."</p>
+        </div>
+      </div>
+
+      <div class="swiper-slide">
+        <div class="testi-card">
+          <div class="client-info">
+            <img class="client-av" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=150" alt="Ana L.">
+            <div><h4 class="client-name">Ana L.</h4><div class="client-plat"><i class="fa-brands fa-instagram" style="color:#e1306c"></i> Instagram</div></div>
+          </div>
+          <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+          <p class="testi-text">"Me hice la limpieza dental y quedé muy satisfecha. El servicio es de primer nivel. Lo que más me gustó es que no te hacen esperar y siempre están puntuales. ¡100% recomendado!"</p>
+        </div>
+      </div>
+
+      <div class="swiper-slide">
+        <div class="testi-card">
+          <div class="client-info">
+            <img class="client-av" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150" alt="Roberto M.">
+            <div><h4 class="client-name">Roberto M.</h4><div class="client-plat"><i class="fa-brands fa-google" style="color:#EA4335"></i> Google Review</div></div>
+          </div>
+          <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+          <p class="testi-text">"Excelente atención del equipo de Blue Dental. Me hice dos resinas y quedaron perfectas del color natural. El Dr. Macías es muy profesional y dedicado. Ya les recomendé con toda mi familia."</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="swiper-pagination"></div>
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+  </div>
+</section>
+
+<!-- CONTACTO -->
+<section id="contacto" class="contact-section">
+  <div class="section-header reveal reveal-up">
+    <span class="section-sub">Encuéntranos</span>
+    <h2 class="section-title">Contacto & Citas</h2>
+  </div>
+  <div class="contact-grid">
+    <div class="contact-card reveal reveal-left">
+      <h3 class="contact-card-title">Agenda tu Cita</h3>
+      <p class="contact-card-desc">Reserva en línea. Te confirmamos por WhatsApp y te esperamos con todo listo.</p>
+      <div class="form-group">
+        <input type="text" class="form-input" placeholder="Nombre completo" required>
+      </div>
+      <div class="form-group">
+        <input type="tel" class="form-input" placeholder="Teléfono / WhatsApp" required>
+      </div>
+      <div class="form-group">
+        <input type="email" class="form-input" placeholder="Email (opcional)">
+      </div>
+      <div class="form-group" style="position:relative">
+        <select class="form-select" id="servicio-select">
+          <option value="">Selecciona un tratamiento</option>
+          <option>Limpieza Dental — $500 MXN</option>
+          <option>Corona Metal Porcelana — $4,000 MXN</option>
+          <option>Corona Zirconia — $320 USD</option>
+          <option>Resinas Dentales — $600 MXN</option>
+          <option>Ortodoncia — Consultar</option>
+        </select>
+        <i class="fa-solid fa-chevron-down select-arrow"></i>
+      </div>
+      <div class="form-group">
+        <input type="date" class="form-input" id="fecha-input">
+      </div>
+      <div class="form-group" style="position:relative">
+        <select class="form-select">
+          <option value="">Doctor de preferencia</option>
+          <option>Dr. Sesar Macías — Dentista General</option>
+          <option>Dr. Rafael Quiñónez — Ortodoncista</option>
+        </select>
+        <i class="fa-solid fa-chevron-down select-arrow"></i>
+      </div>
+      <button class="btn-submit" id="submit-btn" onclick="handleSubmit()">
+        <i class="fa-brands fa-whatsapp"></i> CONFIRMAR CITA
+      </button>
+      <div class="form-success" id="form-success">
+        <div class="success-ico"><i class="fa-solid fa-check"></i></div>
+        <div class="success-title">¡CITA CONFIRMADA!</div>
+        <p class="success-text">Tu cita fue registrada. Nos pondremos en contacto muy pronto por WhatsApp.</p>
+        <button class="btn-close-success" onclick="document.getElementById('form-success').classList.remove('active')">Cerrar</button>
+      </div>
+    </div>
+
+    <div class="contact-info-col reveal reveal-right delay-2">
+      <a href="tel:+526561802318" class="info-strip">
+        <i class="fa-solid fa-phone info-strip-ico"></i>
+        <div><div class="info-strip-lbl">Teléfono</div><div class="info-strip-val">+52 656 180 2318</div></div>
+      </a>
+      <a href="https://wa.me/526561802318" target="_blank" class="info-strip">
+        <i class="fa-brands fa-whatsapp info-strip-ico"></i>
+        <div><div class="info-strip-lbl">WhatsApp</div><div class="info-strip-val">Escríbenos directo</div></div>
+      </a>
+      <div class="info-strip">
+        <i class="fa-solid fa-location-dot info-strip-ico"></i>
+        <div><div class="info-strip-lbl">Dirección</div><div class="info-strip-val">Baltazar Adame 7663, Cd. Juárez, Chih.</div></div>
+      </div>
+      <div class="info-strip">
+        <i class="fa-solid fa-clock info-strip-ico"></i>
+        <div>
+          <div class="info-strip-lbl">Horario</div>
+          <div class="info-strip-val">9:00–14:00 · 16:00–19:30</div>
+        </div>
+      </div>
+      <div class="map-wrap">
+        <iframe src="https://maps.google.com/maps?q=Calle+Baltazar+Adame+7663+Juarez+Chihuahua&output=embed" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="logo-wrap" style="margin-bottom:20px;display:inline-flex">
+        <i class="fa-solid fa-tooth logo-icon-spin" style="font-size:1.5rem"></i>
+        <span class="logo-name" style="font-size:1.4rem">Blue Dental</span>
+      </a>
+      <p class="footer-desc">El consultorio dental premium en Ciudad Juárez. Tecnología moderna, atención personalizada y los mejores materiales del mercado.</p>
+      <div class="social-icons">
+        <a href="https://wa.me/526561802318" target="_blank" class="soc-btn wa"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="#" class="soc-btn fb"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="#" class="soc-btn ig"><i class="fa-brands fa-instagram"></i></a>
+      </div>
+    </div>
+    <div>
+      <h4 class="footer-heading">Servicios</h4>
+      <ul class="footer-list">
+        <li><i class="fa-solid fa-chevron-right"></i>Limpieza Dental — $500 MXN</li>
+        <li><i class="fa-solid fa-chevron-right"></i>Corona Metal Porcelana — $4,000 MXN</li>
+        <li><i class="fa-solid fa-chevron-right"></i>Corona Zirconia — $320 USD</li>
+        <li><i class="fa-solid fa-chevron-right"></i>Resinas Dentales — $600 MXN</li>
+        <li><i class="fa-solid fa-chevron-right"></i>Ortodoncia — Consultar</li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="footer-heading">Horario</h4>
+      <ul class="footer-list hrs">
+        <li><span class="day">Lun – Vie</span><span>9:00 – 14:00</span></li>
+        <li><span class="day">Lun – Vie</span><span>16:00 – 19:30</span></li>
+        <li><span class="day">Sábado</span><span>9:00 – 14:00</span></li>
+        <li><span class="day">Domingo</span><span>Cerrado</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="copy">© 2025 <strong>Blue Dental</strong> · Ciudad Juárez, Chihuahua</p>
+    <p class="copy">Baltazar Adame 7663, 32587 · <a href="tel:+526561802318" style="color:var(--secondary);text-decoration:none">+52 656 180 2318</a></p>
+  </div>
+</footer>
+
+<!-- WA FLOAT -->
+<a href="https://wa.me/526561802318" target="_blank" class="wa-fab">
+  <i class="fa-brands fa-whatsapp" style="color:white;font-size:1.6rem"></i>
+  <span class="wa-tip">¡Escríbenos!</span>
+</a>
+
+<!-- SCROLL TOP -->
+<button class="btn-top" id="btn-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <i class="fa-solid fa-arrow-up"></i>
+</button>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+/* LOADER */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const l = document.getElementById('loader');
+    l.style.opacity = '0'; l.style.visibility = 'hidden';
+  }, 2200);
+});
+
+/* HEADER SCROLL */
+window.addEventListener('scroll', () => {
+  document.getElementById('header').classList.toggle('scrolled', window.scrollY > 80);
+  document.getElementById('btn-top').classList.toggle('active', window.scrollY > 300);
+});
+
+/* BURGER */
+document.getElementById('burger').addEventListener('click', function() {
+  document.getElementById('nav-links').classList.toggle('open');
+  this.classList.toggle('open');
+});
+document.querySelectorAll('#nav-links a').forEach(a => {
+  a.addEventListener('click', () => {
+    document.getElementById('nav-links').classList.remove('open');
+    document.getElementById('burger').classList.remove('open');
+  });
+});
+
+/* HERO PARALLAX */
+window.addEventListener('scroll', () => {
+  const bg = document.querySelector('.hero-bg');
+  if (bg) bg.style.transform = `scale(1.05) translateY(${window.scrollY * 0.3}px)`;
+});
+
+/* PARTICLES */
+const canvas = document.getElementById('hero-particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+for (let i = 0; i < 70; i++) {
+  particles.push({
+    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+    r: Math.random() * 1.5 + 0.5, dx: (Math.random() - .5) * .4, dy: (Math.random() - .5) * .4,
+    a: Math.random()
+  });
+}
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0,191,200,${p.a * .6})`; ctx.fill();
+    p.x += p.dx; p.y += p.dy;
+    if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+  });
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+/* SCROLLSPY */
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) cur = s.id; });
+  navLinks.forEach(a => { a.classList.toggle('active-link', a.getAttribute('href') === '#' + cur); });
+});
+
+/* REVEAL */
+const revEls = document.querySelectorAll('.reveal');
+const revObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('active'); revObs.unobserve(e.target); } });
+}, { threshold: 0.1 });
+revEls.forEach(el => revObs.observe(el));
+
+/* COUNTER */
+function animCounter(el) {
+  const target = parseInt(el.dataset.target);
+  const suffix = el.dataset.suffix || '';
+  let cur = 0; const step = Math.ceil(target / 80);
+  const t = setInterval(() => {
+    cur = Math.min(cur + step, target);
+    el.textContent = cur.toLocaleString() + suffix;
+    if (cur >= target) clearInterval(t);
+  }, 20);
+}
+const cntObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { animCounter(e.target); cntObs.unobserve(e.target); } });
+}, { threshold: .5 });
+document.querySelectorAll('.stat-num-box[data-target]').forEach(el => cntObs.observe(el));
+
+/* SERVICE CARD 3D TILT */
+document.querySelectorAll('.srv-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - .5;
+    const y = (e.clientY - r.top) / r.height - .5;
+    card.style.transform = `perspective(1000px) rotateY(${x * 12}deg) rotateX(${-y * 12}deg) translateZ(10px)`;
+  });
+  card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+});
+
+/* GALLERY LIGHTBOX */
+const lb = document.getElementById('lightbox');
+const lbImg = lb.querySelector('.lb-img');
+const lbCap = document.getElementById('lb-caption');
+document.querySelectorAll('.gallery-item').forEach(item => {
+  item.addEventListener('click', () => {
+    lbImg.src = item.dataset.img;
+    lbCap.textContent = item.dataset.cap;
+    lb.classList.add('active');
+  });
+});
+document.getElementById('lb-close').addEventListener('click', () => lb.classList.remove('active'));
+lb.addEventListener('click', e => { if (e.target === lb) lb.classList.remove('active'); });
+
+/* SWIPER */
+new Swiper('.testi-slider', {
+  slidesPerView: 1, spaceBetween: 30, loop: true,
+  autoplay: { delay: 4500, disableOnInteraction: false },
+  pagination: { el: '.swiper-pagination', clickable: true },
+  navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+  breakpoints: { 640: { slidesPerView: 2 }, 1024: { slidesPerView: 3 } }
+});
+
+/* FORM */
+document.getElementById('fecha-input').min = new Date().toISOString().split('T')[0];
+function handleSubmit() {
+  document.getElementById('form-success').classList.add('active');
+}
+
+/* DATE */
+document.getElementById('fecha-input').min = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>

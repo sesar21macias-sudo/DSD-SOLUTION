@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\skills\\\\crear-agente\" | Select-Object Name)",
+      "PowerShell(node --version 2>&1)",
+      "PowerShell(npm --version 2>&1)",
+      "WebFetch(domain:www.grupodentaltec.com)",
+      "WebFetch(domain:www.nespresso.com)",
+      "WebFetch(domain:www.starbucks.com.mx)",
+      "Bash(npx wrangler *)",
+      "Bash(curl -s -X POST https://unspotted-coffee.sesar21macias.workers.dev/stripe/crear-intent -H 'Content-Type: application/json' -d '{\"mesa\":1,\"items\":[{\"id\":\"cafe1\",\"nombre\":\"Cafe\",\"precio\":50,\"cantidad\":1}]}')",
+      "WebFetch(domain:www.nemirestaurante.com)",
+      "mcp__Claude_in_Chrome__navigate",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\sesar\\\\mailos-coffee\\\\src\\\\fotos\" | ForEach-Object { Write-Host \"$\\($_.Name\\) - $\\([math]::Round\\($_.Length/1KB\\)\\)KB\" })",
+      "PowerShell($lines = Get-Content \"C:\\\\Users\\\\sesar\\\\mailos-coffee\\\\src\\\\index.ts\"; $lines.Length)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://unspotted-coffee.sesar21macias.workers.dev/historial\" -UseBasicParsing; Write-Output \"Status: $\\($r.StatusCode\\)\"; Write-Output \"Content: $\\($r.Content.Substring\\(0, [Math]::Min\\(200, $r.Content.Length\\)\\)\\)\")",
+      "mcp__7558730b-6f63-45c6-ba83-fd550877a32d__generate_image",
+      "mcp__7558730b-6f63-45c6-ba83-fd550877a32d__job_display",
+      "mcp__7558730b-6f63-45c6-ba83-fd550877a32d__generate_video",
+      "mcp__7558730b-6f63-45c6-ba83-fd550877a32d__show_plans_and_credits",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\sesar\\\\Downloads\\\\PROYECTO\\\\luxury-watch\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\sesar\\\\Downloads\\\\PROYECTO\\\\luxury-watch\\\\app\\\\components\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\sesar\\\\Downloads\\\\PROYECTO\\\\luxury-watch\\\\public\\\\frames\")",
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\sesar\\\\Downloads\\\\PROYECTO\\\\dorados-birria\" -Force)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)"
+    ]
+  }
+}

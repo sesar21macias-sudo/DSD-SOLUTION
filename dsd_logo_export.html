@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>DSD Logo Export</title>
+  <style>
+    body { margin: 0; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: Arial, sans-serif; gap: 24px; }
+    #canvas-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    canvas { display: block; }
+    button { padding: 14px 32px; background: #1a1a1a; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; letter-spacing: 1px; }
+    button:hover { background: #333; }
+    p { color: #666; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <canvas id="logoCanvas" width="1200" height="500"></canvas>
+  </div>
+  <button onclick="downloadPNG()">Descargar PNG</button>
+  <p>Logo 1200×500px · fondo blanco · alta resolución</p>
+
+  <script>
+    const canvas = document.getElementById('logoCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawLogo() {
+      // Fondo blanco
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1200, 500);
+
+      const ox = 80, oy = 60;
+
+      // Letras DSD
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = '900 280px Arial Black, Arial';
+      ctx.fillText('D', ox, oy + 280);
+      ctx.fillText('S', ox + 180, oy + 280);
+      ctx.fillText('D', ox + 368, oy + 280);
+
+      // Cerebro poligonal
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 2.2;
+      const bx = ox + 118, by = oy;
+      const polys = [
+        [[90,30],[148,20],[175,65],[132,97],[84,81]],
+        [[148,20],[206,36],[196,89],[175,65]],
+        [[175,65],[196,89],[180,129],[138,120],[132,97]],
+        [[90,30],[84,81],[52,89],[45,45],[77,21]],
+        [[84,81],[52,89],[59,129],[100,137],[132,97]],
+        [[52,89],[29,105],[35,137],[59,129]],
+        [[100,137],[132,97],[138,120],[122,162],[90,154]],
+        [[45,45],[77,21],[90,30]],
+        [[206,36],[255,29],[271,71],[239,97],[196,89]],
+        [[255,29],[297,45],[291,94],[249,103],[239,97]],
+        [[239,97],[249,103],[233,136],[196,126],[196,89]],
+        [[291,94],[297,45],[323,77],[317,120],[275,120]],
+        [[275,120],[317,120],[299,154],[266,154],[233,136]],
+        [[196,126],[233,136],[223,170],[181,162]],
+        [[138,120],[181,112],[196,126],[181,162],[148,162],[122,162]],
+        [[181,112],[196,89],[196,126]],
+      ];
+
+      polys.forEach(pts => {
+        ctx.beginPath();
+        ctx.moveTo(bx + pts[0][0] * 1.6, by + pts[0][1] * 1.6);
+        pts.slice(1).forEach(p => ctx.lineTo(bx + p[0] * 1.6, by + p[1] * 1.6));
+        ctx.closePath();
+        ctx.stroke();
+      });
+
+      // Tallo
+      const stemX = bx + 165 * 1.6, stemY = by + 168 * 1.6;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(stemX - 10, stemY); ctx.lineTo(stemX - 15, stemY + 32); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(stemX + 10, stemY); ctx.lineTo(stemX + 15, stemY + 32); ctx.stroke();
+      ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(stemX - 15, stemY + 32); ctx.lineTo(stemX - 22, stemY + 52); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(stemX + 15, stemY + 32); ctx.lineTo(stemX + 22, stemY + 52); ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(stemX - 15, stemY + 32); ctx.lineTo(stemX, stemY + 52); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(stemX + 15, stemY + 32); ctx.lineTo(stemX, stemY + 52); ctx.stroke();
+
+      // AI SOLUTIONS
+      ctx.fillStyle = '#444';
+      ctx.font = '300 36px Arial';
+      ctx.letterSpacing = '6px';
+      ctx.fillText('AI  SOLUTIONS', ox + 680, oy + 200);
+      ctx.strokeStyle = '#aaa';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(ox + 680, oy + 215);
+      ctx.lineTo(ox + 940, oy + 215);
+      ctx.stroke();
+    }
+
+    drawLogo();
+
+    function downloadPNG() {
+      const link = document.createElement('a');
+      link.download = 'DSD_AI_Solutions_Logo.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>
