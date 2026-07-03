@@ -5,9 +5,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import axios from 'axios'
 import { ShoppingBag, Plus, Minus, Trash2, ChevronRight, CheckCircle, X, User } from 'lucide-react'
 
-const API_BASE = typeof window !== 'undefined'
-  ? `${window.location.protocol}//${window.location.hostname}:4000/api`
-  : 'http://localhost:4000/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 
 const publicApi = axios.create({ baseURL: API_BASE })
 

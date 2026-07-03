@@ -8,10 +8,7 @@ import {
   CheckCircle, ChevronRight, Star, Clock, MapPin, Phone, Flame,
 } from 'lucide-react'
 
-const API =
-  typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.hostname}:4000/api`
-    : 'http://localhost:4000/api'
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 
 const pub = axios.create({ baseURL: API })
 const TENANT_SLUG = 'tacos-el-guero'

@@ -5,9 +5,7 @@ import { useParams } from 'next/navigation'
 import axios from 'axios'
 import { ShoppingBag, CheckCircle, ChevronRight, Loader2, AlertCircle, Clock } from 'lucide-react'
 
-const API = typeof window !== 'undefined'
-  ? `${window.location.protocol}//${window.location.hostname}:4000/api`
-  : 'http://localhost:4000/api'
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 
 const pub = axios.create({ baseURL: API })
 
