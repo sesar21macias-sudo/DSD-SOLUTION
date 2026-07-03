@@ -13,6 +13,7 @@ import reportsRoutes from './modules/reports/reports.routes'
 import shiftRoutes from './modules/shift/shift.routes'
 import inventoryRoutes from './modules/inventory/inventory.routes'
 import publicRoutes from './modules/public/public.routes'
+import mpRoutes from './modules/mercadopago/mp.routes'
 import whatsappRoutes from './modules/whatsapp/whatsapp.routes'
 import { errorHandler, notFound } from './middleware/errorHandler'
 
@@ -44,6 +45,7 @@ app.use('/api/reports', reportsRoutes)
 app.use('/api/shift', shiftRoutes)
 app.use('/api/inventory', inventoryRoutes)
 app.use('/api/public', publicRoutes)
+app.use('/api/mp', mpRoutes)
 app.use('/api/whatsapp', whatsappRoutes)
 
 // Socket.io — real-time kitchen display

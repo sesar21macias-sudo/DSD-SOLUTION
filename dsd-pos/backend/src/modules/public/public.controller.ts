@@ -29,6 +29,14 @@ export async function getTableInfo(req: Request, res: Response): Promise<void> {
   res.json({ success: true, data: { tenant, table } })
 }
 
+export async function getPublicTables(req: Request, res: Response): Promise<void> {
+  const { tenantSlug } = req.params
+  const { data: tenant } = await supabase.from('tenants').select('id').eq('slug', tenantSlug).eq('is_active', true).single()
+  if (!tenant) { res.status(404).json({ success: false, error: 'Negocio no encontrado' }); return }
+  const { data: tables } = await supabase.from('tables').select('id, name, status').eq('tenant_id', tenant.id).eq('is_active', true).order('name')
+  res.json({ success: true, data: tables ?? [] })
+}
+
 export async function getPublicMenu(req: Request, res: Response): Promise<void> {
   const { tenantSlug } = req.params
 
@@ -149,6 +157,92 @@ export async function createPublicOrder(req: Request, res: Response): Promise<vo
     order_items: orderItems,
     source: 'qr',
     table_number: table.number,
+  })
+
+  res.status(201).json({ success: true, data: { order_number: orderNumber, total, currency } })
+}
+
+export async function createOnlineOrder(req: Request, res: Response): Promise<void> {
+  const { tenantSlug } = req.params
+
+  const schema = z.object({
+    customer_name: z.string().min(1),
+    notes: z.string().optional(),
+    order_type: z.enum(['takeout', 'delivery', 'dine_in']).default('takeout'),
+    table_id: z.string().uuid().optional(),
+    items: z.array(z.object({
+      product_id: z.string().uuid(),
+      quantity: z.number().int().positive(),
+      notes: z.string().optional(),
+    })).min(1),
+  })
+
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id, currency, tax_rate')
+    .eq('slug', tenantSlug)
+    .single()
+
+  if (!tenant) { res.status(404).json({ success: false, error: 'Negocio no encontrado' }); return }
+
+  const productIds = parsed.data.items.map(i => i.product_id)
+  const { data: products } = await supabase
+    .from('menu_products')
+    .select('id, name, price_mxn, price_usd, is_active')
+    .in('id', productIds)
+    .eq('tenant_id', tenant.id)
+
+  const inactive = parsed.data.items.find(i => {
+    const p = products?.find(p => p.id === i.product_id)
+    return !p || !p.is_active
+  })
+  if (inactive) { res.status(400).json({ success: false, error: 'Producto no disponible' }); return }
+
+  const currency = tenant.currency ?? 'MXN'
+  const orderItems = parsed.data.items.map(item => {
+    const product = products!.find(p => p.id === item.product_id)!
+    const unitPrice = currency === 'USD' ? (product.price_usd ?? product.price_mxn / 17) : product.price_mxn
+    const subtotal = unitPrice * item.quantity
+    return { id: uuidv4(), product_id: item.product_id, quantity: item.quantity, unit_price: unitPrice, subtotal, notes: item.notes }
+  })
+
+  const subtotal = orderItems.reduce((s, i) => s + i.subtotal, 0)
+  const taxRate = Number(tenant.tax_rate ?? 0.16)
+  const tax = subtotal * taxRate
+  const total = subtotal + tax
+  const orderNumber = `WEB-${Date.now().toString(36).toUpperCase()}`
+
+  const { data: order, error } = await supabase
+    .from('orders')
+    .insert({
+      tenant_id: tenant.id,
+      order_number: orderNumber,
+      type: parsed.data.order_type,
+      table_id: parsed.data.table_id ?? null,
+      customer_name: parsed.data.customer_name,
+      notes: parsed.data.notes,
+      currency,
+      status: 'pending',
+      subtotal,
+      tax,
+      total,
+    })
+    .select()
+    .single()
+
+  if (error || !order) { res.status(500).json({ success: false, error: error?.message }); return }
+
+  await supabase.from('order_items').insert(
+    orderItems.map(i => ({ ...i, order_id: order.id, tenant_id: tenant.id }))
+  )
+
+  io.to(`tenant:${tenant.id}`).emit('order:new', {
+    ...order,
+    order_items: orderItems,
+    source: 'web',
   })
 
   res.status(201).json({ success: true, data: { order_number: orderNumber, total, currency } })
