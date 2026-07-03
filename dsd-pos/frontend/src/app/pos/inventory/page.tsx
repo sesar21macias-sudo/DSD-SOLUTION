@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -79,15 +79,17 @@ export default function InventoryPage() {
     queryFn: async () => { const { data } = await api.get('/menu/products'); return data.data },
     enabled: tab === 'recipes' || showRecipeModal,
   })
-  const { data: currentRecipe } = useQuery<RecipeItem[]>({
+  const { data: currentRecipe } = useQuery({
     queryKey: ['recipe', selectedProduct?.id],
-    queryFn: async () => { const { data } = await api.get(`/inventory/recipes/${selectedProduct!.id}`); return data.data },
+    queryFn: async (): Promise<RecipeItem[]> => { const { data } = await api.get(`/inventory/recipes/${selectedProduct!.id}`); return data.data },
     enabled: !!selectedProduct,
-    onSuccess: (data: RecipeItem[]) => {
-      setRecipeItems(data.map(r => ({ ingredient_id: r.ingredient_id, quantity: String(r.quantity), unit: r.unit })))
-    },
-  } as Parameters<typeof useQuery>[0])
-  void currentRecipe
+  })
+
+  useEffect(() => {
+    if (currentRecipe) {
+      setRecipeItems((currentRecipe as RecipeItem[]).map(r => ({ ingredient_id: r.ingredient_id, quantity: String(r.quantity), unit: r.unit })))
+    }
+  }, [currentRecipe])
 
   const { data: viewRecipe } = useQuery<RecipeItem[]>({
     queryKey: ['recipe-view', pendingViewProduct?.id],
