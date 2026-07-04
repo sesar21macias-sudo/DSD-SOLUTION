@@ -170,6 +170,7 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
     notes: z.string().optional(),
     order_type: z.enum(['takeout', 'delivery', 'dine_in']).default('takeout'),
     table_id: z.string().uuid().optional(),
+    require_payment: z.boolean().optional().default(false),
     items: z.array(z.object({
       product_id: z.string().uuid(),
       quantity: z.number().int().positive(),
@@ -215,6 +216,9 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
   const total = subtotal + tax
   const orderNumber = `WEB-${Date.now().toString(36).toUpperCase()}`
 
+  const requirePayment = parsed.data.require_payment
+  const orderStatus = requirePayment ? 'pending_payment' : 'pending'
+
   const { data: order, error } = await supabase
     .from('orders')
     .insert({
@@ -225,7 +229,7 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
       customer_name: parsed.data.customer_name,
       notes: parsed.data.notes,
       currency,
-      status: 'pending',
+      status: orderStatus,
       subtotal,
       tax,
       total,
@@ -239,11 +243,13 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
     orderItems.map(i => ({ ...i, order_id: order.id, tenant_id: tenant.id }))
   )
 
-  io.to(`tenant:${tenant.id}`).emit('order:new', {
-    ...order,
-    order_items: orderItems,
-    source: 'web',
-  })
+  if (!requirePayment) {
+    io.to(`tenant:${tenant.id}`).emit('order:new', {
+      ...order,
+      order_items: orderItems,
+      source: 'web',
+    })
+  }
 
-  res.status(201).json({ success: true, data: { order_number: orderNumber, total, currency } })
+  res.status(201).json({ success: true, data: { order_id: order.id, order_number: orderNumber, total, currency } })
 }

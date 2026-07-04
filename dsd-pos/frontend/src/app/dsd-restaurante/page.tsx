@@ -5,7 +5,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import axios from 'axios'
 import {
   ShoppingCart, Plus, Minus, Trash2, X,
-  CheckCircle, ChevronRight, Star, Clock, MapPin, Phone, Flame,
+  ChevronRight, Star, Clock, MapPin, Phone, Flame,
 } from 'lucide-react'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
@@ -137,8 +137,7 @@ export default function DSDRestaurantePage() {
   const [name,      setName]      = useState('')
   const [notes,     setNotes]     = useState('')
   const [tableId,   setTableId]   = useState<string>('')
-  const [success,   setSuccess]   = useState<string | null>(null)
-  const [successTableId, setSuccessTableId] = useState<string | null>(null)
+  const [mpError, setMpError] = useState<string | null>(null)
   const [countKey, setCountKey] = useState(0)
   const [filterAnim, setFilterAnim] = useState(false)
   const heroRef  = useRef<HTMLDivElement>(null)
@@ -212,23 +211,30 @@ export default function DSDRestaurantePage() {
 
   const placeOrder = useMutation({
     mutationFn: async () => {
-      const { data } = await pub.post(`/public/online-order/${TENANT_SLUG}`, {
-        customer_name: name || 'Cliente Web',
-        notes:         notes || undefined,
-        order_type:    tableId ? 'dine_in' : 'takeout',
-        table_id:      tableId || undefined,
+      // Step 1: create order with pending_payment status
+      const { data: orderRes } = await pub.post(`/public/online-order/${TENANT_SLUG}`, {
+        customer_name:   name || 'Cliente',
+        notes:           notes || undefined,
+        order_type:      tableId ? 'dine_in' : 'takeout',
+        table_id:        tableId || undefined,
+        require_payment: true,
         items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
       })
-      return data.data as { order_number: string; total: number }
+      const { order_id } = orderRes.data as { order_id: string; order_number: string; total: number }
+
+      // Step 2: create MP preference
+      const { data: mpRes } = await pub.post('/mp/preference', {
+        order_id,
+        tip_percent: 0,
+      })
+      return mpRes.data as { init_point: string }
     },
     onSuccess: (d) => {
-      setSuccess(d.order_number)
-      setSuccessTableId(tableId || null)
-      setCart([])
+      window.location.href = d.init_point
+    },
+    onError: (e: any) => {
+      setMpError(e?.response?.data?.error ?? 'No se pudo conectar con Mercado Pago. Intenta de nuevo.')
       setDrawer(false)
-      setName('')
-      setNotes('')
-      setTableId('')
     },
   })
 
@@ -271,44 +277,20 @@ export default function DSDRestaurantePage() {
     return () => { document.body.style.overflow = '' }
   }, [drawer])
 
-  // ── Success screen ──────────────────────────────────────────────────────────
-  if (success) return (
+  // ── MP error screen ──────────────────────────────────────────────────────────
+  if (mpError) return (
     <div style={{ minHeight: '100vh', background: CREAM, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui,sans-serif' }}>
       <div style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}>
-        <div className="check-anim" style={{ width: 96, height: 96, borderRadius: '50%', background: '#f0fdf4', border: '2px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
-          <CheckCircle size={48} color="#16a34a" strokeWidth={1.8} />
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#fef2f2', border: '2px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+          <span style={{ fontSize: 36 }}>!</span>
         </div>
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#1c1917', letterSpacing: '-0.03em', marginBottom: 10 }}>Pedido enviado</h1>
-        <p style={{ color: '#78716c', fontSize: 16, lineHeight: 1.6, marginBottom: 36 }}>
-          Tu pedido esta en cocina. Pasa a recogerlo en unos minutos.
-        </p>
-        <div style={{ background: '#fff', border: '1px solid #e7e5e4', borderRadius: 28, padding: '32px 28px', marginBottom: 20 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#a8a29e', textTransform: 'uppercase', marginBottom: 10 }}>
-            Numero de orden
-          </p>
-          <p style={{ fontSize: 42, fontWeight: 900, color: DARK, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-            {success}
-          </p>
-          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f5f5f4', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, color: '#78716c', fontSize: 14 }}>
-            <Clock size={14} /> Tiempo estimado: 15-20 min
-          </div>
-        </div>
-        {successTableId && (
-          <a
-            href={`/pagar/${TENANT_SLUG}/${successTableId}`}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', background: '#009ee3', color: '#fff', fontWeight: 800, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer', textDecoration: 'none', marginBottom: 12 }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-            Pagar con Mercado Pago
-          </a>
-        )}
+        <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1c1917', marginBottom: 10 }}>Error al procesar pago</h1>
+        <p style={{ color: '#78716c', fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>{mpError}</p>
         <button
-          onClick={() => { setSuccess(null); setSuccessTableId(null) }}
-          style={{ width: '100%', background: DARK, color: '#fff', fontWeight: 700, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer', transition: 'background .15s' }}
-          onMouseEnter={e => (e.currentTarget.style.background = ACCENT)}
-          onMouseLeave={e => (e.currentTarget.style.background = DARK)}
+          onClick={() => setMpError(null)}
+          style={{ width: '100%', background: DARK, color: '#fff', fontWeight: 700, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer' }}
         >
-          Hacer otro pedido
+          Intentar de nuevo
         </button>
       </div>
     </div>
@@ -708,7 +690,7 @@ export default function DSDRestaurantePage() {
                   </select>
                   {tableId && (
                     <p style={{ marginTop: 6, fontSize: 12, color: '#009ee3', fontWeight: 600 }}>
-                      Al confirmar podras pagar desde tu telefono con Mercado Pago
+                      Pagaras con Mercado Pago antes de que llegue a cocina
                     </p>
                   )}
                 </div>
@@ -807,11 +789,13 @@ export default function DSDRestaurantePage() {
                 onMouseEnter={e => { if (!placeOrder.isPending && cart.length > 0) e.currentTarget.style.background = ACCENT }}
                 onMouseLeave={e => { if (!placeOrder.isPending) e.currentTarget.style.background = DARK }}
               >
-                {placeOrder.isPending ? 'Enviando...' : 'Enviar pedido a cocina'}
-                {!placeOrder.isPending && <ChevronRight size={19} />}
+                {placeOrder.isPending
+                  ? 'Preparando pago...'
+                  : <><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" style={{flexShrink:0}}><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg> Pagar con Mercado Pago</>
+                }
               </button>
               <p style={{ textAlign: 'center', fontSize: 12, color: '#a8a29e', marginTop: 12 }}>
-                Pago en tienda al recoger tu pedido
+                Pago seguro · Tu pedido llega a cocina despues del pago
               </p>
             </div>
           </div>

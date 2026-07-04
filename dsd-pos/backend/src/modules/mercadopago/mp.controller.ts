@@ -115,7 +115,7 @@ export async function createPreference(req: Request, res: Response): Promise<voi
   const FRONTEND = process.env['FRONTEND_URL'] ?? 'http://localhost:3000'
   const BACKEND  = process.env['BACKEND_URL']  ?? 'http://localhost:4000'
   const slug     = tenant.slug
-  const tableId  = order.table_id
+  const tableId  = order.table_id ?? order_id  // use order_id as fallback for takeout
 
   const isLocalhost = FRONTEND.includes('localhost') || FRONTEND.includes('127.0.0.1')
 
@@ -177,6 +177,17 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
     const orderId = payment.external_reference
     if (!orderId) return
 
+    // Cargar orden actual para saber su status previo
+    const { data: orderBefore } = await supabase
+      .from('orders')
+      .select('id, order_number, tenant_id, table_id, total, status, order_items(id, quantity, unit_price, subtotal, product_id)')
+      .eq('id', orderId)
+      .single()
+
+    if (!orderBefore) { console.error('[MP Webhook] Orden no encontrada:', orderId); return }
+
+    const wasPendingPayment = orderBefore.status === 'pending_payment'
+
     // Marcar orden como pagada
     const { data: order } = await supabase
       .from('orders')
@@ -189,7 +200,7 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
       .select('id, order_number, tenant_id, table_id, total')
       .single()
 
-    if (!order) { console.error('[MP Webhook] Orden no encontrada:', orderId); return }
+    if (!order) { console.error('[MP Webhook] Error actualizando orden:', orderId); return }
 
     // Registrar pago en tabla payments
     await supabase.from('payments').insert({
@@ -207,6 +218,15 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
       await supabase.from('tables')
         .update({ status: 'available', updated_at: new Date().toISOString() })
         .eq('id', order.table_id)
+    }
+
+    // Si la orden estaba en pending_payment, notificar a cocina ahora que fue pagada
+    if (wasPendingPayment) {
+      io.to(`tenant:${order.tenant_id}`).emit('order:new', {
+        ...orderBefore,
+        status: 'paid',
+        source: 'web',
+      })
     }
 
     // Notificación en tiempo real a cocina y POS
