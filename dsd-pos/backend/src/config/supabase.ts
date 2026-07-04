@@ -9,5 +9,5 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
-  realtime: { transport: WebSocket },
+  realtime: { transport: WebSocket as any },
 })
