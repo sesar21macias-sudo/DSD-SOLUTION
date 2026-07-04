@@ -130,18 +130,30 @@ function addRipple(e: React.MouseEvent<HTMLButtonElement>) {
   el.addEventListener('animationend', () => el.remove())
 }
 
+interface PaymentData {
+  preference_id: string
+  order_id:      string
+  order_number:  string
+  total:         number
+  public_key:    string
+}
+
 export default function DSDRestaurantePage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [cart,      setCart]      = useState<CartItem[]>([])
-  const [drawer,    setDrawer]    = useState(false)
-  const [name,      setName]      = useState('')
-  const [notes,     setNotes]     = useState('')
-  const [tableId,   setTableId]   = useState<string>('')
-  const [mpError, setMpError] = useState<string | null>(null)
-  const [countKey, setCountKey] = useState(0)
-  const [filterAnim, setFilterAnim] = useState(false)
-  const heroRef  = useRef<HTMLDivElement>(null)
-  const gridRef  = useRef<HTMLDivElement>(null)
+  const [cart,        setCart]        = useState<CartItem[]>([])
+  const [drawer,      setDrawer]      = useState(false)
+  const [name,        setName]        = useState('')
+  const [notes,       setNotes]       = useState('')
+  const [tableId,     setTableId]     = useState<string>('')
+  const [mpError,     setMpError]     = useState<string | null>(null)
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
+  const [paySuccess,  setPaySuccess]  = useState<string | null>(null)
+  const [mpSdkReady,  setMpSdkReady]  = useState(false)
+  const [countKey,    setCountKey]    = useState(0)
+  const [filterAnim,  setFilterAnim]  = useState(false)
+  const heroRef    = useRef<HTMLDivElement>(null)
+  const gridRef    = useRef<HTMLDivElement>(null)
+  const brickRef   = useRef<any>(null)
 
   // Inject global styles once
   useEffect(() => {
@@ -149,6 +161,15 @@ export default function DSDRestaurantePage() {
     const s = document.createElement('style')
     s.id = 'dsd-gs'; s.textContent = GLOBAL_STYLES
     document.head.appendChild(s)
+  }, [])
+
+  // Load Mercado Pago SDK once
+  useEffect(() => {
+    if ((window as any).MercadoPago) { setMpSdkReady(true); return }
+    const script = document.createElement('script')
+    script.src = 'https://sdk.mercadopago.com/js/v2'
+    script.onload = () => setMpSdkReady(true)
+    document.head.appendChild(script)
   }, [])
 
   // Hero parallax
@@ -211,7 +232,6 @@ export default function DSDRestaurantePage() {
 
   const placeOrder = useMutation({
     mutationFn: async () => {
-      // Step 1: create order with pending_payment status
       const { data: orderRes } = await pub.post(`/public/online-order/${TENANT_SLUG}`, {
         customer_name:   name || 'Cliente',
         notes:           notes || undefined,
@@ -220,23 +240,101 @@ export default function DSDRestaurantePage() {
         require_payment: true,
         items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
       })
-      const { order_id } = orderRes.data as { order_id: string; order_number: string; total: number }
+      const orderData = orderRes.data as { order_id: string; order_number: string; total: number }
 
-      // Step 2: create MP preference
       const { data: mpRes } = await pub.post('/mp/preference', {
-        order_id,
+        order_id:    orderData.order_id,
         tip_percent: 0,
       })
-      return mpRes.data as { init_point: string }
+      const mpData = mpRes.data as { preference_id: string; init_point: string; public_key: string }
+
+      return {
+        preference_id: mpData.preference_id,
+        order_id:      orderData.order_id,
+        order_number:  orderData.order_number,
+        total:         orderData.total,
+        public_key:    mpData.public_key,
+        init_point:    mpData.init_point,
+      }
     },
     onSuccess: (d) => {
-      window.location.href = d.init_point
+      setCart([]); setDrawer(false); setName(''); setNotes(''); setTableId('')
+      if (mpSdkReady) {
+        setPaymentData({
+          preference_id: d.preference_id,
+          order_id:      d.order_id,
+          order_number:  d.order_number,
+          total:         d.total,
+          public_key:    d.public_key,
+        })
+      } else {
+        // SDK not loaded yet — fall back to redirect
+        window.location.href = d.init_point
+      }
     },
     onError: (e: any) => {
       setMpError(e?.response?.data?.error ?? 'No se pudo conectar con Mercado Pago. Intenta de nuevo.')
       setDrawer(false)
     },
   })
+
+  // Initialize Payment Brick once we have paymentData and the SDK is ready
+  useEffect(() => {
+    if (!paymentData || !mpSdkReady) return
+    const container = document.getElementById('dsd-payment-brick')
+    if (!container) return
+
+    // Destroy previous brick instance if exists
+    if (brickRef.current) {
+      brickRef.current.unmount?.()
+      brickRef.current = null
+    }
+
+    const mp = new (window as any).MercadoPago(paymentData.public_key, { locale: 'es-MX' })
+
+    mp.bricks().create('payment', 'dsd-payment-brick', {
+      initialization: {
+        amount:       paymentData.total,
+        preferenceId: paymentData.preference_id,
+      },
+      customization: {
+        paymentMethods: {
+          wallet_purchase: 'all',  // Apple Pay / Google Pay / MP Wallet
+          creditCard:      'all',
+          debitCard:       'all',
+        },
+        visual: {
+          hidePaymentButton:     false,
+          hideFormTitle:         false,
+          style: { theme: 'default' },
+        },
+      },
+      callbacks: {
+        onReady: () => {},
+        onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
+          if (selectedPaymentMethod === 'wallet_purchase') return  // MP handles redirect
+          try {
+            await pub.post('/mp/process-card', {
+              order_id: paymentData.order_id,
+              ...formData,
+            })
+            setPaySuccess(paymentData.order_number)
+            setPaymentData(null)
+          } catch (e: any) {
+            throw new Error(e?.response?.data?.error ?? 'Error al procesar el pago')
+          }
+        },
+        onError: (err: any) => {
+          console.error('[MP Brick]', err)
+        },
+      },
+    }).then((brick: any) => { brickRef.current = brick })
+
+    return () => {
+      brickRef.current?.unmount?.()
+      brickRef.current = null
+    }
+  }, [paymentData, mpSdkReady])
 
   // Smooth category switch
   function switchCategory(id: string | null) {
@@ -276,6 +374,70 @@ export default function DSDRestaurantePage() {
     document.body.style.overflow = drawer ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [drawer])
+
+  // ── Payment Brick screen ────────────────────────────────────────────────────
+  if (paymentData) return (
+    <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+      {/* Header */}
+      <div style={{ background: DARK, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button
+          onClick={() => setPaymentData(null)}
+          style={{ background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', flexShrink: 0 }}
+        >
+          <X size={18} />
+        </button>
+        <div>
+          <p style={{ color: '#fff', fontWeight: 800, fontSize: 15, lineHeight: 1 }}>Completa tu pago</p>
+          <p style={{ color: '#6b7280', fontSize: 11, marginTop: 2 }}>Orden {paymentData.order_number} · ${paymentData.total.toFixed(2)} MXN</p>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Apple Pay icon */}
+          <svg width="36" height="22" viewBox="0 0 36 22" fill="none"><rect width="36" height="22" rx="4" fill="#fff"/><text x="5" y="15" fontSize="9" fontWeight="700" fill="#000" fontFamily="system-ui"></text><text x="4" y="15" fontSize="8" fill="#000" fontFamily="-apple-system,sans-serif" fontWeight="600"> Pay</text></svg>
+          {/* Google Pay icon */}
+          <svg width="44" height="22" viewBox="0 0 44 22" fill="none"><rect width="44" height="22" rx="4" fill="#fff"/><text x="4" y="15" fontSize="8" fill="#4285F4" fontFamily="sans-serif" fontWeight="700">G</text><text x="12" y="15" fontSize="8" fill="#555" fontFamily="sans-serif">Pay</text></svg>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 100px' }}>
+        <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', marginBottom: 20 }}>
+          Elige tu metodo de pago preferido
+        </p>
+        {/* MP Payment Brick renders here */}
+        <div id="dsd-payment-brick" />
+      </div>
+
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#f5f6fa', borderTop: '1px solid #e5e7eb', padding: '12px 20px', textAlign: 'center' }}>
+        <p style={{ fontSize: 11, color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#009ee3"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+          Pago seguro con Mercado Pago · SSL cifrado
+        </p>
+      </div>
+    </div>
+  )
+
+  // ── Pay success screen ───────────────────────────────────────────────────────
+  if (paySuccess) return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+      <div style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
+        <div style={{ width: 100, height: 100, borderRadius: '50%', background: '#fff', border: '3px solid #16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: '0 8px 32px rgba(22,163,74,.2)' }}>
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: DARK, letterSpacing: '-0.03em', marginBottom: 10 }}>Pago exitoso</h1>
+        <p style={{ fontSize: 16, color: '#374151', lineHeight: 1.6, marginBottom: 28 }}>Tu pedido ya esta en camino a la cocina.</p>
+        <div style={{ background: '#fff', border: '1px solid #bbf7d0', borderRadius: 20, padding: '24px 28px', marginBottom: 28, boxShadow: '0 4px 20px rgba(0,166,80,.08)' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 }}>Orden</p>
+          <p style={{ fontSize: 36, fontWeight: 900, color: DARK, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{paySuccess}</p>
+          <p style={{ marginTop: 12, fontSize: 13, color: '#6b7280' }}>Tiempo estimado: 15-20 min</p>
+        </div>
+        <button
+          onClick={() => setPaySuccess(null)}
+          style={{ width: '100%', background: DARK, color: '#fff', fontWeight: 700, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer' }}
+        >
+          Hacer otro pedido
+        </button>
+      </div>
+    </div>
+  )
 
   // ── MP error screen ──────────────────────────────────────────────────────────
   if (mpError) return (

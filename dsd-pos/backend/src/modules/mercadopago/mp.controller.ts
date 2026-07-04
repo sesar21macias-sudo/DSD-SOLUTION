@@ -4,6 +4,20 @@ import MercadoPagoConfig, { Preference, Payment } from 'mercadopago'
 import { supabase } from '../../config/supabase'
 import { io } from '../../server'
 
+declare module 'mercadopago' {
+  interface PaymentCreateData {
+    transaction_amount: number
+    token?: string
+    description?: string
+    installments?: number
+    payment_method_id?: string
+    issuer_id?: number
+    payer?: { email?: string; identification?: { type?: string; number?: string } }
+    external_reference?: string
+    notification_url?: string
+  }
+}
+
 // ── Cliente MP por access token ──────────────────────────────────────────────
 function mpClient(accessToken: string) {
   return new MercadoPagoConfig({ accessToken, options: { timeout: 8000 } })
@@ -72,7 +86,7 @@ export async function createPreference(req: Request, res: Response): Promise<voi
     .select(`
       id, order_number, subtotal, tax, total, status, currency, customer_name, tenant_id, table_id,
       order_items ( id, quantity, unit_price, menu_products ( name ) ),
-      tenants ( name, slug, mp_access_token )
+      tenants ( name, slug, mp_access_token, mp_public_key )
     `)
     .eq('id', order_id)
     .single()
@@ -80,7 +94,7 @@ export async function createPreference(req: Request, res: Response): Promise<voi
   if (!order) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }
   if (order.status === 'paid') { res.status(400).json({ success: false, error: 'Esta orden ya fue pagada' }); return }
 
-  const tenant      = (order as any).tenants as { name: string; slug: string; mp_access_token?: string }
+  const tenant      = (order as any).tenants as { name: string; slug: string; mp_access_token?: string; mp_public_key?: string }
   const accessToken = tenant?.mp_access_token ?? process.env['MP_ACCESS_TOKEN']
 
   if (!accessToken || accessToken.startsWith('TEST-000')) {
@@ -150,7 +164,9 @@ export async function createPreference(req: Request, res: Response): Promise<voi
     ? prefResponse.init_point
     : prefResponse.sandbox_init_point
 
-  res.json({ success: true, data: { preference_id: prefResponse.id, init_point: initPoint } })
+  const publicKey = tenant?.mp_public_key ?? process.env['MP_PUBLIC_KEY'] ?? ''
+
+  res.json({ success: true, data: { preference_id: prefResponse.id, init_point: initPoint, public_key: publicKey } })
 }
 
 // ── POST /api/mp/webhook ──────────────────────────────────────────────────────
@@ -242,4 +258,66 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
   } catch (err) {
     console.error('[MP Webhook] Error procesando notificación:', err)
   }
+}
+
+// ── POST /api/mp/process-card ─────────────────────────────────────────────────
+// Procesa pago con tarjeta tokenizada desde el Payment Brick (sin redirigir)
+export async function processCardPayment(req: Request, res: Response): Promise<void> {
+  const schema = z.object({
+    order_id:          z.string().uuid(),
+    token:             z.string(),
+    payment_method_id: z.string(),
+    issuer_id:         z.union([z.string(), z.number()]).optional(),
+    installments:      z.number().int().min(1).default(1),
+    payer: z.object({
+      email:          z.string().email().optional(),
+      identification: z.object({ type: z.string(), number: z.string() }).optional(),
+    }).optional(),
+  })
+
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
+  const { order_id, token, payment_method_id, issuer_id, installments, payer } = parsed.data
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, order_number, total, tenant_id, table_id, status, tenants(mp_access_token, name)')
+    .eq('id', order_id)
+    .single()
+
+  if (!order) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }
+  if (order.status === 'paid') { res.status(400).json({ success: false, error: 'Esta orden ya fue pagada' }); return }
+
+  const tenant      = (order as any).tenants as { name: string; mp_access_token?: string }
+  const accessToken = tenant?.mp_access_token ?? process.env['MP_ACCESS_TOKEN']
+
+  if (!accessToken) { res.status(400).json({ success: false, error: 'Credenciales de Mercado Pago no configuradas' }); return }
+
+  const BACKEND = process.env['BACKEND_URL'] ?? 'http://localhost:4000'
+
+  const payClient = new Payment(mpClient(accessToken))
+  const payment = await payClient.create({
+    body: {
+      transaction_amount: Number(order.total),
+      token,
+      description:        `Orden ${order.order_number} - ${tenant.name ?? 'DSD Restaurante'}`,
+      installments:       Number(installments),
+      payment_method_id,
+      issuer_id:          issuer_id ? Number(issuer_id) : undefined,
+      payer:              payer ?? {},
+      external_reference: order_id,
+      notification_url:   `${BACKEND}/api/mp/webhook`,
+    } as any,
+  })
+
+  res.json({
+    success: true,
+    data: {
+      status:        payment.status,
+      status_detail: payment.status_detail,
+      payment_id:    payment.id,
+    },
+  })
+  // El webhook maneja el resto (marcar como pagada, notificar cocina)
 }
