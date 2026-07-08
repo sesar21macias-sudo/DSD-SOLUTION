@@ -6,6 +6,8 @@ import { AuthRequest } from '../../middleware/auth'
 import { OrderStatus, OrderType } from '../../types'
 import { io } from '../../server'
 import { deductInventoryForOrder } from '../inventory/inventory.controller'
+import { logAudit } from '../../utils/auditLog'
+import { sendError } from '../../utils/sendError'
 
 const createOrderSchema = z.object({
   type: z.enum(['dine_in', 'takeout', 'delivery', 'online']),
@@ -56,7 +58,7 @@ export async function getOrders(req: AuthRequest, res: Response): Promise<void> 
   }
 
   const { data, error } = await query
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -66,7 +68,8 @@ export async function getOrder(req: AuthRequest, res: Response): Promise<void> {
     .select(`
       *,
       order_items(*, menu_products(name, description, image_url)),
-      tables(number, name)
+      tables(number, name),
+      tenants(name, address, phone)
     `)
     .eq('id', req.params['id'])
     .eq('tenant_id', req.user!.tenantId)
@@ -133,13 +136,13 @@ export async function createOrder(req: AuthRequest, res: Response): Promise<void
     .select()
     .single()
 
-  if (orderError || !order) { res.status(500).json({ success: false, error: orderError?.message }); return }
+  if (orderError || !order) { sendError(res, 500, orderError, 'No se pudo crear la orden'); return }
 
   const { error: itemsError } = await supabase
     .from('order_items')
     .insert(orderItems.map(i => ({ ...i, order_id: order.id, tenant_id: req.user!.tenantId })))
 
-  if (itemsError) { res.status(500).json({ success: false, error: itemsError.message }); return }
+  if (itemsError) { sendError(res, 500, itemsError, 'No se pudo crear la orden'); return }
 
   io.to(`tenant:${req.user!.tenantId}`).emit('order:new', { ...order, order_items: orderItems })
 
@@ -217,7 +220,7 @@ export async function addOrderItem(req: AuthRequest, res: Response): Promise<voi
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
 
   // Recalculate order total
   const { data: allItems } = await supabase
@@ -236,14 +239,168 @@ export async function addOrderItem(req: AuthRequest, res: Response): Promise<voi
 }
 
 export async function removeOrderItem(req: AuthRequest, res: Response): Promise<void> {
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from('order_items')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('id', req.params['itemId'])
     .eq('order_id', req.params['id'])
+    .eq('tenant_id', req.user!.tenantId)
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
+  if (!count) { res.status(404).json({ success: false, error: 'Item no encontrado' }); return }
+
+  await logAudit({
+    tenantId: req.user!.tenantId,
+    userId: req.user!.userId,
+    action: 'order.item_remove',
+    entityType: 'order_item',
+    entityId: req.params['itemId'] as string,
+    metadata: { orderId: req.params['id'] },
+  })
+
   res.json({ success: true, message: 'Item eliminado' })
+}
+
+const discountSchema = z.object({
+  type: z.enum(['amount', 'percentage']),
+  value: z.number().min(0),
+  reason: z.string().optional(),
+})
+
+// Aplica (o quita, con value: 0) un descuento manual a una orden antes de cobrarla.
+// El descuento se calcula sobre el subtotal (antes de IVA) y nunca puede dejar el
+// total en negativo.
+export async function applyDiscount(req: AuthRequest, res: Response): Promise<void> {
+  const parsed = discountSchema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
+  const { type, value, reason } = parsed.data
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, subtotal, status')
+    .eq('id', req.params['id'])
+    .eq('tenant_id', req.user!.tenantId)
+    .single()
+
+  if (!order) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }
+  if (['paid', 'cancelled'].includes(order.status)) {
+    res.status(400).json({ success: false, error: 'No se puede aplicar descuento a una orden pagada o cancelada' }); return
+  }
+
+  const subtotal = Number(order.subtotal)
+  const rawDiscount = type === 'percentage' ? subtotal * (Math.min(value, 100) / 100) : value
+  const discount = Math.round(Math.min(rawDiscount, subtotal) * 100) / 100
+
+  const taxableAmount = subtotal - discount
+  const tax = Math.round(taxableAmount * 0.16 * 100) / 100
+  const total = Math.round((taxableAmount + tax) * 100) / 100
+
+  const { data: updated, error } = await supabase
+    .from('orders')
+    .update({ discount, tax, total, updated_at: new Date().toISOString() })
+    .eq('id', req.params['id'])
+    .select()
+    .single()
+
+  if (error || !updated) { sendError(res, 500, error, 'No se pudo aplicar el descuento'); return }
+
+  await logAudit({
+    tenantId: req.user!.tenantId,
+    userId: req.user!.userId,
+    action: 'order.discount',
+    entityType: 'order',
+    entityId: req.params['id'] as string,
+    metadata: { type, value, discount, reason },
+  })
+
+  io.to(`tenant:${req.user!.tenantId}`).emit('order:updated', updated)
+
+  res.json({ success: true, data: updated })
+}
+
+const mergeSchema = z.object({
+  source_order_id: z.string().uuid(),
+})
+
+// Fusiona dos cuentas activas en una sola (ej. dos órdenes distintas en la misma
+// mesa, o de dos mesas que se van a pagar juntas). Mueve los items de la orden
+// origen a la destino, recalcula totales, y cancela la orden origen.
+export async function mergeOrders(req: AuthRequest, res: Response): Promise<void> {
+  const parsed = mergeSchema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
+  const targetId = req.params['id'] as string
+  const { source_order_id } = parsed.data
+
+  if (source_order_id === targetId) {
+    res.status(400).json({ success: false, error: 'No puedes fusionar una orden consigo misma' }); return
+  }
+
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('id, status, currency, table_id')
+    .in('id', [targetId, source_order_id])
+    .eq('tenant_id', req.user!.tenantId)
+
+  const target = orders?.find(o => o.id === targetId)
+  const source = orders?.find(o => o.id === source_order_id)
+
+  if (!target || !source) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }
+  if (['paid', 'cancelled'].includes(target.status) || ['paid', 'cancelled'].includes(source.status)) {
+    res.status(400).json({ success: false, error: 'No se pueden fusionar órdenes pagadas o canceladas' }); return
+  }
+  if (target.currency !== source.currency) {
+    res.status(400).json({ success: false, error: 'No se pueden fusionar órdenes en distinta moneda' }); return
+  }
+
+  const { error: moveError } = await supabase
+    .from('order_items')
+    .update({ order_id: targetId })
+    .eq('order_id', source_order_id)
+    .eq('tenant_id', req.user!.tenantId)
+
+  if (moveError) { sendError(res, 500, moveError, 'No se pudo fusionar la cuenta'); return }
+
+  const { data: allItems } = await supabase.from('order_items').select('subtotal').eq('order_id', targetId)
+  const newSubtotal = (allItems ?? []).reduce((sum, i) => sum + Number(i.subtotal), 0)
+
+  const { data: updatedTarget, error: updateError } = await supabase
+    .from('orders')
+    .update({
+      subtotal: newSubtotal,
+      tax: newSubtotal * 0.16,
+      total: newSubtotal * 1.16,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', targetId)
+    .select('*, order_items(*, menu_products(name, image_url)), tables(number, name)')
+    .single()
+
+  if (updateError || !updatedTarget) { sendError(res, 500, updateError, 'No se pudo fusionar la cuenta'); return }
+
+  await supabase.from('orders').update({
+    status: 'cancelled',
+    cancellation_reason: `Fusionada con orden ${targetId}`,
+    updated_at: new Date().toISOString(),
+  }).eq('id', source_order_id)
+
+  if (source.table_id && source.table_id !== target.table_id) {
+    await supabase.from('tables').update({ status: 'available', updated_at: new Date().toISOString() }).eq('id', source.table_id)
+  }
+
+  await logAudit({
+    tenantId: req.user!.tenantId,
+    userId: req.user!.userId,
+    action: 'order.merge',
+    entityType: 'order',
+    entityId: targetId,
+    metadata: { sourceOrderId: source_order_id },
+  })
+
+  io.to(`tenant:${req.user!.tenantId}`).emit('order:updated', updatedTarget)
+
+  res.json({ success: true, data: updatedTarget })
 }
 
 export async function cancelOrder(req: AuthRequest, res: Response): Promise<void> {
@@ -259,6 +416,16 @@ export async function cancelOrder(req: AuthRequest, res: Response): Promise<void
     .single()
 
   if (error || !data) { res.status(400).json({ success: false, error: 'No se puede cancelar esta orden' }); return }
+
+  await logAudit({
+    tenantId: req.user!.tenantId,
+    userId: req.user!.userId,
+    action: 'order.cancel',
+    entityType: 'order',
+    entityId: data.id,
+    metadata: { reason },
+  })
+
   res.json({ success: true, data })
 }
 

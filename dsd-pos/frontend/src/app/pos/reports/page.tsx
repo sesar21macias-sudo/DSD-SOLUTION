@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { BarChart2, TrendingUp, ShoppingBag, CreditCard, Banknote, Smartphone, UtensilsCrossed, Bike, PackageOpen, Globe } from 'lucide-react'
+import { BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard, Banknote, Smartphone, UtensilsCrossed, Bike, PackageOpen, Globe, PieChart, AlertTriangle } from 'lucide-react'
 
 interface DailySummary {
   total_orders: number; paid_orders: number; cancelled_orders: number
@@ -12,6 +13,29 @@ interface DailySummary {
   date: string
 }
 interface TopProduct { name: string; qty: number; revenue: number }
+interface Trends {
+  period: 'week' | 'month'
+  current: { orders: number; revenue: number }
+  previous: { orders: number; revenue: number }
+  revenue_change_pct: number | null
+  orders_change_pct: number | null
+  avg_ticket_current: number
+  avg_ticket_previous: number
+}
+interface ProductMix { category: string; revenue: number; pct: number }
+interface Margin { product_id: string; name: string; qty: number; revenue: number; cost: number | null; margin_pct: number | null; has_cost_data: boolean }
+
+function ChangeBadge({ pct }: { pct: number | null }) {
+  if (pct === null) return null
+  const positive = pct >= 0
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+      style={{ background: positive ? '#f0fdf4' : '#fef2f2', color: positive ? '#15803d' : '#dc2626' }}>
+      {positive ? <TrendingUp size={11}/> : <TrendingDown size={11}/>}
+      {positive ? '+' : ''}{pct}%
+    </span>
+  )
+}
 
 function StatCard({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: React.ReactNode }) {
   return (
@@ -29,6 +53,8 @@ function StatCard({ label, value, sub, icon }: { label: string; value: string; s
 }
 
 export default function ReportsPage() {
+  const [trendPeriod, setTrendPeriod] = useState<'week' | 'month'>('week')
+
   const { data: summary } = useQuery<DailySummary>({
     queryKey: ['daily-summary'],
     queryFn: async () => { const { data } = await api.get('/reports/daily'); return data.data },
@@ -42,6 +68,22 @@ export default function ReportsPage() {
     queryKey: ['sales-by-hour'],
     queryFn: async () => { const { data } = await api.get('/reports/by-hour'); return data.data },
   })
+  const { data: trends } = useQuery<Trends>({
+    queryKey: ['trends', trendPeriod],
+    queryFn: async () => { const { data } = await api.get('/reports/trends', { params: { period: trendPeriod } }); return data.data },
+  })
+  const { data: productMix } = useQuery<ProductMix[]>({
+    queryKey: ['product-mix'],
+    queryFn: async () => { const { data } = await api.get('/reports/product-mix'); return data.data },
+  })
+  const { data: margins } = useQuery<Margin[]>({
+    queryKey: ['margins'],
+    queryFn: async () => { const { data } = await api.get('/reports/margins'); return data.data },
+  })
+
+  const worstMargins = margins?.filter(m => m.has_cost_data).slice(0, 5) ?? []
+  const bestMargins   = margins?.filter(m => m.has_cost_data).slice(-5).reverse() ?? []
+  const mixColors = ['#111827', '#374151', '#6b7280', '#9ca3af', '#d1d5db', '#f97316', '#0ea5e9']
 
   const maxRevenue   = Math.max(...(byHour?.map(h => h.revenue) ?? [1]), 1)
   const totalPayment = (summary?.total_mxn ?? 0) + (summary?.total_usd ?? 0)
@@ -76,6 +118,41 @@ export default function ReportsPage() {
           <StatCard label="Ventas USD"       value={`$${(summary?.total_usd ?? 0).toFixed(2)}`}  icon={<TrendingUp size={15}/>} />
           <StatCard label="Órdenes totales"  value={String(summary?.total_orders ?? 0)}            icon={<ShoppingBag size={15}/>} sub={`${summary?.cancelled_orders ?? 0} canceladas`} />
           <StatCard label="Órdenes cobradas" value={String(summary?.paid_orders ?? 0)}             icon={<CreditCard size={15}/>} />
+        </div>
+
+        {/* Tendencias: período actual vs anterior */}
+        <div className="rounded-2xl p-4" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold" style={{ color: '#111827' }}>Tendencia</h3>
+            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#f0f2f5' }}>
+              {(['week', 'month'] as const).map(p => (
+                <button key={p} onClick={() => setTrendPeriod(p)}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold transition"
+                  style={trendPeriod === p ? { background: '#111827', color: '#ffffff' } : { color: '#6b7280' }}>
+                  {p === 'week' ? 'Últimos 7 días' : 'Últimos 30 días'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {trends && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl p-3" style={{ background: '#f9fafb', border: '1px solid #f0f2f5' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Ingresos</p>
+                <p className="text-xl font-black" style={{ color: '#111827' }}>${trends.current.revenue.toFixed(2)}</p>
+                <div className="mt-1.5"><ChangeBadge pct={trends.revenue_change_pct} /></div>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: '#f9fafb', border: '1px solid #f0f2f5' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Órdenes</p>
+                <p className="text-xl font-black" style={{ color: '#111827' }}>{trends.current.orders}</p>
+                <div className="mt-1.5"><ChangeBadge pct={trends.orders_change_pct} /></div>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: '#f9fafb', border: '1px solid #f0f2f5' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#9ca3af' }}>Ticket promedio</p>
+                <p className="text-xl font-black" style={{ color: '#111827' }}>${trends.avg_ticket_current.toFixed(2)}</p>
+                <p className="text-[10px] mt-1.5" style={{ color: '#9ca3af' }}>antes: ${trends.avg_ticket_previous.toFixed(2)}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -160,6 +237,73 @@ export default function ReportsPage() {
             ))}
             {(!topProducts || topProducts.length === 0) && (
               <p className="text-sm text-center py-6" style={{ color: '#d1d5db' }}>Sin ventas registradas hoy</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Mezcla de productos */}
+          <div className="rounded-2xl p-4" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
+            <h3 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#111827' }}>
+              <PieChart size={14} style={{ color: '#6b7280' }}/> Mezcla de productos
+            </h3>
+            <p className="text-xs mb-4" style={{ color: '#9ca3af' }}>% de ingresos por categoría, últimos 30 días</p>
+            <div className="space-y-2.5">
+              {productMix?.map((m, i) => (
+                <div key={m.category}>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span style={{ color: '#4b5563' }}>{m.category}</span>
+                    <span className="font-semibold" style={{ color: '#111827' }}>{m.pct}% · ${m.revenue.toFixed(2)}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ background: '#f0f2f5' }}>
+                    <div className="h-1.5 rounded-full transition-all duration-700"
+                      style={{ width: `${m.pct}%`, background: mixColors[i % mixColors.length] }} />
+                  </div>
+                </div>
+              ))}
+              {(!productMix || productMix.length === 0) && (
+                <p className="text-sm text-center py-6" style={{ color: '#d1d5db' }}>Sin ventas en los últimos 30 días</p>
+              )}
+            </div>
+          </div>
+
+          {/* Márgenes */}
+          <div className="rounded-2xl p-4" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
+            <h3 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#111827' }}>
+              <AlertTriangle size={14} style={{ color: '#6b7280' }}/> Márgenes de ganancia
+            </h3>
+            <p className="text-xs mb-4" style={{ color: '#9ca3af' }}>Últimos 30 días, requiere costo cargado en el producto</p>
+            {worstMargins.length === 0 && bestMargins.length === 0 ? (
+              <p className="text-sm text-center py-6" style={{ color: '#d1d5db' }}>
+                Ningún producto tiene costo cargado todavía — agrégalo en Menú para ver márgenes
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#dc2626' }}>Menor margen</p>
+                  <div className="space-y-1">
+                    {worstMargins.map(m => (
+                      <div key={m.product_id} className="flex items-center justify-between text-sm py-1">
+                        <span style={{ color: '#4b5563' }}>{m.name}</span>
+                        <span className="font-bold" style={{ color: (m.margin_pct ?? 0) < 20 ? '#dc2626' : '#111827' }}>
+                          {m.margin_pct}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#15803d' }}>Mayor margen</p>
+                  <div className="space-y-1">
+                    {bestMargins.map(m => (
+                      <div key={m.product_id} className="flex items-center justify-between text-sm py-1">
+                        <span style={{ color: '#4b5563' }}>{m.name}</span>
+                        <span className="font-bold" style={{ color: '#15803d' }}>{m.margin_pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

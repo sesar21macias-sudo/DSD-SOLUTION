@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { supabase } from '../../config/supabase'
 import { AuthRequest } from '../../middleware/auth'
 import { ApiResponse } from '../../types'
+import { sendError } from '../../utils/sendError'
 
 const categorySchema = z.object({
   name: z.string().min(1),
@@ -34,7 +35,7 @@ export async function getCategories(req: AuthRequest, res: Response): Promise<vo
     .eq('is_active', true)
     .order('sort_order')
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -48,7 +49,7 @@ export async function createCategory(req: AuthRequest, res: Response): Promise<v
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.status(201).json({ success: true, data })
 }
 
@@ -64,7 +65,7 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -75,7 +76,7 @@ export async function deleteCategory(req: AuthRequest, res: Response): Promise<v
     .eq('id', req.params['id'])
     .eq('tenant_id', req.user!.tenantId)
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, message: 'CategorÃ­a eliminada' })
 }
 
@@ -92,7 +93,7 @@ export async function getProducts(req: AuthRequest, res: Response): Promise<void
   if (category_id) query = query.eq('category_id', category_id as string)
 
   const { data, error } = await query.order('name')
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -108,9 +109,23 @@ export async function getProduct(req: AuthRequest, res: Response): Promise<void>
   res.json({ success: true, data })
 }
 
+async function categoryBelongsToTenant(categoryId: string, tenantId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('menu_categories')
+    .select('id')
+    .eq('id', categoryId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  return !!data
+}
+
 export async function createProduct(req: AuthRequest, res: Response): Promise<void> {
   const parsed = productSchema.safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
+  if (!(await categoryBelongsToTenant(parsed.data.category_id, req.user!.tenantId))) {
+    res.status(400).json({ success: false, error: 'Categoría inválida' }); return
+  }
 
   const { data, error } = await supabase
     .from('menu_products')
@@ -118,13 +133,17 @@ export async function createProduct(req: AuthRequest, res: Response): Promise<vo
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.status(201).json({ success: true, data })
 }
 
 export async function updateProduct(req: AuthRequest, res: Response): Promise<void> {
   const parsed = productSchema.partial().safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
+  if (parsed.data.category_id && !(await categoryBelongsToTenant(parsed.data.category_id, req.user!.tenantId))) {
+    res.status(400).json({ success: false, error: 'Categoría inválida' }); return
+  }
 
   const { data, error } = await supabase
     .from('menu_products')
@@ -134,7 +153,7 @@ export async function updateProduct(req: AuthRequest, res: Response): Promise<vo
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -145,7 +164,7 @@ export async function getTables(req: AuthRequest, res: Response): Promise<void> 
     .eq('tenant_id', req.user!.tenantId)
     .eq('is_active', true)
     .order('number')
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -156,7 +175,7 @@ export async function deleteProduct(req: AuthRequest, res: Response): Promise<vo
     .eq('id', req.params['id'])
     .eq('tenant_id', req.user!.tenantId)
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, message: 'Producto eliminado' })
 }
 

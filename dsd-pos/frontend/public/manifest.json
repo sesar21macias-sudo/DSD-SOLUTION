@@ -1,0 +1,12 @@
+{
+  "name": "DSD POS — Point of Sale",
+  "short_name": "DSD POS",
+  "description": "Sistema de Punto de Venta — DSD AI Solutions",
+  "start_url": "/pos",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#111827",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

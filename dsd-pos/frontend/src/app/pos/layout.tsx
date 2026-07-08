@@ -1,37 +1,55 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/store/auth'
 import { DSDLogo } from '@/components/DSDLogo'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { useT } from '@/lib/i18n/useT'
 import {
   ShoppingCart, UtensilsCrossed, ClipboardList,
-  LogOut, ChefHat, LayoutGrid, BarChart2, Users, Timer, Package
+  LogOut, ChefHat, LayoutGrid, BarChart2, Users, Timer, Package, Star, Truck, CalendarClock
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/pos',           label: 'POS / Caja',   icon: ShoppingCart },
-  { href: '/pos/tables',    label: 'Mesas',         icon: LayoutGrid },
-  { href: '/pos/orders',    label: 'Órdenes',       icon: ClipboardList },
-  { href: '/pos/kitchen',   label: 'Cocina',        icon: ChefHat },
-  { href: '/pos/menu',      label: 'Menú',          icon: UtensilsCrossed },
-  { href: '/pos/inventory', label: 'Inventario',    icon: Package },
-  { href: '/pos/reports',   label: 'Reportes',      icon: BarChart2 },
-  { href: '/pos/users',     label: 'Usuarios',      icon: Users },
-  { href: '/pos/shift',     label: 'Turno / Caja',  icon: Timer },
+  { href: '/pos',             labelKey: 'nav.pos'          as const, icon: ShoppingCart },
+  { href: '/pos/tables',      labelKey: 'nav.tables'       as const, icon: LayoutGrid },
+  { href: '/pos/reservations',labelKey: 'nav.reservations' as const, icon: CalendarClock },
+  { href: '/pos/orders',      labelKey: 'nav.orders'       as const, icon: ClipboardList },
+  { href: '/pos/kitchen',     labelKey: 'nav.kitchen'      as const, icon: ChefHat },
+  { href: '/pos/menu',        labelKey: 'nav.menu'         as const, icon: UtensilsCrossed },
+  { href: '/pos/inventory',   labelKey: 'nav.inventory'    as const, icon: Package },
+  { href: '/pos/loyalty',     labelKey: 'nav.loyalty'      as const, icon: Star },
+  { href: '/pos/integrations',labelKey: 'nav.integrations' as const, icon: Truck },
+  { href: '/pos/reports',     labelKey: 'nav.reports'      as const, icon: BarChart2 },
+  { href: '/pos/users',       labelKey: 'nav.users'        as const, icon: Users },
+  { href: '/pos/shift',       labelKey: 'nav.shift'        as const, icon: Timer },
 ]
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
+  const { t }    = useT()
   const { user, logout } = useAuthStore()
+  // Al entrar por una recarga completa (F5, link directo, pestaña nueva) el store
+  // arranca en frío: hay que esperar a que zustand termine de leer localStorage
+  // antes de decidir si redirigir a /login, o se dispara un falso redirect.
+  // Ojo: `useAuthStore.persist` no existe durante el renderizado en el servidor
+  // (no hay localStorage ahí) — hay que arrancar en `false` y solo tocarlo
+  // dentro de useEffect, que nunca corre en el servidor.
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    if (!user) router.replace('/login')
-  }, [user, router])
+    if (useAuthStore.persist.hasHydrated()) { setHydrated(true); return }
+    return useAuthStore.persist.onFinishHydration(() => setHydrated(true))
+  }, [])
 
-  if (!user) return null
+  useEffect(() => {
+    if (hydrated && !user) router.replace('/login')
+  }, [hydrated, user, router])
+
+  if (!hydrated || !user) return null
 
   function handleLogout() {
     logout()
@@ -54,7 +72,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav links */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href
             return (
               <Link
@@ -83,7 +101,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
                   className="hidden md:block text-sm font-medium"
                   style={{ color: active ? '#ffffff' : '#6b7280' }}
                 >
-                  {label}
+                  {t(labelKey)}
                 </span>
               </Link>
             )
@@ -126,8 +144,11 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             }}
           >
             <LogOut size={17} className="flex-shrink-0" />
-            <span className="hidden md:block text-sm font-medium">Salir</span>
+            <span className="hidden md:block text-sm font-medium">{t('nav.logout')}</span>
           </button>
+          <div className="hidden md:flex justify-center pt-1">
+            <LanguageSwitcher variant="dark" />
+          </div>
         </div>
       </aside>
 

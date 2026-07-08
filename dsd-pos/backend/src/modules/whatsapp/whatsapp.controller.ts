@@ -4,6 +4,7 @@ import { supabase } from '../../config/supabase'
 import { processWhatsAppMessage } from './whatsapp.agent'
 import { AuthRequest } from '../../middleware/auth'
 import { io } from '../../server'
+import { sendError } from '../../utils/sendError'
 
 const twilioClient = twilio(
   process.env['TWILIO_ACCOUNT_SID'],
@@ -120,6 +121,6 @@ export async function getConversations(req: AuthRequest, res: Response): Promise
     .order('last_message_at', { ascending: false })
     .limit(50)
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }

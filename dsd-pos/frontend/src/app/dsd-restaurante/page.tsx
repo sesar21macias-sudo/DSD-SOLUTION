@@ -242,7 +242,7 @@ export default function DSDRestaurantePage() {
       })
       const orderData = orderRes.data as { order_id: string; order_number: string; total: number }
 
-      const { data: mpRes } = await pub.post('/mp/preference', {
+      const { data: mpRes } = await pub.post(`/mp/preference/${TENANT_SLUG}`, {
         order_id:    orderData.order_id,
         tip_percent: 0,
       })
@@ -314,7 +314,7 @@ export default function DSDRestaurantePage() {
         onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
           if (selectedPaymentMethod === 'wallet_purchase') return  // MP handles redirect
           try {
-            await pub.post('/mp/process-card', {
+            await pub.post(`/mp/process-card/${TENANT_SLUG}`, {
               order_id: paymentData.order_id,
               ...formData,
             })

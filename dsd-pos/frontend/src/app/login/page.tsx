@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { DSDLogo } from '@/components/DSDLogo'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { useT } from '@/lib/i18n/useT'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const router  = useRouter()
+  const { t }   = useT()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [email,    setEmail]   = useState('')
   const [password, setPassword] = useState('')
@@ -22,10 +26,10 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', { email, password })
       setAuth(data.data.user, data.data.token)
-      toast.success(`Bienvenido, ${data.data.user.fullName}`)
+      toast.success(t('login.welcome', { name: data.data.user.fullName }))
       router.push('/pos')
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Error al iniciar sesión'
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t('login.error')
       toast.error(msg)
     } finally {
       setLoading(false)
@@ -59,12 +63,15 @@ export default function LoginPage() {
       />
 
       <div className="w-full max-w-sm relative">
+        <div className="flex justify-center mb-4">
+          <LanguageSwitcher />
+        </div>
         {/* Logo + heading */}
         <div className="text-center mb-8 flex flex-col items-center gap-4">
           <DSDLogo size={52} variant="dark" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#111827' }}>DSD POS</h1>
-            <p className="text-sm mt-1" style={{ color: '#6b7280' }}>Sistema de Punto de Venta</p>
+            <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#111827' }}>{t('login.title')}</h1>
+            <p className="text-sm mt-1" style={{ color: '#6b7280' }}>{t('login.subtitle')}</p>
           </div>
         </div>
 
@@ -77,7 +84,7 @@ export default function LoginPage() {
           {/* Email */}
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>
-              Correo electrónico
+              {t('login.email')}
             </label>
             <input
               type="email"
@@ -94,7 +101,7 @@ export default function LoginPage() {
           {/* Password */}
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>
-              Contraseña
+              {t('login.password')}
             </label>
             <div className="relative">
               <input
@@ -130,18 +137,22 @@ export default function LoginPage() {
                 <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeDashoffset="12" />
                 </svg>
-                Entrando...
+                {t('login.submitting')}
               </>
             ) : (
               <>
                 <LogIn size={16} />
-                Iniciar sesión
+                {t('login.submit')}
               </>
             )}
           </button>
         </form>
 
-        <p className="text-center text-xs mt-6" style={{ color: '#d1d5db' }}>
+        <p className="text-center text-xs mt-6" style={{ color: '#9ca3af' }}>
+          ¿No tienes negocio registrado? <Link href="/signup" className="font-semibold" style={{ color: '#111827' }}>Crea uno gratis</Link>
+        </p>
+
+        <p className="text-center text-xs mt-3" style={{ color: '#d1d5db' }}>
           DSD AI Solutions © 2025
         </p>
       </div>

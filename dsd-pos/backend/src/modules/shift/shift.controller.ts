@@ -2,6 +2,7 @@ import { Response } from 'express'
 import { z } from 'zod'
 import { supabase } from '../../config/supabase'
 import { AuthRequest } from '../../middleware/auth'
+import { sendError } from '../../utils/sendError'
 
 export async function getCurrentShift(req: AuthRequest, res: Response): Promise<void> {
   const { data } = await supabase
@@ -39,7 +40,7 @@ export async function openShift(req: AuthRequest, res: Response): Promise<void> 
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.status(201).json({ success: true, data })
 }
 
@@ -86,6 +87,6 @@ export async function closeShift(req: AuthRequest, res: Response): Promise<void>
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data: { ...data, cash_sales: cashSales } })
 }

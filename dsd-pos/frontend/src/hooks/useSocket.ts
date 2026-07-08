@@ -13,7 +13,8 @@ export function useSocket(handlers: Record<string, (data: unknown) => void> = {}
     if (!user) return
 
     function joinAndListen() {
-      socket.emit('join:tenant', user!.tenantId)
+      // El backend ignora cualquier tenantId del cliente y usa el del JWT verificado
+      socket.emit('join:tenant')
       Object.entries(handlersRef.current).forEach(([event, handler]) => {
         socket.off(event)
         socket.on(event, handler)

@@ -14,7 +14,7 @@ interface OrderItem {
   quantity: number
   unit_price: number
   subtotal: number
-  menu_products: { id: string; name: string }
+  menu_products: { id: string; name: string } | null
 }
 
 interface Order {
@@ -77,7 +77,7 @@ export default function PagarPage() {
     setPaying(true)
     setPayError(null)
     try {
-      const { data: res } = await pub.post('/mp/preference', {
+      const { data: res } = await pub.post(`/mp/preference/${tenantSlug}`, {
         order_id:    data.order.id,
         tip_percent: effectiveTip,
       })
@@ -160,7 +160,7 @@ export default function PagarPage() {
                 <span style={{ background: DARK, color: '#fff', borderRadius: 6, width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                   {item.quantity}
                 </span>
-                <span style={{ fontSize: 14, color: '#111', fontWeight: 500 }}>{item.menu_products.name}</span>
+                <span style={{ fontSize: 14, color: '#111', fontWeight: 500 }}>{item.menu_products?.name ?? 'Producto'}</span>
               </div>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#111', whiteSpace: 'nowrap' }}>
                 ${Number(item.subtotal).toFixed(2)}

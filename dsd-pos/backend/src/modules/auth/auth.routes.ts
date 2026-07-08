@@ -1,10 +1,12 @@
 import { Router } from 'express'
-import { login, me, refreshToken, listUsers, createUser, updateUser } from './auth.controller'
+import { login, signup, me, refreshToken, listUsers, createUser, updateUser } from './auth.controller'
 import { authenticate, authorize } from '../../middleware/auth'
+import { loginLimiter, signupLimiter } from '../../middleware/rateLimit'
 
 const router = Router()
 
-router.post('/login', login)
+router.post('/login', loginLimiter, login)
+router.post('/signup', signupLimiter, signup)
 router.get('/me', authenticate, me)
 router.post('/refresh', authenticate, refreshToken)
 router.get('/users', authenticate, authorize('tenant_admin', 'manager'), listUsers)

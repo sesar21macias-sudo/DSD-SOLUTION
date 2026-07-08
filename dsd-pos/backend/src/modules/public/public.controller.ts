@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import { supabase } from '../../config/supabase'
 import { io } from '../../server'
+import { sendError } from '../../utils/sendError'
 
 export async function getTableInfo(req: Request, res: Response): Promise<void> {
   const { tenantSlug, tableId } = req.params
@@ -145,7 +146,7 @@ export async function createPublicOrder(req: Request, res: Response): Promise<vo
     .select()
     .single()
 
-  if (error || !order) { res.status(500).json({ success: false, error: error?.message }); return }
+  if (error || !order) { sendError(res, 500, error, 'No se pudo procesar la orden'); return }
 
   await supabase.from('order_items').insert(
     orderItems.map(i => ({ ...i, order_id: order.id, tenant_id: tenant.id }))
@@ -237,7 +238,7 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
     .select()
     .single()
 
-  if (error || !order) { res.status(500).json({ success: false, error: error?.message }); return }
+  if (error || !order) { sendError(res, 500, error, 'No se pudo procesar la orden'); return }
 
   await supabase.from('order_items').insert(
     orderItems.map(i => ({ ...i, order_id: order.id, tenant_id: tenant.id }))

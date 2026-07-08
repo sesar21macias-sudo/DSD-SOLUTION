@@ -10,7 +10,7 @@ interface Order {
   id: string; order_number: string; type: string; status: string
   customer_name?: string; total: number; currency: string; created_at: string
   tables?: { number: number }
-  order_items: { quantity: number; menu_products: { name: string } }[]
+  order_items: { quantity: number; notes?: string | null; menu_products: { name: string } | null }[]
 }
 
 const STATUS_CFG: Record<string, { label: string; fg: string; bg: string; border: string }> = {
@@ -146,7 +146,7 @@ export default function OrdersPage() {
                         </span>
                       </div>
                       <p className="text-xs mt-1 truncate" style={{ color: '#9ca3af' }}>
-                        {order.order_items.map(i => `${i.quantity}× ${i.menu_products.name}`).join(' · ')}
+                        {order.order_items.map(i => `${i.quantity}× ${i.menu_products?.name ?? i.notes ?? 'Producto'}`).join(' · ')}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">

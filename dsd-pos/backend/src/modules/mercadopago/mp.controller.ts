@@ -3,6 +3,7 @@ import { z } from 'zod'
 import MercadoPagoConfig, { Preference, Payment } from 'mercadopago'
 import { supabase } from '../../config/supabase'
 import { io } from '../../server'
+import { accrueLoyaltyPoints } from '../loyalty/loyalty.service'
 
 declare module 'mercadopago' {
   interface PaymentCreateData {
@@ -79,16 +80,18 @@ export async function createPreference(req: Request, res: Response): Promise<voi
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
 
   const { order_id, tip_percent } = parsed.data
+  const { tenantSlug } = req.params
 
-  // Cargar orden + items + tenant
+  // Cargar orden + items + tenant, forzando que la orden pertenezca al tenant del slug de la URL
   const { data: order } = await supabase
     .from('orders')
     .select(`
       id, order_number, subtotal, tax, total, status, currency, customer_name, tenant_id, table_id,
       order_items ( id, quantity, unit_price, menu_products ( name ) ),
-      tenants ( name, slug, mp_access_token, mp_public_key )
+      tenants!inner ( name, slug, mp_access_token, mp_public_key )
     `)
     .eq('id', order_id)
+    .eq('tenants.slug', tenantSlug)
     .single()
 
   if (!order) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }
@@ -196,7 +199,7 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
     // Cargar orden actual para saber su status previo
     const { data: orderBefore } = await supabase
       .from('orders')
-      .select('id, order_number, tenant_id, table_id, total, status, order_items(id, quantity, unit_price, subtotal, product_id)')
+      .select('id, order_number, tenant_id, table_id, total, status, customer_phone, order_items(id, quantity, unit_price, subtotal, product_id)')
       .eq('id', orderId)
       .single()
 
@@ -228,6 +231,13 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
       status:        'completed',
       mp_payment_id: paymentId,
     })
+
+    accrueLoyaltyPoints({
+      tenantId: order.tenant_id,
+      customerPhone: orderBefore.customer_phone,
+      amountSpent: payment.transaction_amount ?? Number(order.total),
+      orderId,
+    }).catch(err => console.error('[Loyalty] Error acumulando puntos:', err))
 
     // Liberar la mesa
     if (order.table_id) {
@@ -279,11 +289,13 @@ export async function processCardPayment(req: Request, res: Response): Promise<v
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
 
   const { order_id, token, payment_method_id, issuer_id, installments, payer } = parsed.data
+  const { tenantSlug } = req.params
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, order_number, total, tenant_id, table_id, status, tenants(mp_access_token, name)')
+    .select('id, order_number, total, tenant_id, table_id, status, tenants!inner(mp_access_token, name, slug)')
     .eq('id', order_id)
+    .eq('tenants.slug', tenantSlug)
     .single()
 
   if (!order) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }

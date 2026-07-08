@@ -4,13 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useSocket } from '@/hooks/useSocket'
 import toast from 'react-hot-toast'
-import { Clock, ChefHat, CheckCircle, Flame, PackageCheck } from 'lucide-react'
+import { Clock, ChefHat, CheckCircle, Flame, PackageCheck, Printer } from 'lucide-react'
 
 interface Order {
   id: string; order_number: string; type: string; status: string
   customer_name?: string; notes?: string; created_at: string
   tables?: { number: number; name: string }
-  order_items: { id: string; quantity: number; notes?: string; menu_products: { name: string } }[]
+  order_items: { id: string; quantity: number; notes?: string; menu_products: { name: string } | null }[]
 }
 
 const STATUS_CFG: Record<string, { label: string; bg: string; border: string; badge: string; badgeFg: string }> = {
@@ -148,8 +148,8 @@ export default function KitchenPage() {
                             {item.quantity}
                           </span>
                           <div>
-                            <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>{item.menu_products.name}</p>
-                            {item.notes && <p className="text-xs mt-0.5" style={{ color: '#d97706' }}>⚠ {item.notes}</p>}
+                            <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>{item.menu_products?.name ?? item.notes ?? 'Producto'}</p>
+                            {item.menu_products && item.notes && <p className="text-xs mt-0.5" style={{ color: '#d97706' }}>⚠ {item.notes}</p>}
                           </div>
                         </div>
                       ))}
@@ -163,17 +163,24 @@ export default function KitchenPage() {
                     )}
 
                     {/* Action button */}
-                    {btnCfg && (
-                      <div className="mt-auto">
+                    <div className="mt-auto flex gap-2">
+                      {btnCfg && (
                         <button
                           onClick={() => updateStatus.mutate({ id: order.id, status: btnCfg.next })}
                           disabled={updateStatus.isPending}
-                          className="w-full text-white text-sm font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-opacity disabled:opacity-50"
+                          className="flex-1 text-white text-sm font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-opacity disabled:opacity-50"
                           style={{ background: btnCfg.bg }}>
                           {btnCfg.icon} {btnCfg.label}
                         </button>
-                      </div>
-                    )}
+                      )}
+                      <button
+                        onClick={() => window.open(`/print/${order.id}?kind=kitchen`, '_blank')}
+                        title="Imprimir comanda"
+                        className="px-3 rounded-xl flex items-center justify-center transition-opacity"
+                        style={{ background: 'rgba(0,0,0,0.06)', color: '#374151' }}>
+                        <Printer size={15}/>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )

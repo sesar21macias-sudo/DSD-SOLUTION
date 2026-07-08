@@ -2,6 +2,7 @@ import { Response } from 'express'
 import { z } from 'zod'
 import { supabase } from '../../config/supabase'
 import { AuthRequest } from '../../middleware/auth'
+import { sendError } from '../../utils/sendError'
 
 const ingredientSchema = z.object({
   name: z.string().min(1),
@@ -22,7 +23,7 @@ export async function getIngredients(req: AuthRequest, res: Response): Promise<v
     .eq('is_active', true)
     .order('name')
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -36,7 +37,7 @@ export async function createIngredient(req: AuthRequest, res: Response): Promise
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.status(201).json({ success: true, data })
 }
 
@@ -52,7 +53,7 @@ export async function updateIngredient(req: AuthRequest, res: Response): Promise
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -63,7 +64,7 @@ export async function getLowStock(req: AuthRequest, res: Response): Promise<void
     .eq('tenant_id', req.user!.tenantId)
     .eq('is_active', true)
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
 
   const low = (data ?? []).filter(i => Number(i.stock) <= Number(i.min_stock))
   res.json({ success: true, data: low })
@@ -78,7 +79,7 @@ export async function getRecipe(req: AuthRequest, res: Response): Promise<void> 
     .eq('product_id', req.params['productId'])
     .eq('tenant_id', req.user!.tenantId)
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -109,7 +110,7 @@ export async function saveRecipe(req: AuthRequest, res: Response): Promise<void>
         unit: item.unit,
       }))
     )
-    if (error) { res.status(500).json({ success: false, error: error.message }); return }
+    if (error) { sendError(res, 500, error); return }
   }
 
   res.json({ success: true, message: 'Receta guardada' })
@@ -125,7 +126,7 @@ export async function getMovements(req: AuthRequest, res: Response): Promise<voi
     .order('created_at', { ascending: false })
     .limit(100)
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
@@ -151,7 +152,7 @@ export async function addMovement(req: AuthRequest, res: Response): Promise<void
     notes,
     created_by: req.user!.userId,
   })
-  if (mvError) { res.status(500).json({ success: false, error: mvError.message }); return }
+  if (mvError) { sendError(res, 500, mvError); return }
 
   // Actualizar stock
   const { data: ingredient } = await supabase
@@ -175,7 +176,7 @@ export async function addMovement(req: AuthRequest, res: Response): Promise<void
     .select()
     .single()
 
-  if (error) { res.status(500).json({ success: false, error: error.message }); return }
+  if (error) { sendError(res, 500, error); return }
   res.json({ success: true, data })
 }
 
