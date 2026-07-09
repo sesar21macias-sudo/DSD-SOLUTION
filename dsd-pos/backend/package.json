@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "build": "tsc",
-    "start": "tsc && node dist/server.js",
+    "start": "node dist/server.js",
     "seed": "ts-node --skip-project --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"target\\\":\\\"es2020\\\",\\\"lib\\\":[\\\"es2020\\\"],\\\"esModuleInterop\\\":true}\" scripts/seed.ts"
   },
   "keywords": [],
