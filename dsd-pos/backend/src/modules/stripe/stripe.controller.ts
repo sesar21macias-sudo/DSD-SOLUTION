@@ -3,6 +3,7 @@ import { z } from 'zod'
 import Stripe from 'stripe'
 import { supabase } from '../../config/supabase'
 import { io } from '../../server'
+import { accrueLoyaltyPoints } from '../loyalty/loyalty.service'
 
 function stripeClient() {
   const key = process.env['STRIPE_SECRET_KEY']
@@ -74,7 +75,7 @@ export async function confirmStripePayment(req: Request, res: Response): Promise
   // Load order to get its current status
   const { data: orderBefore } = await supabase
     .from('orders')
-    .select('id, order_number, tenant_id, table_id, total, status, order_items(id, quantity, unit_price, subtotal, product_id)')
+    .select('id, order_number, tenant_id, table_id, total, status, customer_phone, order_items(id, quantity, unit_price, subtotal, product_id)')
     .eq('id', order_id)
     .single()
 
@@ -121,6 +122,17 @@ export async function confirmStripePayment(req: Request, res: Response): Promise
     order_number: order.order_number,
     table_id:     order.table_id,
   })
+
+  // Accrue loyalty points asynchronously — don't block the response
+  const phone = (orderBefore as any).customer_phone
+  if (phone) {
+    accrueLoyaltyPoints({
+      tenantId:     order.tenant_id,
+      customerPhone: phone,
+      amountSpent:  Number(order.total),
+      orderId:      order_id,
+    }).catch(err => console.error('[Loyalty] Error acumulando puntos (Stripe):', err))
+  }
 
   res.json({ success: true, data: { order_number: order.order_number } })
 }

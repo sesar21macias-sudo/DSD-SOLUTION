@@ -86,6 +86,9 @@ const GLOBAL_STYLES = `
   @keyframes pillsIn   { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
   @keyframes spinBadge { 0%{transform:rotate(-8deg) scale(.8)} 60%{transform:rotate(4deg) scale(1.06)} 100%{transform:rotate(0) scale(1)} }
   @keyframes cardReveal{ from{opacity:0;transform:translateY(28px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes gateIn    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes gateSpin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  @keyframes dotPulse  { 0%,80%,100%{transform:scale(0);opacity:.3} 40%{transform:scale(1);opacity:1} }
 
   .hero-badge  { animation: spinBadge .5s cubic-bezier(.34,1.56,.64,1) both .05s }
   .hero-h1     { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .18s }
@@ -230,6 +233,13 @@ export default function DSDRestaurantePage() {
   const [stripeError,      setStripeError]        = useState<string | null>(null)
   const [countKey,    setCountKey]    = useState(0)
   const [filterAnim,  setFilterAnim]  = useState(false)
+  // ── Loyalty gate ─────────────────────────────────────────────────────────────
+  const [gateStep,     setGateStep]     = useState<'phone'|'loading'|'found'|'new'|'done'>('phone')
+  const [gatePhone,    setGatePhone]    = useState('')
+  const [gateName,     setGateName]     = useState('')
+  const [gateCustomer, setGateCustomer] = useState<{ full_name: string | null; points: number; total_visits: number; tier: string } | null>(null)
+  const [gateError,    setGateError]    = useState<string | null>(null)
+
   const heroRef    = useRef<HTMLDivElement>(null)
   const gridRef    = useRef<HTMLDivElement>(null)
   const brickRef   = useRef<any>(null)
@@ -283,6 +293,34 @@ export default function DSDRestaurantePage() {
     return () => io.disconnect()
   }, [])
 
+  // ── Loyalty gate handlers ─────────────────────────────────────────────────────
+  async function handleGateSubmit() {
+    if (gatePhone.length < 7) return
+    setGateStep('loading'); setGateError(null)
+    try {
+      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: gatePhone })
+      setGateCustomer(data.data.customer)
+      setGateStep(data.data.is_new ? 'new' : 'found')
+    } catch {
+      setGateStep('phone')
+      setGateError('No se pudo conectar. Intenta de nuevo.')
+    }
+  }
+
+  async function handleGateRegister() {
+    setGateStep('loading')
+    try {
+      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, {
+        phone: gatePhone,
+        name:  gateName.trim() || undefined,
+      })
+      setGateCustomer(data.data.customer)
+      setGateStep('done')
+    } catch {
+      setGateStep('new')
+    }
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ['dsd-menu'],
     queryFn: async () => {
@@ -312,7 +350,8 @@ export default function DSDRestaurantePage() {
   const placeOrder = useMutation({
     mutationFn: async () => {
       const { data: orderRes } = await pub.post(`/public/online-order/${TENANT_SLUG}`, {
-        customer_name:   name || 'Cliente',
+        customer_name:   name || gateCustomer?.full_name || 'Cliente',
+        customer_phone:  gatePhone || undefined,
         notes:           notes || undefined,
         order_type:      tableId ? 'dine_in' : 'takeout',
         table_id:        tableId || undefined,
@@ -453,6 +492,196 @@ export default function DSDRestaurantePage() {
     document.body.style.overflow = drawer ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [drawer])
+
+  // ── Loyalty gate ─────────────────────────────────────────────────────────────
+  if (gateStep !== 'done') {
+    const VISITS_PER_PRIZE = 8
+    const cycleVisits   = gateCustomer ? gateCustomer.total_visits % VISITS_PER_PRIZE : 0
+    const toNextPrize   = VISITS_PER_PRIZE - cycleVisits
+    const progressPct   = Math.round((cycleVisits / VISITS_PER_PRIZE) * 100)
+    const firstName     = gateCustomer?.full_name?.split(' ')[0] ?? 'de vuelta'
+
+    return (
+      <div style={{ minHeight: '100vh', background: '#0d0d0d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 20px', fontFamily: 'system-ui,-apple-system,sans-serif', position: 'relative', overflow: 'hidden' }}>
+        <style>{`
+          * { box-sizing: border-box; margin: 0; padding: 0 }
+          @keyframes gateIn   { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+          @keyframes gateSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+          .gate-card { animation: gateIn .52s cubic-bezier(.22,1,.36,1) both }
+          input:focus { outline: none }
+        `}</style>
+
+        {/* Ambient glow */}
+        <div style={{ position: 'absolute', top: -160, left: '50%', transform: 'translateX(-50%)', width: 520, height: 520, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,66,26,.15) 0%, transparent 68%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -100, right: -80, width: 340, height: 340, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,66,26,.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        <div className="gate-card" style={{ width: '100%', maxWidth: 400 }}>
+
+          {/* Logo mark */}
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ width: 60, height: 60, borderRadius: 20, background: 'linear-gradient(135deg, #1a1a1a, #111)', border: '1px solid #2a2a2a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 6px rgba(232,66,26,.08)' }}>
+              <span style={{ color: '#e8421a', fontWeight: 900, fontSize: 26, fontStyle: 'italic', letterSpacing: '-1px' }}>D</span>
+            </div>
+          </div>
+
+          {/* ── Phone input step ── */}
+          {gateStep === 'phone' && (
+            <>
+              <h1 style={{ fontSize: 30, fontWeight: 900, color: '#faf9f7', textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Bienvenido</h1>
+              <p style={{ color: '#6b7280', fontSize: 14, textAlign: 'center', lineHeight: 1.6, marginBottom: 36 }}>
+                Ingresa tu numero para acumular<br />puntos en cada visita
+              </p>
+
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <span style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', color: '#4b5563', fontSize: 15, fontWeight: 700, userSelect: 'none' }}>+52</span>
+                <div style={{ position: 'absolute', left: 54, top: '50%', transform: 'translateY(-50%)', width: 1, height: 20, background: '#2a2a2a' }} />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={gatePhone}
+                  onChange={e => setGatePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  onKeyDown={e => e.key === 'Enter' && gatePhone.length >= 7 && handleGateSubmit()}
+                  placeholder="Numero de telefono"
+                  maxLength={10}
+                  autoFocus
+                  style={{ width: '100%', background: '#161616', border: `1.5px solid ${gatePhone.length >= 7 ? '#e8421a' : '#222'}`, borderRadius: 16, padding: '17px 18px 17px 70px', fontSize: 17, color: '#faf9f7', letterSpacing: '0.06em', transition: 'border-color .2s' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#e8421a' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = gatePhone.length >= 7 ? '#e8421a' : '#222' }}
+                />
+              </div>
+
+              {gateError && (
+                <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10, padding: '0 4px' }}>{gateError}</p>
+              )}
+
+              <button
+                onClick={handleGateSubmit}
+                disabled={gatePhone.length < 7}
+                style={{ width: '100%', background: gatePhone.length < 7 ? '#1a1a1a' : '#e8421a', color: gatePhone.length < 7 ? '#4b5563' : '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePhone.length < 7 ? 'not-allowed' : 'pointer', transition: 'background .2s, color .2s', marginBottom: 14, letterSpacing: '-0.01em' }}
+              >
+                Continuar
+              </button>
+
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: '#374151', fontSize: 13, cursor: 'pointer', padding: '10px 0', transition: 'color .15s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#6b7280')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#374151')}
+              >
+                Saltar por ahora
+              </button>
+            </>
+          )}
+
+          {/* ── Loading step ── */}
+          {gateStep === 'loading' && (
+            <div style={{ textAlign: 'center', padding: '48px 0' }}>
+              <div style={{ width: 44, height: 44, border: '3px solid #1f1f1f', borderTop: '3px solid #e8421a', borderRadius: '50%', animation: 'gateSpin .75s linear infinite', margin: '0 auto 20px' }} />
+              <p style={{ color: '#4b5563', fontSize: 14 }}>Buscando tu cuenta...</p>
+            </div>
+          )}
+
+          {/* ── Found: returning customer ── */}
+          {gateStep === 'found' && gateCustomer && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(34,197,94,.1)', border: '2px solid rgba(34,197,94,.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <h1 style={{ fontSize: 28, fontWeight: 900, color: '#faf9f7', letterSpacing: '-0.04em', marginBottom: 6 }}>
+                  Hola, {firstName}!
+                </h1>
+                <p style={{ color: '#4b5563', fontSize: 13 }}>Que gusto verte de nuevo</p>
+              </div>
+
+              {/* Stats card */}
+              <div style={{ background: '#131313', border: '1px solid #1e1e1e', borderRadius: 20, padding: '22px 22px 20px', marginBottom: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+                  <div>
+                    <p style={{ fontSize: 10, color: '#4b5563', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Puntos</p>
+                    <p style={{ fontSize: 40, fontWeight: 900, color: '#faf9f7', letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.points.toLocaleString()}</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: 10, color: '#4b5563', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Visitas</p>
+                    <p style={{ fontSize: 40, fontWeight: 900, color: '#e8421a', letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.total_visits}</p>
+                  </div>
+                </div>
+
+                {/* Progress toward prize */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <p style={{ fontSize: 12, color: '#6b7280' }}>
+                      {cycleVisits} de {VISITS_PER_PRIZE} visitas para tu premio
+                    </p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: toNextPrize > 0 ? '#e8421a' : '#22c55e' }}>
+                      {toNextPrize > 0 ? `${toNextPrize} mas` : 'Premio disponible'}
+                    </p>
+                  </div>
+                  <div style={{ height: 6, background: '#1e1e1e', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
+                    <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, #c23614, #e8421a, #ff6340)', borderRadius: 99, transition: 'width 1.2s cubic-bezier(.22,1,.36,1)' }} />
+                  </div>
+                  {/* Dot trail */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    {Array.from({ length: VISITS_PER_PRIZE }).map((_, i) => (
+                      <div key={i} style={{ width: 24, height: 24, borderRadius: '50%', background: i < cycleVisits ? '#e8421a' : '#1a1a1a', border: `2px solid ${i < cycleVisits ? '#e8421a' : '#252525'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === VISITS_PER_PRIZE - 1 ? 11 : 9, transition: 'all .3s' }}>
+                        {i === VISITS_PER_PRIZE - 1 ? '🎁' : <span style={{ color: i < cycleVisits ? '#fff' : '#374151', fontWeight: 700 }}>{i + 1}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setGateStep('done')}
+                style={{ width: '100%', background: '#e8421a', color: '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
+              >
+                Ver el menu
+              </button>
+            </>
+          )}
+
+          {/* ── New customer step ── */}
+          {gateStep === 'new' && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                <div style={{ fontSize: 52, marginBottom: 14, display: 'block' }}>🎉</div>
+                <h1 style={{ fontSize: 28, fontWeight: 900, color: '#faf9f7', letterSpacing: '-0.04em', marginBottom: 8 }}>Primera visita!</h1>
+                <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6 }}>
+                  Gana puntos desde hoy.<br />
+                  Despues de {VISITS_PER_PRIZE} visitas recibes un premio.
+                </p>
+              </div>
+
+              <input
+                type="text"
+                value={gateName}
+                onChange={e => setGateName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleGateRegister()}
+                placeholder="Tu nombre (opcional)"
+                autoFocus
+                style={{ width: '100%', background: '#161616', border: '1.5px solid #222', borderRadius: 16, padding: '17px 18px', fontSize: 16, color: '#faf9f7', marginBottom: 12, transition: 'border-color .2s' }}
+                onFocus={e => { e.currentTarget.style.borderColor = '#e8421a' }}
+                onBlur={e => { e.currentTarget.style.borderColor = '#222' }}
+              />
+
+              <button
+                onClick={handleGateRegister}
+                style={{ width: '100%', background: '#e8421a', color: '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', marginBottom: 12, letterSpacing: '-0.01em' }}
+              >
+                Registrarme y ordenar
+              </button>
+
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: '#374151', fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#6b7280')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#374151')}
+              >
+                Saltar
+              </button>
+            </>
+          )}
+
+        </div>
+      </div>
+    )
+  }
 
   // ── Stripe payment screen ───────────────────────────────────────────────────
   if (payMethod === 'stripe' && stripeSecret && stripeOrderId) return (

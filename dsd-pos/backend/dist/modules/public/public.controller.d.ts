@@ -4,4 +4,5 @@ export declare function getPublicTables(req: Request, res: Response): Promise<vo
 export declare function getPublicMenu(req: Request, res: Response): Promise<void>;
 export declare function createPublicOrder(req: Request, res: Response): Promise<void>;
 export declare function createOnlineOrder(req: Request, res: Response): Promise<void>;
+export declare function identifyLoyaltyCustomer(req: Request, res: Response): Promise<void>;
 //# sourceMappingURL=public.controller.d.ts.map

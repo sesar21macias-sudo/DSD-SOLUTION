@@ -5,6 +5,7 @@ exports.getPublicTables = getPublicTables;
 exports.getPublicMenu = getPublicMenu;
 exports.createPublicOrder = createPublicOrder;
 exports.createOnlineOrder = createOnlineOrder;
+exports.identifyLoyaltyCustomer = identifyLoyaltyCustomer;
 const zod_1 = require("zod");
 const uuid_1 = require("uuid");
 const supabase_1 = require("../../config/supabase");
@@ -168,6 +169,7 @@ async function createOnlineOrder(req, res) {
     const { tenantSlug } = req.params;
     const schema = zod_1.z.object({
         customer_name: zod_1.z.string().min(1),
+        customer_phone: zod_1.z.string().optional(),
         notes: zod_1.z.string().optional(),
         order_type: zod_1.z.enum(['takeout', 'delivery', 'dine_in']).default('takeout'),
         table_id: zod_1.z.string().uuid().optional(),
@@ -229,6 +231,7 @@ async function createOnlineOrder(req, res) {
         table_id: parsed.data.table_id ?? null,
         customer_name: parsed.data.customer_name,
         notes: parsed.data.notes,
+        customer_phone: parsed.data.customer_phone?.replace(/\D/g, '') ?? null,
         currency,
         status: orderStatus,
         subtotal,
@@ -250,5 +253,62 @@ async function createOnlineOrder(req, res) {
         });
     }
     res.status(201).json({ success: true, data: { order_id: order.id, order_number: orderNumber, total, currency } });
+}
+// ── POST /api/public/loyalty/identify/:tenantSlug ─────────────────────────────
+// Public endpoint — no auth. Looks up or creates a loyalty customer by phone.
+async function identifyLoyaltyCustomer(req, res) {
+    const { tenantSlug } = req.params;
+    const schema = zod_1.z.object({
+        phone: zod_1.z.string().min(7),
+        name: zod_1.z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+        res.status(400).json({ success: false, error: parsed.error.issues[0]?.message });
+        return;
+    }
+    const { data: tenant } = await supabase_1.supabase
+        .from('tenants')
+        .select('id')
+        .eq('slug', tenantSlug)
+        .eq('is_active', true)
+        .single();
+    if (!tenant) {
+        res.status(404).json({ success: false, error: 'Restaurante no encontrado' });
+        return;
+    }
+    const phone = parsed.data.phone.replace(/\D/g, '');
+    const { data: existing } = await supabase_1.supabase
+        .from('loyalty_customers')
+        .select('id, full_name, points, total_visits, tier')
+        .eq('tenant_id', tenant.id)
+        .eq('phone', phone)
+        .maybeSingle();
+    if (existing) {
+        if (parsed.data.name && !existing.full_name) {
+            await supabase_1.supabase.from('loyalty_customers').update({ full_name: parsed.data.name }).eq('id', existing.id);
+            existing.full_name = parsed.data.name;
+        }
+        res.json({ success: true, data: { customer: existing, is_new: false } });
+        return;
+    }
+    const { data: customer, error } = await supabase_1.supabase
+        .from('loyalty_customers')
+        .insert({
+        tenant_id: tenant.id,
+        phone,
+        full_name: parsed.data.name ?? null,
+        points: 0,
+        total_visits: 0,
+        total_spent: 0,
+        tier: 'bronze',
+    })
+        .select('id, full_name, points, total_visits, tier')
+        .single();
+    if (error || !customer) {
+        (0, sendError_1.sendError)(res, 500, error, 'No se pudo registrar el cliente');
+        return;
+    }
+    res.status(201).json({ success: true, data: { customer, is_new: true } });
 }
 //# sourceMappingURL=public.controller.js.map

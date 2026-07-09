@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getPublicMenu, createPublicOrder, getTableInfo, createOnlineOrder, getPublicTables } from './public.controller'
+import { getPublicMenu, createPublicOrder, getTableInfo, createOnlineOrder, getPublicTables, identifyLoyaltyCustomer } from './public.controller'
 
 const router = Router()
 
@@ -8,5 +8,6 @@ router.get('/tables/:tenantSlug', getPublicTables)
 router.get('/table/:tenantSlug/:tableId', getTableInfo)
 router.post('/order/:tenantSlug/:tableId', createPublicOrder)
 router.post('/online-order/:tenantSlug', createOnlineOrder)
+router.post('/loyalty/identify/:tenantSlug', identifyLoyaltyCustomer)
 
 export default router

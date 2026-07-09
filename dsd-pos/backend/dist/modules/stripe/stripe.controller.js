@@ -9,6 +9,7 @@ const zod_1 = require("zod");
 const stripe_1 = __importDefault(require("stripe"));
 const supabase_1 = require("../../config/supabase");
 const server_1 = require("../../server");
+const loyalty_service_1 = require("../loyalty/loyalty.service");
 function stripeClient() {
     const key = process.env['STRIPE_SECRET_KEY'];
     if (!key)
@@ -79,7 +80,7 @@ async function confirmStripePayment(req, res) {
     // Load order to get its current status
     const { data: orderBefore } = await supabase_1.supabase
         .from('orders')
-        .select('id, order_number, tenant_id, table_id, total, status, order_items(id, quantity, unit_price, subtotal, product_id)')
+        .select('id, order_number, tenant_id, table_id, total, status, customer_phone, order_items(id, quantity, unit_price, subtotal, product_id)')
         .eq('id', order_id)
         .single();
     if (!orderBefore) {
@@ -127,6 +128,16 @@ async function confirmStripePayment(req, res) {
         order_number: order.order_number,
         table_id: order.table_id,
     });
+    // Accrue loyalty points asynchronously — don't block the response
+    const phone = orderBefore.customer_phone;
+    if (phone) {
+        (0, loyalty_service_1.accrueLoyaltyPoints)({
+            tenantId: order.tenant_id,
+            customerPhone: phone,
+            amountSpent: Number(order.total),
+            orderId: order_id,
+        }).catch(err => console.error('[Loyalty] Error acumulando puntos (Stripe):', err));
+    }
     res.json({ success: true, data: { order_number: order.order_number } });
 }
 //# sourceMappingURL=stripe.controller.js.map
