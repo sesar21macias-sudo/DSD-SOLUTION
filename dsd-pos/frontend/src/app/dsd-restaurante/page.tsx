@@ -357,9 +357,9 @@ export default function DSDRestaurantePage() {
     },
   })
 
-  // Initialize Payment Brick once we have paymentData and the SDK is ready
+  // Initialize Payment Brick when showing MP screen
   useEffect(() => {
-    if (!paymentData || !mpSdkReady) return
+    if (!paymentData || !mpSdkReady || payMethod !== 'mp') return
     const container = document.getElementById('dsd-payment-brick')
     if (!container) return
 
@@ -413,7 +413,7 @@ export default function DSDRestaurantePage() {
       brickRef.current?.unmount?.()
       brickRef.current = null
     }
-  }, [paymentData, mpSdkReady])
+  }, [paymentData, mpSdkReady, payMethod])
 
   // Smooth category switch
   function switchCategory(id: string | null) {
