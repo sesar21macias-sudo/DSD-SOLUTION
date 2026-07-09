@@ -13,7 +13,7 @@ function stripeClient() {
     const key = process.env['STRIPE_SECRET_KEY'];
     if (!key)
         throw new Error('STRIPE_SECRET_KEY not configured');
-    return new stripe_1.default(key, { apiVersion: '2025-06-30.basil' });
+    return new stripe_1.default(key);
 }
 // ── POST /api/stripe/payment-intent ──────────────────────────────────────────
 async function createPaymentIntent(req, res) {
@@ -45,7 +45,7 @@ async function createPaymentIntent(req, res) {
         amount: amountCents,
         currency: (order.currency ?? 'mxn').toLowerCase(),
         metadata: { order_id, order_number: order.order_number },
-        payment_method_types: ['card'],
+        automatic_payment_methods: { enabled: true },
         description: `Orden ${order.order_number}`,
     });
     res.json({

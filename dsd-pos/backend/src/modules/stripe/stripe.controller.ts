@@ -7,7 +7,7 @@ import { io } from '../../server'
 function stripeClient() {
   const key = process.env['STRIPE_SECRET_KEY']
   if (!key) throw new Error('STRIPE_SECRET_KEY not configured')
-  return new Stripe(key, { apiVersion: '2025-06-30.basil' as any })
+  return new Stripe(key)
 }
 
 // ── POST /api/stripe/payment-intent ──────────────────────────────────────────
@@ -37,7 +37,7 @@ export async function createPaymentIntent(req: Request, res: Response): Promise<
     amount:   amountCents,
     currency: (order.currency ?? 'mxn').toLowerCase(),
     metadata: { order_id, order_number: order.order_number },
-    payment_method_types: ['card'],
+    automatic_payment_methods: { enabled: true },
     description: `Orden ${order.order_number}`,
   })
 
