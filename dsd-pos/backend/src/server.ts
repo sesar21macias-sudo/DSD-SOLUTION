@@ -15,6 +15,7 @@ import shiftRoutes from './modules/shift/shift.routes'
 import inventoryRoutes from './modules/inventory/inventory.routes'
 import publicRoutes from './modules/public/public.routes'
 import mpRoutes from './modules/mercadopago/mp.routes'
+import stripeRoutes from './modules/stripe/stripe.routes'
 import whatsappRoutes from './modules/whatsapp/whatsapp.routes'
 import loyaltyRoutes from './modules/loyalty/loyalty.routes'
 import deliveryRoutes from './modules/delivery/delivery.routes'
@@ -69,6 +70,7 @@ app.use('/api/shift', shiftRoutes)
 app.use('/api/inventory', inventoryRoutes)
 app.use('/api/public', publicRoutes)
 app.use('/api/mp', mpRoutes)
+app.use('/api/stripe', stripeRoutes)
 app.use('/api/whatsapp', whatsappRoutes)
 app.use('/api/loyalty', loyaltyRoutes)
 app.use('/api/delivery', deliveryRoutes)

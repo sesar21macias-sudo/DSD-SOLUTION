@@ -7,6 +7,8 @@ import {
   ShoppingCart, Plus, Minus, Trash2, X,
   ChevronRight, Star, Clock, MapPin, Phone, Flame,
 } from 'lucide-react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 
@@ -130,6 +132,76 @@ function addRipple(e: React.MouseEvent<HTMLButtonElement>) {
   el.addEventListener('animationend', () => el.remove())
 }
 
+const STRIPE_PK = 'pk_test_51TpZEEFxupxbJS8buDU9aoTjIcGLpvYc55eROC3BnaJAiipEyaklQKXaOnJTrjGrzK5RetJoA0wSiIi7Y8mKYAqi00tE0dCmhU'
+const stripePromise = loadStripe(STRIPE_PK)
+
+// ── Stripe checkout form ──────────────────────────────────────────────────────
+function StripeCheckoutForm({ orderId, orderNumber, total, onSuccess, onBack }: {
+  orderId: string; orderNumber: string; total: number
+  onSuccess: (orderNumber: string) => void
+  onBack: () => void
+}) {
+  const stripe   = useStripe()
+  const elements = useElements()
+  const [paying,   setPaying]   = useState(false)
+  const [errMsg,   setErrMsg]   = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!stripe || !elements) return
+    setPaying(true); setErrMsg(null)
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+    })
+    if (error) {
+      setErrMsg(error.message ?? 'Error al procesar el pago')
+      setPaying(false); return
+    }
+    if (paymentIntent?.status === 'succeeded') {
+      try {
+        await axios.post(`${API}/stripe/confirm`, { payment_intent_id: paymentIntent.id, order_id: orderId })
+        onSuccess(orderNumber)
+      } catch {
+        setErrMsg('Pago recibido pero error al confirmar. Contacta al restaurante.')
+      }
+    }
+    setPaying(false)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <PaymentElement options={{ layout: 'tabs' }} />
+      {errMsg && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#dc2626' }}>
+          {errMsg}
+        </div>
+      )}
+      <button
+        type="submit"
+        disabled={!stripe || paying}
+        style={{
+          width: '100%', background: paying ? '#6b7280' : '#635bff',
+          color: '#fff', fontWeight: 800, fontSize: 16,
+          padding: '17px 0', borderRadius: 16, border: 'none',
+          cursor: paying ? 'wait' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          transition: 'background .15s',
+        }}
+      >
+        {paying ? 'Procesando...' : `Pagar $${total.toFixed(2)} MXN`}
+      </button>
+      <button
+        type="button"
+        onClick={onBack}
+        style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: 13, cursor: 'pointer', textAlign: 'center' }}
+      >
+        Volver a elegir metodo de pago
+      </button>
+    </form>
+  )
+}
+
 interface PaymentData {
   preference_id: string
   order_id:      string
@@ -146,9 +218,16 @@ export default function DSDRestaurantePage() {
   const [notes,       setNotes]       = useState('')
   const [tableId,     setTableId]     = useState<string>('')
   const [mpError,     setMpError]     = useState<string | null>(null)
-  const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
-  const [paySuccess,  setPaySuccess]  = useState<string | null>(null)
-  const [mpSdkReady,  setMpSdkReady]  = useState(false)
+  const [paymentData,      setPaymentData]      = useState<PaymentData | null>(null)
+  const [paySuccess,       setPaySuccess]        = useState<string | null>(null)
+  const [mpSdkReady,       setMpSdkReady]        = useState(false)
+  const [payMethod,        setPayMethod]          = useState<'select' | 'mp' | 'stripe'>('select')
+  const [stripeSecret,     setStripeSecret]       = useState<string | null>(null)
+  const [stripeOrderId,    setStripeOrderId]      = useState<string | null>(null)
+  const [stripeOrderNum,   setStripeOrderNum]     = useState<string>('')
+  const [stripeTotal,      setStripeTotal]        = useState<number>(0)
+  const [stripeLoading,    setStripeLoading]      = useState(false)
+  const [stripeError,      setStripeError]        = useState<string | null>(null)
   const [countKey,    setCountKey]    = useState(0)
   const [filterAnim,  setFilterAnim]  = useState(false)
   const heroRef    = useRef<HTMLDivElement>(null)
@@ -375,13 +454,138 @@ export default function DSDRestaurantePage() {
     return () => { document.body.style.overflow = '' }
   }, [drawer])
 
-  // ── Payment Brick screen ────────────────────────────────────────────────────
-  if (paymentData) return (
+  // ── Stripe payment screen ───────────────────────────────────────────────────
+  if (payMethod === 'stripe' && stripeSecret && stripeOrderId) return (
+    <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+      <div style={{ background: DARK, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button
+          onClick={() => setPayMethod('select')}
+          style={{ background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+        >
+          <X size={18} />
+        </button>
+        <div>
+          <p style={{ color: '#fff', fontWeight: 800, fontSize: 15, lineHeight: 1 }}>Pagar con Stripe</p>
+          <p style={{ color: '#6b7280', fontSize: 11, marginTop: 2 }}>Orden {stripeOrderNum} · ${stripeTotal.toFixed(2)} MXN</p>
+        </div>
+        <div style={{ marginLeft: 'auto' }}>
+          <svg width="44" height="20" viewBox="0 0 60 25" fill="none"><text x="0" y="18" fontSize="18" fontWeight="700" fill="#635bff" fontFamily="sans-serif">stripe</text></svg>
+        </div>
+      </div>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 100px' }}>
+        <Elements stripe={stripePromise} options={{ clientSecret: stripeSecret, appearance: { theme: 'stripe' } }}>
+          <StripeCheckoutForm
+            orderId={stripeOrderId}
+            orderNumber={stripeOrderNum}
+            total={stripeTotal}
+            onSuccess={(num) => { setPayMethod('select'); setStripeSecret(null); setPaySuccess(num) }}
+            onBack={() => setPayMethod('select')}
+          />
+        </Elements>
+      </div>
+    </div>
+  )
+
+  // ── Payment method selector ──────────────────────────────────────────────────
+  if (payMethod !== 'select' || (paymentData && payMethod === 'select')) {
+    // show selector only when paymentData is set and method not chosen yet
+  }
+  if (paymentData && payMethod === 'select') return (
+    <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui,-apple-system,sans-serif', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: DARK, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button
+          onClick={() => { setPaymentData(null); setPayMethod('select') }}
+          style={{ background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+        >
+          <X size={18} />
+        </button>
+        <div>
+          <p style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>Elige como pagar</p>
+          <p style={{ color: '#6b7280', fontSize: 11, marginTop: 2 }}>Orden {paymentData.order_number} · ${paymentData.total.toFixed(2)} MXN</p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px', width: '100%' }}>
+        <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', marginBottom: 24 }}>Selecciona tu metodo de pago preferido</p>
+
+        {/* Stripe */}
+        <button
+          onClick={async () => {
+            setStripeLoading(true); setStripeError(null)
+            try {
+              const { data } = await pub.post('/stripe/payment-intent', { order_id: paymentData.order_id })
+              setStripeSecret(data.data.client_secret)
+              setStripeOrderId(paymentData.order_id)
+              setStripeOrderNum(paymentData.order_number)
+              setStripeTotal(paymentData.total)
+              setPayMethod('stripe')
+            } catch (e: any) {
+              setStripeError(e?.response?.data?.error ?? 'Error al conectar con Stripe')
+            }
+            setStripeLoading(false)
+          }}
+          disabled={stripeLoading}
+          style={{
+            width: '100%', background: '#fff', border: '2px solid #635bff',
+            borderRadius: 20, padding: '20px 24px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14,
+            transition: 'box-shadow .15s', boxShadow: '0 2px 12px rgba(99,91,255,.1)',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,91,255,.2)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(99,91,255,.1)')}
+        >
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: '#635bff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="#fff"/></svg>
+          </div>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={{ fontWeight: 800, fontSize: 16, color: '#111', marginBottom: 4 }}>
+              {stripeLoading ? 'Conectando...' : 'Apple Pay / Google Pay / Tarjeta'}
+            </p>
+            <p style={{ fontSize: 12, color: '#6b7280' }}>Powered by Stripe · Pago inmediato</p>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <span style={{ background: '#000', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6 }}> Pay</span>
+            <span style={{ background: '#fff', border: '1px solid #e5e7eb', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: '#555' }}>G Pay</span>
+          </div>
+        </button>
+
+        {/* Mercado Pago */}
+        <button
+          onClick={() => setPayMethod('mp')}
+          style={{
+            width: '100%', background: '#fff', border: '2px solid #009ee3',
+            borderRadius: 20, padding: '20px 24px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14,
+            transition: 'box-shadow .15s', boxShadow: '0 2px 12px rgba(0,158,227,.08)',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,158,227,.18)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,158,227,.08)')}
+        >
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: '#009ee3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+          </div>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={{ fontWeight: 800, fontSize: 16, color: '#111', marginBottom: 4 }}>Mercado Pago</p>
+            <p style={{ fontSize: 12, color: '#6b7280' }}>Tarjeta, OXXO, cartera MP</p>
+          </div>
+        </button>
+
+        {stripeError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#dc2626', marginTop: 8 }}>
+            {stripeError}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // ── Payment Brick screen (MP) ────────────────────────────────────────────────
+  if (paymentData && payMethod === 'mp') return (
     <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
       {/* Header */}
       <div style={{ background: DARK, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <button
-          onClick={() => setPaymentData(null)}
+          onClick={() => setPayMethod('select')}
           style={{ background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', flexShrink: 0 }}
         >
           <X size={18} />
