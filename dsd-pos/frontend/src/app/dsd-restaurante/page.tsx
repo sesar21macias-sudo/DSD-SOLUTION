@@ -481,6 +481,8 @@ export default function DSDRestaurantePage() {
   }
 
   async function handleGateRegister() {
+    if (gatePhone.length < 7) { setGateError('Ingresa tu numero de telefono'); return }
+    setGateError(null)
     setGateStep('loading')
     try {
       const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: fullPhone(), name: gateName.trim() || undefined })
@@ -488,14 +490,15 @@ export default function DSDRestaurantePage() {
       setGateCustomer(d.customer)
       setGateHasPin(d.has_pin)
       if (!d.is_new && d.has_pin) {
-        // Ya tiene cuenta con PIN — iniciar sesion en vez de sobreescribir
         setGatePin('')
         setGateStep('enter-pin')
       } else {
-        // Nuevo o sin PIN — dejar crear PIN
         setGateStep('set-pin')
       }
-    } catch { setGateStep('new') }
+    } catch {
+      setGateStep('new')
+      setGateError('No se pudo conectar. Intenta de nuevo.')
+    }
   }
 
   async function handleSetPin() {
@@ -795,13 +798,6 @@ export default function DSDRestaurantePage() {
             </div>
           </div>
 
-          {/* Logo */}
-          <div style={{ textAlign: 'center', marginBottom: 36 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 18, background: SURFACE, border: `1px solid ${BORDER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: ACCENT, fontWeight: 900, fontSize: 24, fontStyle: 'italic' }}>D</span>
-            </div>
-          </div>
-
           {/* ── WELCOME ── */}
           {gateStep === 'welcome' && (
             <>
@@ -945,15 +941,9 @@ export default function DSDRestaurantePage() {
                 />
 
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 7 }}>Telefono</label>
-                <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 14, display: 'flex', alignItems: 'center', overflow: 'hidden', marginBottom: 20 }}>
-                  <select value={gateCountry} onChange={e => setGateCountry(e.target.value as '+52'|'+1')}
-                    style={{ background: 'transparent', border: 'none', borderRight: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '0 8px 0 14px', height: 50, appearance: 'none', flexShrink: 0, width: 82, fontFamily: 'Inter, sans-serif' }}>
-                    <option value="+52">MX +52</option>
-                    <option value="+1">US +1</option>
-                  </select>
-                  <span style={{ padding: '14px 14px', fontSize: 15, color: gatePhone ? TEXT : TEXT3, flex: 1 }}>{gatePhone || 'Numero de telefono'}</span>
-                </div>
+                <div style={{ marginBottom: 20 }}><PhoneInput /></div>
 
+                {gateError && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>{gateError}</p>}
                 <button onClick={handleGateRegister}
                   style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 14, padding: '16px 0', fontWeight: 800, fontSize: 15, cursor: 'pointer', letterSpacing: '-0.01em', marginBottom: 12, fontFamily: 'Inter, sans-serif', transition: 'transform .15s' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.01)' }} onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}>

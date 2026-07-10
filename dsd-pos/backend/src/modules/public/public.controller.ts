@@ -290,10 +290,24 @@ export async function identifyLoyaltyCustomer(req: Request, res: Response): Prom
 
   const phone = parsed.data.phone.replace(/\D/g, '')
 
-  const { data: existing } = await supabase
+  let existing: any = null
+  const { data: exactMatch } = await supabase
     .from('loyalty_customers')
     .select('id, full_name, points, total_visits, tier, pin')
     .eq('tenant_id', tenant.id).eq('phone', phone).maybeSingle()
+  existing = exactMatch
+
+  if (!existing && phone.length > 10) {
+    const phone10 = phone.slice(-10)
+    const { data: fallback } = await supabase
+      .from('loyalty_customers')
+      .select('id, full_name, points, total_visits, tier, pin')
+      .eq('tenant_id', tenant.id).eq('phone', phone10).maybeSingle()
+    if (fallback) {
+      await supabase.from('loyalty_customers').update({ phone }).eq('id', fallback.id)
+      existing = fallback
+    }
+  }
 
   if (existing) {
     if (parsed.data.name && !existing.full_name) {
@@ -327,7 +341,14 @@ export async function setCustomerPin(req: Request, res: Response): Promise<void>
   if (!tenant) { res.status(404).json({ success: false, error: 'Restaurante no encontrado' }); return }
 
   const phone = parsed.data.phone.replace(/\D/g, '')
-  const { data: customer } = await supabase.from('loyalty_customers').select('id').eq('tenant_id', tenant.id).eq('phone', phone).maybeSingle()
+  let customer: any = null
+  const { data: exactC } = await supabase.from('loyalty_customers').select('id').eq('tenant_id', tenant.id).eq('phone', phone).maybeSingle()
+  customer = exactC
+  if (!customer && phone.length > 10) {
+    const phone10 = phone.slice(-10)
+    const { data: fb } = await supabase.from('loyalty_customers').select('id').eq('tenant_id', tenant.id).eq('phone', phone10).maybeSingle()
+    if (fb) { await supabase.from('loyalty_customers').update({ phone }).eq('id', fb.id); customer = fb }
+  }
   if (!customer) { res.status(404).json({ success: false, error: 'Cliente no encontrado' }); return }
 
   const pin = bcrypt.hashSync(parsed.data.pin, 10)
@@ -348,10 +369,20 @@ export async function loginCustomer(req: Request, res: Response): Promise<void> 
   if (!tenant) { res.status(404).json({ success: false, error: 'Restaurante no encontrado' }); return }
 
   const phone = parsed.data.phone.replace(/\D/g, '')
-  const { data: customer } = await supabase
+  let customer: any = null
+  const { data: exactL } = await supabase
     .from('loyalty_customers')
     .select('id, full_name, points, total_visits, total_spent, tier, pin')
     .eq('tenant_id', tenant.id).eq('phone', phone).maybeSingle()
+  customer = exactL
+  if (!customer && phone.length > 10) {
+    const phone10 = phone.slice(-10)
+    const { data: fbL } = await supabase
+      .from('loyalty_customers')
+      .select('id, full_name, points, total_visits, total_spent, tier, pin')
+      .eq('tenant_id', tenant.id).eq('phone', phone10).maybeSingle()
+    if (fbL) { await supabase.from('loyalty_customers').update({ phone }).eq('id', fbL.id); customer = fbL }
+  }
 
   if (!customer)     { res.status(404).json({ success: false, error: 'Cliente no encontrado' }); return }
   if (!customer.pin) { res.status(400).json({ success: false, error: 'Este cliente no tiene PIN configurado' }); return }
