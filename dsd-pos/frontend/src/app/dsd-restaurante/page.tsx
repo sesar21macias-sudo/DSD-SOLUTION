@@ -11,6 +11,7 @@ const API               = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4
 const pub               = axios.create({ baseURL: API })
 const TENANT_SLUG       = 'tacos-el-guero'
 const STORAGE_KEY       = `dsd_ct_${TENANT_SLUG}`
+const PHONE_KEY         = `dsd_ph_${TENANT_SLUG}`
 const GOOGLE_CLIENT_ID  = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
 
 // ── Palette (black / white / grey — red only for key CTAs) ───────────────────
@@ -367,16 +368,17 @@ export default function DSDRestaurantePage() {
   const [filterAnim,  setFilterAnim]  = useState(false)
 
   // Loyalty gate
-  const [gateStep,     setGateStep]     = useState<'welcome'|'phone'|'loading'|'found'|'enter-pin'|'login-method'|'new'|'set-pin'|'done'>('welcome')
+  const [gateStep,     setGateStep]     = useState<'welcome'|'phone'|'loading'|'found'|'enter-pin'|'login-method'|'new'|'set-pin'|'quick-pin'|'done'>('welcome')
   const [gatePhone,    setGatePhone]    = useState('')
   const [gateCountry,  setGateCountry]  = useState<'+52'|'+1'>('+52')
   const [gateLoginMode,setGateLoginMode]= useState<'pin'|'phone'>('pin')
   const [gateName,     setGateName]     = useState('')
   const [gatePin,      setGatePin]      = useState('')
   const [gatePinErr,   setGatePinErr]   = useState<string | null>(null)
-  const [gateCustomer, setGateCustomer] = useState<Customer | null>(null)
-  const [gateHasPin,   setGateHasPin]   = useState(false)
-  const [gateError,    setGateError]    = useState<string | null>(null)
+  const [gateCustomer,   setGateCustomer]   = useState<Customer | null>(null)
+  const [gateHasPin,     setGateHasPin]     = useState(false)
+  const [gateError,      setGateError]      = useState<string | null>(null)
+  const [savedPhoneName, setSavedPhoneName] = useState<string | null>(null)
   const [activeMainTab,setActiveMainTab]= useState<'menu'|'rewards'|'promos'>('menu')
 
   // Logged-in customer session
@@ -433,21 +435,37 @@ export default function DSDRestaurantePage() {
   // Restore saved customer session from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return
-    ;(async () => {
+    if (saved) {
+      ;(async () => {
+        try {
+          const { data } = await pub.get(`/public/loyalty/profile/${TENANT_SLUG}`, { headers: { Authorization: `Bearer ${saved}` } })
+          const d = data.data
+          setCustomerToken(saved)
+          setCustomer(d.customer)
+          setAllRewards(d.all_rewards)
+          setAvailRewards(d.available_rewards)
+          setGateCustomer(d.customer)
+          setGateStep('done')
+        } catch {
+          localStorage.removeItem(STORAGE_KEY)
+          checkSavedPhone()
+        }
+      })()
+    } else {
+      checkSavedPhone()
+    }
+
+    function checkSavedPhone() {
+      const raw = localStorage.getItem(PHONE_KEY)
+      if (!raw) return
       try {
-        const { data } = await pub.get(`/public/loyalty/profile/${TENANT_SLUG}`, { headers: { Authorization: `Bearer ${saved}` } })
-        const d = data.data
-        setCustomerToken(saved)
-        setCustomer(d.customer)
-        setAllRewards(d.all_rewards)
-        setAvailRewards(d.available_rewards)
-        setGateCustomer(d.customer)
-        setGateStep('done')
-      } catch {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    })()
+        const { phone, country, name } = JSON.parse(raw)
+        setGatePhone(phone)
+        setGateCountry(country)
+        setSavedPhoneName(name ?? null)
+        setGateStep('quick-pin')
+      } catch { localStorage.removeItem(PHONE_KEY) }
+    }
   }, [])
 
   // Hero parallax
@@ -549,7 +567,7 @@ export default function DSDRestaurantePage() {
     }
   }
 
-  async function saveSession(token: string) {
+  async function saveSession(token: string, nameOverride?: string) {
     localStorage.setItem(STORAGE_KEY, token)
     setCustomerToken(token)
     try {
@@ -557,11 +575,32 @@ export default function DSDRestaurantePage() {
       setCustomer(data.data.customer)
       setAllRewards(data.data.all_rewards)
       setAvailRewards(data.data.available_rewards)
+      const savedName = nameOverride ?? data.data.customer?.full_name ?? null
+      localStorage.setItem(PHONE_KEY, JSON.stringify({ phone: gatePhone, country: gateCountry, name: savedName }))
+      setSavedPhoneName(savedName)
     } catch {}
+  }
+
+  async function handleQuickPin() {
+    if (gatePin.length !== 4) return
+    setGatePinErr(null)
+    setGateStep('loading')
+    try {
+      const { data } = await pub.post(`/public/loyalty/login/${TENANT_SLUG}`, { phone: fullPhone(), pin: gatePin })
+      const token = data.data.token
+      await saveSession(token)
+      setGateCustomer(data.data.customer)
+      setGateStep('done')
+    } catch (e: any) {
+      setGateStep('quick-pin')
+      setGatePinErr(e?.response?.data?.error ?? 'PIN incorrecto')
+      setGatePin('')
+    }
   }
 
   function handleLogout() {
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(PHONE_KEY)
     setCustomerToken(null)
     setCustomer(null)
     setAllRewards([])
@@ -991,6 +1030,37 @@ export default function DSDRestaurantePage() {
               </>
             )
           })()}
+
+          {/* Quick PIN — regreso con telefono guardado */}
+          {gateStep === 'quick-pin' && (
+            <>
+              <div className="slide-up-1" style={{ textAlign: 'center', marginBottom: 28 }}>
+                <h1 style={{ fontSize: 30, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 6 }}>
+                  {savedPhoneName ? `Hola, ${savedPhoneName.split(' ')[0]}` : 'Bienvenido de vuelta'}
+                </h1>
+                <p style={{ color: '#888', fontSize: 14, marginBottom: 4 }}>Ingresa tu PIN para entrar</p>
+                <p style={{ color: '#555', fontSize: 12 }}>{gateCountry} {gatePhone}</p>
+              </div>
+
+              <div className="slide-up-2"><PinDisplay /></div>
+              <div className="slide-up-3">
+                <PinPad onDigit={d => { if (gatePin.length < 4) setGatePin(p => p + d) }} onBack={() => setGatePin(p => p.slice(0, -1))} />
+              </div>
+
+              {gatePinErr && <p style={{ color: '#ef4444', fontSize: 13, textAlign: 'center', marginBottom: 8 }}>{gatePinErr}</p>}
+
+              <div className="slide-up-4">
+                <button onClick={handleQuickPin} disabled={gatePin.length !== 4}
+                  style={{ width: '100%', background: gatePin.length === 4 ? '#ffffff' : '#1a1a1a', color: gatePin.length === 4 ? '#000' : '#555', border: 'none', borderRadius: 14, padding: '16px 0', fontWeight: 800, fontSize: 15, cursor: gatePin.length === 4 ? 'pointer' : 'default', marginBottom: 12, fontFamily: 'Inter, sans-serif', transition: 'background .2s, color .2s' }}>
+                  {gatePin.length === 4 ? 'Entrar' : `Faltan ${4 - gatePin.length} digitos`}
+                </button>
+                <button onClick={() => { localStorage.removeItem(PHONE_KEY); setSavedPhoneName(null); setGatePhone(''); setGatePin(''); setGateStep('welcome') }}
+                  style={{ width: '100%', background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: '8px 0', fontFamily: 'Inter, sans-serif' }}>
+                  No soy yo / Usar otro numero
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Returning customer - found */}
           {gateStep === 'found' && gateCustomer && (
