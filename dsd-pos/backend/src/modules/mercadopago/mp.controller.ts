@@ -167,9 +167,9 @@ export async function createPreference(req: Request, res: Response): Promise<voi
     updated_at:       new Date().toISOString(),
   }).eq('id', order_id)
 
-  // Use token type to pick init_point: APP_USR- = production, TEST- = sandbox
-  const isSandboxToken = accessToken.startsWith('TEST-')
-  const initPoint = isSandboxToken ? prefResponse.sandbox_init_point : prefResponse.init_point
+  // MP_PROD=true en Render cuando tengas credenciales de produccion reales
+  const isProduction = process.env['MP_PROD'] === 'true'
+  const initPoint = isProduction ? prefResponse.init_point : prefResponse.sandbox_init_point
 
   const publicKey = tenant?.mp_public_key ?? process.env['MP_PUBLIC_KEY'] ?? ''
 
