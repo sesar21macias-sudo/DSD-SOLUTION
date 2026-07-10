@@ -231,7 +231,7 @@ function StripeCheckoutForm({ orderId, orderNumber, total, onSuccess, onBack }: 
   )
 }
 
-interface PaymentData { preference_id: string; order_id: string; order_number: string; total: number; public_key: string }
+interface PaymentData { preference_id: string; order_id: string; order_number: string; total: number; public_key: string; init_point: string }
 
 // ── Tier helpers ──────────────────────────────────────────────────────────────
 const TIER_LABELS: Record<string, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' }
@@ -545,7 +545,7 @@ export default function DSDRestaurantePage() {
       }
       setPaidAtCounter(false)
       if (mpSdkReady) {
-        setPaymentData({ preference_id: d.preference_id, order_id: d.order_id, order_number: d.order_number, total: d.total, public_key: d.public_key })
+        setPaymentData({ preference_id: d.preference_id, order_id: d.order_id, order_number: d.order_number, total: d.total, public_key: d.public_key, init_point: d.init_point })
       } else { window.location.href = d.init_point }
     },
     onError: (e: any) => {
