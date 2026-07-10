@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import axios from 'axios'
-import { ShoppingCart, Plus, Minus, Trash2, X, ChevronRight, Star, Clock, MapPin, Phone, Gift, User, LogOut } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, X, ChevronRight, Star, Clock, MapPin, Phone, Gift, User, LogOut, UtensilsCrossed, Tag, ArrowLeft, Check, Sparkles, Zap } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
@@ -29,7 +29,14 @@ interface Product  { id: string; name: string; description?: string; price_mxn: 
 interface CartItem { id: string; name: string; price: number; qty: number }
 interface Table    { id: string; name: string; status: string }
 interface Reward   { id: string; name: string; description?: string; points_required: number; reward_type: 'discount' | 'free_item' | 'percentage'; reward_value?: number }
-interface Customer { id: string; full_name: string | null; points: number; total_visits: number; tier: string }
+interface Promo    { id: string; title: string; description: string; tag: string; discount_type: 'flat' | 'percent'; discount_value: number; min_order: number; icon: string }
+
+const PROMOS: Promo[] = [
+  { id: 'tuesday-taco', title: '2x1 en Tacos', description: 'Todos los martes en tacos de asada y birria. Presenta al pedir.', tag: 'Martes', discount_type: 'percent', discount_value: 50, min_order: 60, icon: 'T' },
+  { id: 'free-drink',   title: 'Bebida gratis', description: 'Con cualquier orden mayor a $150. Se aplica la bebida de menor precio.', tag: 'Siempre', discount_type: 'flat', discount_value: 30, min_order: 150, icon: 'B' },
+  { id: 'birthday',     title: 'Desc. cumpleanos', description: '20% off en tu mes de cumpleanos con cuenta de lealtad activa.', tag: 'Miembros', discount_type: 'percent', discount_value: 20, min_order: 0, icon: 'C' },
+]
+interface Customer { id: string; full_name: string | null; points: number; total_visits: number; total_spent?: number; tier: string }
 
 // ── Product photos ────────────────────────────────────────────────────────────
 const PRODUCT_PHOTOS: Record<string, string> = {
@@ -135,44 +142,50 @@ const GLOBAL_STYLES = `
 
   @keyframes slideUp   { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
   @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
-  @keyframes bounceIn  { 0%{opacity:0;transform:translateX(-50%) translateY(20px) scale(.92)}
-                         60%{transform:translateX(-50%) translateY(-5px) scale(1.02)}
-                         100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
-  @keyframes drawerIn  { from{transform:translateX(100%)} to{transform:translateX(0)} }
-  @keyframes checkPop  { 0%{transform:scale(0);opacity:0} 65%{transform:scale(1.2)} 100%{transform:scale(1);opacity:1} }
-  @keyframes countPop  { 0%{transform:scale(1)} 35%{transform:scale(1.5)} 100%{transform:scale(1)} }
-  @keyframes shimmer   { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
-  @keyframes ripple    { from{transform:scale(0);opacity:.4} to{transform:scale(3.5);opacity:0} }
-  @keyframes pillsIn   { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
-  @keyframes cardReveal{ from{opacity:0;transform:translateY(24px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-  @keyframes gateIn    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes gateSpin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-  @keyframes pinPop    { 0%{transform:scale(0.6);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
-  @keyframes profileIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-  .hero-h1     { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .12s }
-  .hero-p      { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .26s }
-  .hero-ctas   { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .40s }
-  .hero-info   { animation: fadeIn    .7s ease both .55s }
-  .hero-mosaic { animation: fadeIn    .9s ease both .2s }
-  .pill-in     { animation: bounceIn  .42s cubic-bezier(.22,1,.36,1) both }
-  .drawer-in   { animation: drawerIn  .35s cubic-bezier(.22,1,.36,1) both }
-  .profile-in  { animation: profileIn .35s cubic-bezier(.22,1,.36,1) both }
-  .gate-card   { animation: gateIn    .52s cubic-bezier(.22,1,.36,1) both }
-  .check-anim  { animation: checkPop  .55s cubic-bezier(.34,1.56,.64,1) both .1s }
-  .count-pop   { animation: countPop  .32s cubic-bezier(.34,1.56,.64,1) }
-  .cat-pill    { animation: pillsIn .3s ease both }
-  .card-hidden { opacity:0; transform:translateY(24px) scale(.97) }
-  .card-visible{ animation: cardReveal .48s cubic-bezier(.22,1,.36,1) both }
-  .add-btn { position:relative; overflow:hidden }
-  .add-btn .ripple-el { position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);pointer-events:none;animation:ripple .55s ease-out forwards }
-  .product-card img { transition: transform .45s cubic-bezier(.22,1,.36,1) }
-  .product-card:hover img { transform: scale(1.07) }
-  .skeleton { background:linear-gradient(90deg,#1a1a1a 25%,#242424 50%,#1a1a1a 75%);background-size:400px 100%;animation:shimmer 1.2s infinite }
-  ::-webkit-scrollbar { width:4px;height:4px }
+  * { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent }
+  body,input,textarea,select,button { font-family:'Inter',system-ui,-apple-system,sans-serif }
+
+  @keyframes slideUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn     { from{opacity:0} to{opacity:1} }
+  @keyframes scaleUp    { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
+  @keyframes drawerIn   { from{transform:translateX(100%)} to{transform:translateX(0)} }
+  @keyframes profileIn  { from{transform:translateX(100%)} to{transform:translateX(0)} }
+  @keyframes pillFloat  { 0%{opacity:0;transform:translateX(-50%) translateY(14px)} 60%{transform:translateX(-50%) translateY(-3px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
+  @keyframes pinPop     { 0%{transform:scale(.5);opacity:0} 65%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+  @keyframes spin       { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  @keyframes shimmer    { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+  @keyframes ripple     { from{transform:scale(0);opacity:.3} to{transform:scale(4);opacity:0} }
+  @keyframes countBounce{ 0%{transform:scale(1)} 35%{transform:scale(1.45)} 100%{transform:scale(1)} }
+  @keyframes cardIn     { from{opacity:0;transform:translateY(18px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes pillsIn    { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes checkPop   { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+  .slide-up   { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both }
+  .slide-up-1 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .06s }
+  .slide-up-2 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .12s }
+  .slide-up-3 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .18s }
+  .slide-up-4 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .24s }
+  .fade-in    { animation: fadeIn   .45s ease both }
+  .scale-up   { animation: scaleUp  .4s  cubic-bezier(.16,1,.3,1) both }
+  .drawer-in  { animation: drawerIn .38s cubic-bezier(.16,1,.3,1) both }
+  .profile-in { animation: profileIn .38s cubic-bezier(.16,1,.3,1) both }
+  .pill-in    { animation: pillFloat .48s cubic-bezier(.16,1,.3,1) both }
+  .cat-pill   { animation: pillsIn  .26s ease both }
+  .card-in    { animation: cardIn   .48s cubic-bezier(.16,1,.3,1) both }
+  .count-pop  { animation: countBounce .28s cubic-bezier(.34,1.56,.64,1) }
+  .check-anim { animation: checkPop .45s cubic-bezier(.34,1.56,.64,1) both }
+  .add-btn    { position:relative;overflow:hidden }
+  .add-btn .ripple-el { position:absolute;border-radius:50%;background:rgba(255,255,255,.2);pointer-events:none;animation:ripple .55s ease-out forwards }
+  .product-card img  { transition:transform .5s cubic-bezier(.16,1,.3,1) }
+  .product-card:hover img { transform:scale(1.06) }
+  .skeleton   { background:linear-gradient(90deg,#181818 25%,#222 50%,#181818 75%);background-size:600px 100%;animation:shimmer 1.4s infinite }
+  ::-webkit-scrollbar { width:3px;height:3px }
   ::-webkit-scrollbar-track { background:transparent }
-  ::-webkit-scrollbar-thumb { background:#333;border-radius:99px }
+  ::-webkit-scrollbar-thumb { background:#2a2a2a;border-radius:99px }
   input:focus,textarea:focus,select:focus { outline:none }
+  select option { background:#1c1c1c;color:#ededed }
 `
 
 function addRipple(e: React.MouseEvent<HTMLButtonElement>) {
@@ -283,6 +296,7 @@ export default function DSDRestaurantePage() {
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
   const [profileOpen,    setProfileOpen]    = useState(false)
   const [googleReady,    setGoogleReady]    = useState(false)
+  const [selectedPromo,  setSelectedPromo]  = useState<Promo | null>(null)
 
   const heroRef  = useRef<HTMLDivElement>(null)
   const brickRef = useRef<any>(null)
@@ -586,12 +600,13 @@ export default function DSDRestaurantePage() {
   const tax             = subtotal * 0.16
   const baseTotal       = subtotal + tax
   const discount        = selectedReward ? calcDiscount(selectedReward, subtotal) : 0
-  const total           = Math.max(0, baseTotal - discount)
+  const promoDiscount   = selectedPromo
+    ? (selectedPromo.discount_type === 'flat'
+        ? (subtotal >= selectedPromo.min_order ? Math.min(selectedPromo.discount_value, subtotal) : 0)
+        : (subtotal >= selectedPromo.min_order ? Math.round(subtotal * selectedPromo.discount_value / 100 * 100) / 100 : 0))
+    : 0
+  const total           = Math.max(0, baseTotal - discount - promoDiscount)
   const filtered        = (data?.products ?? []).filter(p => !activeCategory || p.category_id === activeCategory)
-  const VISITS_PER_PRIZE = 8
-  const cycleVisits     = (customer ?? gateCustomer) ? ((customer ?? gateCustomer)!.total_visits % VISITS_PER_PRIZE) : 0
-  const progressPct     = Math.round((cycleVisits / VISITS_PER_PRIZE) * 100)
-
   useEffect(() => { document.body.style.overflow = (drawer || profileOpen) ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [drawer, profileOpen])
 
   // ── Phone input with country selector (reusable) ─────────────────────────
@@ -618,17 +633,61 @@ export default function DSDRestaurantePage() {
 
   // ── GATE SCREEN ───────────────────────────────────────────────────────────
   if (gateStep !== 'done') {
-    const toNextPrize = VISITS_PER_PRIZE - cycleVisits
-    const firstName   = gateCustomer?.full_name?.split(' ')[0] ?? ''
+    const firstName = gateCustomer?.full_name?.split(' ')[0] ?? ''
+
+    // Shared PIN pad component
+    const PinDisplay = () => (
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 28 }}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} style={{
+            width: 56, height: 68, borderRadius: 16,
+            background: gatePin.length > i ? TEXT : SURFACE,
+            border: `2px solid ${gatePin.length > i ? TEXT : BORDER}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26, color: BG,
+            transition: 'all .18s cubic-bezier(.16,1,.3,1)',
+            animation: gatePin.length === i + 1 ? 'pinPop .28s cubic-bezier(.34,1.56,.64,1)' : 'none',
+            boxShadow: gatePin.length > i ? `0 0 0 1px ${TEXT}22` : 'none',
+          }}>
+            {gatePin.length > i ? <div style={{ width: 10, height: 10, borderRadius: '50%', background: BG }} /> : ''}
+          </div>
+        ))}
+      </div>
+    )
+
+    const PinPad = ({ onDigit, onBack }: { onDigit: (d: string) => void; onBack: () => void }) => (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+        {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((key, i) => {
+          if (key === '') return <div key={i} />
+          const isBack = key === '⌫'
+          return (
+            <button key={i} type="button"
+              onClick={() => isBack ? onBack() : onDigit(key)}
+              style={{ width: '100%', padding: '17px 0', borderRadius: 16, background: isBack ? 'transparent' : SURFACE, border: `1.5px solid ${isBack ? 'transparent' : BORDER}`, color: TEXT, fontSize: isBack ? 20 : 22, fontWeight: isBack ? 400 : 700, cursor: 'pointer', transition: 'all .12s', letterSpacing: isBack ? 0 : '0.02em' }}
+              onMouseDown={e => { e.currentTarget.style.background = isBack ? SURFACE2 : SURFACE2; e.currentTarget.style.transform = 'scale(.95)' }}
+              onMouseUp={e => { e.currentTarget.style.background = isBack ? 'transparent' : SURFACE; e.currentTarget.style.transform = 'scale(1)' }}
+              onTouchStart={e => { e.currentTarget.style.background = SURFACE2; e.currentTarget.style.transform = 'scale(.95)' }}
+              onTouchEnd={e => { e.currentTarget.style.background = isBack ? 'transparent' : SURFACE; e.currentTarget.style.transform = 'scale(1)' }}
+            >{key}</button>
+          )
+        })}
+      </div>
+    )
 
     return (
-      <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 20px', fontFamily: 'system-ui,-apple-system,sans-serif', position: 'relative', overflow: 'hidden' }}>
-        <style>{`* { box-sizing:border-box;margin:0;padding:0 } @keyframes gateIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}} @keyframes gateSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes pinPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}} .gate-card{animation:gateIn .52s cubic-bezier(.22,1,.36,1) both} select option{background:#1e1e1e;color:#f0f0f0}`}</style>
+      <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px 48px', position: 'relative', overflow: 'hidden' }}>
+        {/* Background texture */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,.03) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,.02) 0%, transparent 50%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${BORDER}, transparent)` }} />
 
-        {/* Ambient glow */}
-        <div style={{ position: 'absolute', top: -140, left: '50%', transform: 'translateX(-50%)', width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,240,240,.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ width: '100%', maxWidth: 380, position: 'relative' }}>
 
-        <div className="gate-card" style={{ width: '100%', maxWidth: 400 }}>
+          {/* Logo mark */}
+          <div className="slide-up" style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: TEXT, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UtensilsCrossed size={22} color={BG} strokeWidth={2.5} />
+            </div>
+          </div>
 
           {/* Logo */}
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
@@ -640,24 +699,29 @@ export default function DSDRestaurantePage() {
           {/* ── WELCOME ── */}
           {gateStep === 'welcome' && (
             <>
-              <h1 style={{ fontSize: 32, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Bienvenido</h1>
-              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 32 }}>Acumula puntos en cada visita y<br />canjealos por premios exclusivos</p>
+              <div className="slide-up-1" style={{ textAlign: 'center', marginBottom: 36 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: TEXT3, textTransform: 'uppercase', marginBottom: 10 }}>DSD Restaurante</p>
+                <h1 style={{ fontSize: 38, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 12 }}>Gana puntos,<br />canjea premios</h1>
+                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.7 }}>Acumula puntos con cada compra y canjealos por descuentos y comida gratis.</p>
+              </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              <div className="slide-up-2" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
                 <button onClick={() => { setGateLoginMode('pin'); setGatePhone(''); setGatePin(''); setGateStep('new') }}
-                  style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', transition: 'background .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#d4d4d4')} onMouseLeave={e => (e.currentTarget.style.background = TEXT)}>
+                  style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 14, padding: '16px 0', fontWeight: 800, fontSize: 15, cursor: 'pointer', letterSpacing: '-0.01em', transition: 'transform .15s, background .15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#d8d8d8'; e.currentTarget.style.transform = 'scale(1.01)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = TEXT; e.currentTarget.style.transform = 'scale(1)' }}>
                   Crear cuenta
                 </button>
                 <button onClick={() => setGateStep('login-method')}
-                  style={{ width: '100%', background: 'transparent', color: TEXT, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '17px 0', fontWeight: 700, fontSize: 16, cursor: 'pointer', transition: 'border-color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}>
+                  style={{ width: '100%', background: 'transparent', color: TEXT, border: `1.5px solid ${BORDER}`, borderRadius: 14, padding: '16px 0', fontWeight: 700, fontSize: 15, cursor: 'pointer', transition: 'border-color .15s, transform .15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = TEXT3; e.currentTarget.style.transform = 'scale(1.01)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.transform = 'scale(1)' }}>
                   Iniciar sesion
                 </button>
               </div>
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+              <button className="slide-up-3" onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0', transition: 'color .15s' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Saltar por ahora
+                Explorar sin cuenta
               </button>
             </>
           )}
@@ -665,269 +729,206 @@ export default function DSDRestaurantePage() {
           {/* ── LOGIN METHOD ── */}
           {gateStep === 'login-method' && (
             <>
-              <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Iniciar sesion</h1>
-              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 28 }}>Elige como quieres entrar</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-                <button onClick={() => { setGateLoginMode('pin'); setGatePhone(''); setGatePin(''); setGateStep('phone') }}
-                  style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '18px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left', transition: 'border-color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>🔢</div>
-                  <div>
-                    <p style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: 3 }}>Con mi PIN</p>
-                    <p style={{ fontSize: 12, color: TEXT2 }}>Ingresa tu numero y tu PIN de 4 digitos</p>
-                  </div>
+              <div className="slide-up-1">
+                <button onClick={() => setGateStep('welcome')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 28, padding: 0, transition: 'color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                  <ArrowLeft size={14} /> Volver
                 </button>
-                <button onClick={() => { setGateLoginMode('phone'); setGatePhone(''); setGatePin(''); setGateStep('phone') }}
-                  style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '18px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left', transition: 'border-color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}>
-                  <div style={{ width: 44, height: 44, borderRadius: 14, background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>📱</div>
-                  <div>
-                    <p style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: 3 }}>Con mi numero</p>
-                    <p style={{ fontSize: 12, color: TEXT2 }}>Si olvidaste tu PIN, entra con tu telefono</p>
-                  </div>
-                </button>
+                <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 8 }}>Iniciar sesion</h1>
+                <p style={{ color: TEXT2, fontSize: 14, marginBottom: 28 }}>Como quieres entrar a tu cuenta</p>
               </div>
-              <button onClick={() => setGateStep('welcome')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
-                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Volver
-              </button>
+
+              <div className="slide-up-2" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {[
+                  { mode: 'pin' as const, title: 'Entrar con PIN', sub: 'Tu numero + 4 digitos', icon: <Zap size={18} color={TEXT2} strokeWidth={2} /> },
+                  { mode: 'phone' as const, title: 'Solo con mi numero', sub: 'Olvide mi PIN', icon: <Phone size={18} color={TEXT2} strokeWidth={2} /> },
+                ].map(opt => (
+                  <button key={opt.mode} onClick={() => { setGateLoginMode(opt.mode); setGatePhone(''); setGatePin(''); setGateStep('phone') }}
+                    style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 14, padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', transition: 'border-color .15s, transform .15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = TEXT3; e.currentTarget.style.transform = 'scale(1.01)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.transform = 'scale(1)' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{opt.icon}</div>
+                    <div>
+                      <p style={{ fontWeight: 800, fontSize: 14, color: TEXT, marginBottom: 2 }}>{opt.title}</p>
+                      <p style={{ fontSize: 12, color: TEXT3 }}>{opt.sub}</p>
+                    </div>
+                    <ChevronRight size={16} color={TEXT3} style={{ marginLeft: 'auto', flexShrink: 0 }} />
+                  </button>
+                ))}
+              </div>
             </>
           )}
 
           {/* ── PHONE ── */}
           {gateStep === 'phone' && (
             <>
-              <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>
-                {gateLoginMode === 'pin' ? 'Ingresa tu numero' : 'Busca tu cuenta'}
-              </h1>
-              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 24 }}>
-                {gateLoginMode === 'pin' ? 'Luego ingresaras tu PIN' : 'Entraremos con tu numero de telefono'}
-              </p>
+              <div className="slide-up-1">
+                <button onClick={() => setGateStep('login-method')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 28, padding: 0, transition: 'color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                  <ArrowLeft size={14} /> Volver
+                </button>
+                <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 8 }}>
+                  {gateLoginMode === 'pin' ? 'Tu numero' : 'Buscar cuenta'}
+                </h1>
+                <p style={{ color: TEXT2, fontSize: 14, marginBottom: 24 }}>
+                  {gateLoginMode === 'pin' ? 'Ingresa el numero con el que te registraste' : 'Ingresaras sin necesitar PIN'}
+                </p>
+              </div>
 
-              {/* Google Sign-In */}
-              {GOOGLE_CLIENT_ID && googleReady && (
-                <>
-                  <GoogleSignInButton onCredential={handleGoogleCredential} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
-                    <div style={{ flex: 1, height: 1, background: BORDER }} />
-                    <span style={{ fontSize: 12, color: TEXT3, fontWeight: 600, letterSpacing: '0.06em' }}>O CON TELEFONO</span>
-                    <div style={{ flex: 1, height: 1, background: BORDER }} />
-                  </div>
-                </>
-              )}
-
-              <PhoneInput autoFocus />
-              {gateError && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gateError}</p>}
-              <button onClick={handleGateSubmit} disabled={gatePhone.length < 7}
-                style={{ width: '100%', background: gatePhone.length < 7 ? SURFACE : ACCENT, color: gatePhone.length < 7 ? TEXT3 : '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePhone.length < 7 ? 'not-allowed' : 'pointer', transition: 'background .2s', marginBottom: 14 }}>
-                Continuar
-              </button>
-              <button onClick={() => setGateStep('login-method')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
-                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Volver
-              </button>
+              <div className="slide-up-2">
+                {GOOGLE_CLIENT_ID && googleReady && (
+                  <>
+                    <GoogleSignInButton onCredential={handleGoogleCredential} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0' }}>
+                      <div style={{ flex: 1, height: 1, background: BORDER }} />
+                      <span style={{ fontSize: 11, color: TEXT3, fontWeight: 700, letterSpacing: '0.08em' }}>O</span>
+                      <div style={{ flex: 1, height: 1, background: BORDER }} />
+                    </div>
+                  </>
+                )}
+                <PhoneInput autoFocus />
+                {gateError && <p style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{gateError}</p>}
+              </div>
+              <div className="slide-up-3">
+                <button onClick={handleGateSubmit} disabled={gatePhone.length < 7}
+                  style={{ width: '100%', background: gatePhone.length < 7 ? SURFACE : TEXT, color: gatePhone.length < 7 ? TEXT3 : BG, border: 'none', borderRadius: 14, padding: '16px 0', fontWeight: 800, fontSize: 15, cursor: gatePhone.length < 7 ? 'not-allowed' : 'pointer', transition: 'all .2s', marginBottom: 12, letterSpacing: '-0.01em' }}>
+                  Continuar
+                </button>
+              </div>
             </>
           )}
 
           {/* Loading */}
           {gateStep === 'loading' && (
-            <div style={{ textAlign: 'center', padding: '52px 0' }}>
-              <div style={{ width: 40, height: 40, border: `3px solid ${SURFACE2}`, borderTop: `3px solid ${TEXT}`, borderRadius: '50%', animation: 'gateSpin .75s linear infinite', margin: '0 auto 20px' }} />
-              <p style={{ color: TEXT2, fontSize: 14 }}>Un momento...</p>
+            <div className="fade-in" style={{ textAlign: 'center', padding: '60px 0' }}>
+              <div style={{ width: 36, height: 36, border: `2.5px solid ${SURFACE2}`, borderTop: `2.5px solid ${TEXT}`, borderRadius: '50%', animation: 'gateSpin .7s linear infinite', margin: '0 auto 18px' }} />
+              <p style={{ color: TEXT3, fontSize: 13, fontWeight: 500 }}>Un momento...</p>
             </div>
           )}
 
           {/* New customer — registration form */}
           {gateStep === 'new' && (
             <>
-              <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: SURFACE, border: `1px solid ${BORDER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <Star size={24} color={TEXT} fill={TEXT} />
-                </div>
-                <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 8 }}>Crea tu cuenta</h1>
-                <p style={{ color: TEXT2, fontSize: 13, lineHeight: 1.65 }}>Gana puntos en cada visita y canjealos<br />por descuentos y premios.</p>
+              <div className="slide-up-1">
+                <button onClick={() => setGateStep('welcome')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 28, padding: 0, transition: 'color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                  <ArrowLeft size={14} /> Volver
+                </button>
+                <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 8 }}>Crea tu cuenta</h1>
+                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>Gana puntos con cada compra y canjealos por descuentos y comida gratis.</p>
               </div>
 
-              {/* Perks strip */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 24 }}>
+              <div className="slide-up-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 22 }}>
                 {[
-                  { icon: '⭐', label: 'Puntos por compra' },
-                  { icon: '🎁', label: 'Premios gratis' },
-                  { icon: '💸', label: 'Descuentos' },
+                  { icon: <Zap size={16} color={TEXT2} strokeWidth={2} />, label: 'Puntos x compra' },
+                  { icon: <Gift size={16} color={TEXT2} strokeWidth={2} />, label: 'Premios gratis' },
+                  { icon: <Tag size={16} color={TEXT2} strokeWidth={2} />, label: 'Descuentos' },
                 ].map(p => (
-                  <div key={p.label} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, marginBottom: 6 }}>{p.icon}</div>
-                    <p style={{ fontSize: 10, color: TEXT2, fontWeight: 600, lineHeight: 1.3 }}>{p.label}</p>
+                  <div key={p.label} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>{p.icon}</div>
+                    <p style={{ fontSize: 10, color: TEXT3, fontWeight: 600, lineHeight: 1.3 }}>{p.label}</p>
                   </div>
                 ))}
               </div>
 
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Tu nombre</label>
-              <input type="text" value={gateName} autoFocus onChange={e => setGateName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGateRegister()} placeholder="Nombre completo"
-                style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '15px 18px', fontSize: 16, color: TEXT, marginBottom: 10, transition: 'border-color .2s' }}
-                onFocus={e => { e.currentTarget.style.borderColor = TEXT2 }} onBlur={e => { e.currentTarget.style.borderColor = BORDER }}
-              />
+              <div className="slide-up-3">
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 7 }}>Nombre</label>
+                <input type="text" value={gateName} autoFocus onChange={e => setGateName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGateRegister()} placeholder="Tu nombre"
+                  style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 14, padding: '14px 16px', fontSize: 15, color: TEXT, marginBottom: 14, fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = TEXT2 }} onBlur={e => { e.currentTarget.style.borderColor = BORDER }}
+                />
 
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Telefono</label>
-              <div style={{ position: 'relative', marginBottom: 16, background: SURFACE2, border: `1.5px solid ${BORDER}`, borderRadius: 16, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-                <select value={gateCountry} onChange={e => setGateCountry(e.target.value as '+52'|'+1')}
-                  style={{ background: 'transparent', border: 'none', borderRight: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '0 8px 0 12px', height: 52, appearance: 'none', flexShrink: 0, width: 80 }}>
-                  <option value="+52">🇲🇽 +52</option>
-                  <option value="+1">🇺🇸 +1</option>
-                </select>
-                <span style={{ padding: '15px 12px', fontSize: 16, color: TEXT2, letterSpacing: '0.05em', flex: 1 }}>{gatePhone || 'Tu numero'}</span>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 7 }}>Telefono</label>
+                <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 14, display: 'flex', alignItems: 'center', overflow: 'hidden', marginBottom: 20 }}>
+                  <select value={gateCountry} onChange={e => setGateCountry(e.target.value as '+52'|'+1')}
+                    style={{ background: 'transparent', border: 'none', borderRight: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '0 8px 0 14px', height: 50, appearance: 'none', flexShrink: 0, width: 82, fontFamily: 'Inter, sans-serif' }}>
+                    <option value="+52">MX +52</option>
+                    <option value="+1">US +1</option>
+                  </select>
+                  <span style={{ padding: '14px 14px', fontSize: 15, color: gatePhone ? TEXT : TEXT3, flex: 1 }}>{gatePhone || 'Numero de telefono'}</span>
+                </div>
+
+                <button onClick={handleGateRegister}
+                  style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 14, padding: '16px 0', fontWeight: 800, fontSize: 15, cursor: 'pointer', letterSpacing: '-0.01em', marginBottom: 12, fontFamily: 'Inter, sans-serif', transition: 'transform .15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.01)' }} onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}>
+                  Crear cuenta
+                </button>
               </div>
-
-              <button onClick={handleGateRegister} style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', marginBottom: 12 }}>
-                Crear cuenta gratis
-              </button>
-              <button onClick={() => setGateStep('welcome')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
-                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Volver
-              </button>
             </>
           )}
 
-          {/* Set PIN */}
-          {gateStep === 'set-pin' && (
-            <>
-              <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 10 }}>Crea tu PIN</h1>
-                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.65 }}>Un PIN de 4 digitos para acceder a tus<br />puntos y recompensas en tu proxima visita</p>
-              </div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} style={{ width: 52, height: 64, borderRadius: 14, background: SURFACE, border: `2px solid ${gatePin.length > i ? TEXT2 : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: TEXT, transition: 'border-color .2s', animation: gatePin.length === i + 1 ? 'pinPop .28s cubic-bezier(.34,1.56,.64,1)' : 'none' }}>
-                    {gatePin.length > i ? '•' : ''}
-                  </div>
-                ))}
-              </div>
-              {/* Visible numeric PIN pad */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
-                {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((key, i) => {
-                  if (key === '') return <div key={i} />
-                  const isBack = key === '⌫'
-                  return (
-                    <button key={i} type="button"
-                      onClick={() => { if (isBack) setGatePin(p => p.slice(0, -1)); else if (gatePin.length < 4) setGatePin(p => p + key) }}
-                      style={{ width: '100%', padding: '18px 0', borderRadius: 16, background: SURFACE, border: `1.5px solid ${BORDER}`, color: TEXT, fontSize: isBack ? 22 : 20, fontWeight: isBack ? 400 : 700, cursor: 'pointer', transition: 'background .12s' }}
-                      onMouseDown={e => { e.currentTarget.style.background = SURFACE2 }}
-                      onMouseUp={e => { e.currentTarget.style.background = SURFACE }}
-                      onTouchStart={e => { e.currentTarget.style.background = SURFACE2 }}
-                      onTouchEnd={e => { e.currentTarget.style.background = SURFACE }}
-                    >{key}</button>
-                  )
-                })}
-              </div>
-              {gatePinErr && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gatePinErr}</p>}
-              <button onClick={handleSetPin} disabled={gatePin.length !== 4}
-                style={{ width: '100%', background: gatePin.length === 4 ? ACCENT : SURFACE2, color: gatePin.length === 4 ? '#fff' : TEXT3, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePin.length === 4 ? 'pointer' : 'not-allowed', transition: 'background .2s, color .2s', marginBottom: 12 }}>
-                {gatePin.length === 4 ? 'Confirmar PIN' : `${4 - gatePin.length} digito${4 - gatePin.length !== 1 ? 's' : ''} mas`}
-              </button>
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
-                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Saltar, crear PIN despues
-              </button>
-            </>
-          )}
+          {/* Shared PIN pad block */}
+          {(gateStep === 'set-pin' || gateStep === 'enter-pin') && (() => {
+            const isSet = gateStep === 'set-pin'
+            const handlePin = isSet ? handleSetPin : handleEnterPin
+            return (
+              <>
+                <div className="slide-up-1" style={{ textAlign: 'center', marginBottom: 28 }}>
+                  <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 8 }}>
+                    {isSet ? 'Crea tu PIN' : `Hola${gateCustomer?.full_name ? `, ${gateCustomer.full_name.split(' ')[0]}` : ''}`}
+                  </h1>
+                  <p style={{ color: TEXT2, fontSize: 14 }}>
+                    {isSet ? 'Elige 4 digitos para acceder en tu proxima visita' : 'Ingresa tu PIN de 4 digitos'}
+                  </p>
+                </div>
 
-          {/* Enter PIN */}
-          {gateStep === 'enter-pin' && (
-            <>
-              <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 10 }}>
-                  Hola{gateCustomer?.full_name ? `, ${gateCustomer.full_name.split(' ')[0]}` : ''}
-                </h1>
-                <p style={{ color: TEXT2, fontSize: 14 }}>Ingresa tu PIN de 4 digitos</p>
-              </div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} style={{ width: 52, height: 64, borderRadius: 14, background: SURFACE, border: `2px solid ${gatePin.length > i ? TEXT2 : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: TEXT, transition: 'border-color .2s', animation: gatePin.length === i + 1 ? 'pinPop .28s cubic-bezier(.34,1.56,.64,1)' : 'none' }}>
-                    {gatePin.length > i ? '•' : ''}
-                  </div>
-                ))}
-              </div>
-              {/* Visible numeric PIN pad */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
-                {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((key, i) => {
-                  if (key === '') return <div key={i} />
-                  const isBack = key === '⌫'
-                  return (
-                    <button key={i} type="button"
-                      onClick={() => { if (isBack) setGatePin(p => p.slice(0, -1)); else if (gatePin.length < 4) setGatePin(p => p + key) }}
-                      style={{ width: '100%', padding: '18px 0', borderRadius: 16, background: SURFACE, border: `1.5px solid ${BORDER}`, color: TEXT, fontSize: isBack ? 22 : 20, fontWeight: isBack ? 400 : 700, cursor: 'pointer', transition: 'background .12s' }}
-                      onMouseDown={e => { e.currentTarget.style.background = SURFACE2 }}
-                      onMouseUp={e => { e.currentTarget.style.background = SURFACE }}
-                      onTouchStart={e => { e.currentTarget.style.background = SURFACE2 }}
-                      onTouchEnd={e => { e.currentTarget.style.background = SURFACE }}
-                    >{key}</button>
-                  )
-                })}
-              </div>
-              {gatePinErr && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gatePinErr}</p>}
-              <button onClick={handleEnterPin} disabled={gatePin.length !== 4}
-                style={{ width: '100%', background: gatePin.length === 4 ? ACCENT : SURFACE2, color: gatePin.length === 4 ? '#fff' : TEXT3, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePin.length === 4 ? 'pointer' : 'not-allowed', transition: 'background .2s, color .2s', marginBottom: 12 }}>
-                {gatePin.length === 4 ? 'Entrar' : `${4 - gatePin.length} digito${4 - gatePin.length !== 1 ? 's' : ''} mas`}
-              </button>
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
-                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Ver menu sin iniciar sesion
-              </button>
-            </>
-          )}
+                <div className="slide-up-2">
+                  <PinDisplay />
+                </div>
+
+                <div className="slide-up-3">
+                  <PinPad onDigit={d => { if (gatePin.length < 4) setGatePin(p => p + d) }} onBack={() => setGatePin(p => p.slice(0, -1))} />
+                </div>
+
+                {gatePinErr && <p className="fade-in" style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 12 }}>{gatePinErr}</p>}
+
+                <div className="slide-up-4">
+                  <button onClick={handlePin} disabled={gatePin.length !== 4}
+                    style={{ width: '100%', background: gatePin.length === 4 ? TEXT : SURFACE, color: gatePin.length === 4 ? BG : TEXT3, border: 'none', borderRadius: 14, padding: '16px 0', fontWeight: 800, fontSize: 15, cursor: gatePin.length === 4 ? 'pointer' : 'not-allowed', transition: 'all .2s', marginBottom: 12, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>
+                    {gatePin.length === 4 ? (isSet ? 'Confirmar PIN' : 'Entrar') : `Faltan ${4 - gatePin.length} digitos`}
+                  </button>
+                  <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0', transition: 'color .15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                    {isSet ? 'Saltar, crear PIN despues' : 'Ver menu sin sesion'}
+                  </button>
+                </div>
+              </>
+            )
+          })()}
 
           {/* Returning customer - found */}
           {gateStep === 'found' && gateCustomer && (
             <>
-              <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                <div style={{ width: 60, height: 60, borderRadius: '50%', background: SURFACE2, border: `2px solid ${BORDER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={TEXT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div className="scale-up" style={{ textAlign: 'center', marginBottom: 24 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 16, background: TEXT, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                  <Check size={24} color={BG} strokeWidth={2.5} />
                 </div>
-                <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 6 }}>
-                  {firstName ? `Hola, ${firstName}!` : 'Bienvenido!'}
+                <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 6 }}>
+                  {firstName ? `Hola, ${firstName}` : 'Bienvenido'}
                 </h1>
-                <p style={{ color: TEXT2, fontSize: 13 }}>Que gusto verte de nuevo</p>
+                <p style={{ color: TEXT3, fontSize: 13 }}>Que gusto verte de nuevo</p>
               </div>
 
-              <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '20px 20px 18px', marginBottom: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 18 }}>
-                  <div>
-                    <p style={{ fontSize: 10, color: TEXT3, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>Puntos</p>
-                    <p style={{ fontSize: 38, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.points.toLocaleString()}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 10, color: TEXT3, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>Visitas</p>
-                    <p style={{ fontSize: 38, fontWeight: 900, color: TEXT2, letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.total_visits}</p>
-                  </div>
-                </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <p style={{ fontSize: 12, color: TEXT3 }}>{cycleVisits} de {VISITS_PER_PRIZE} visitas para tu premio</p>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: toNextPrize > 0 ? TEXT2 : '#22c55e' }}>{toNextPrize > 0 ? `${toNextPrize} mas` : 'Premio!'}</p>
-                  </div>
-                  <div style={{ height: 5, background: SURFACE2, borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
-                    <div style={{ height: '100%', width: `${progressPct}%`, background: TEXT, borderRadius: 99, transition: 'width 1s cubic-bezier(.22,1,.36,1)' }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    {Array.from({ length: VISITS_PER_PRIZE }).map((_, i) => (
-                      <div key={i} style={{ width: 26, height: 26, borderRadius: '50%', background: i < cycleVisits ? TEXT : SURFACE2, border: `2px solid ${i < cycleVisits ? TEXT : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === VISITS_PER_PRIZE - 1 ? 11 : 9, transition: 'all .3s' }}>
-                        {i === VISITS_PER_PRIZE - 1 ? '🎁' : <span style={{ color: i < cycleVisits ? BG : TEXT3, fontWeight: 700 }}>{i + 1}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div className="slide-up-2" style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px', marginBottom: 16 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Tus puntos</p>
+                <p style={{ fontSize: 48, fontWeight: 900, color: TEXT, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: 6 }}>{gateCustomer.points.toLocaleString()}</p>
+                <p style={{ fontSize: 12, color: TEXT3 }}>Nivel <span style={{ color: TEXT2, fontWeight: 700, textTransform: 'capitalize' }}>{gateCustomer.tier ?? 'bronze'}</span> · {gateCustomer.total_visits} visitas</p>
               </div>
 
-              {!gateHasPin && (
-                <button onClick={() => { setGatePin(''); setGateStep('set-pin') }}
-                  style={{ width: '100%', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '14px 0', fontWeight: 700, fontSize: 14, color: TEXT2, cursor: 'pointer', marginBottom: 10 }}>
-                  Crear PIN para la proxima vez
+              <div className="slide-up-3" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {!gateHasPin && (
+                  <button onClick={() => { setGatePin(''); setGateStep('set-pin') }}
+                    style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 14, padding: '14px 0', fontWeight: 700, fontSize: 14, color: TEXT2, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'border-color .15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}>
+                    Crear PIN para la proxima vez
+                  </button>
+                )}
+                <button onClick={() => setGateStep('done')}
+                  style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 14, padding: '16px 0', fontWeight: 800, fontSize: 15, cursor: 'pointer', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em', transition: 'transform .15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.01)' }} onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}>
+                  Ver el menu
                 </button>
-              )}
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}>
-                Ver el menu
-              </button>
+              </div>
             </>
           )}
 
@@ -1204,18 +1205,19 @@ export default function DSDRestaurantePage() {
       <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`, position: 'sticky', top: 64, zIndex: 90 }}>
         <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 0 }}>
           {([
-            { id: 'menu',    label: 'Menu',        icon: '🍽️' },
-            { id: 'rewards', label: 'Premios',     icon: '⭐' },
-            { id: 'promos',  label: 'Promociones', icon: '🎉' },
-          ] as { id: 'menu'|'rewards'|'promos'; label: string; icon: string }[]).map(tab => {
+            { id: 'menu',    label: 'Menu',        icon: <UtensilsCrossed size={14} strokeWidth={2} /> },
+            { id: 'rewards', label: 'Premios',     icon: <Gift size={14} strokeWidth={2} /> },
+            { id: 'promos',  label: 'Promociones', icon: <Tag size={14} strokeWidth={2} /> },
+          ] as { id: 'menu'|'rewards'|'promos'; label: string; icon: ReactNode }[]).map(tab => {
             const active = activeMainTab === tab.id
             return (
               <button key={tab.id} onClick={() => setActiveMainTab(tab.id)}
-                style={{ flex: 1, maxWidth: 160, padding: '14px 8px', background: 'none', border: 'none', borderBottom: `2px solid ${active ? TEXT : 'transparent'}`, color: active ? TEXT : TEXT3, fontWeight: active ? 800 : 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'color .15s, border-color .15s' }}
+                style={{ flex: 1, maxWidth: 160, padding: '14px 8px', background: 'none', border: 'none', borderBottom: `2px solid ${active ? TEXT : 'transparent'}`, color: active ? TEXT : TEXT3, fontWeight: active ? 800 : 500, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'color .15s, border-color .15s', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.color = TEXT2 }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.color = TEXT3 }}>
-                <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                {tab.icon}
                 {tab.label}
+                {tab.id === 'promos' && selectedPromo && <span style={{ width: 6, height: 6, borderRadius: '50%', background: TEXT, flexShrink: 0 }} />}
               </button>
             )
           })}
@@ -1240,25 +1242,10 @@ export default function DSDRestaurantePage() {
           ) : (
             <>
               {/* Points hero */}
-              <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 24, padding: '32px 28px', marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Tus puntos</p>
-                  <p style={{ fontSize: 56, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1 }}>{customer.points.toLocaleString()}</p>
-                  <p style={{ fontSize: 13, color: TEXT2, marginTop: 8 }}>Nivel <span style={{ color: TIER_COLORS[customer.tier] ?? TEXT2, fontWeight: 700, textTransform: 'capitalize' }}>{TIER_LABELS[customer.tier]}</span> · {customer.total_visits} visitas</p>
-                </div>
-                <div style={{ minWidth: 160 }}>
-                  <p style={{ fontSize: 12, color: TEXT3, marginBottom: 10 }}>{cycleVisits} / {VISITS_PER_PRIZE} visitas para tu premio</p>
-                  <div style={{ height: 6, background: SURFACE2, borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
-                    <div style={{ height: '100%', width: `${progressPct}%`, background: TEXT, borderRadius: 99, transition: 'width 1s cubic-bezier(.22,1,.36,1)' }} />
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {Array.from({ length: VISITS_PER_PRIZE }).map((_, i) => (
-                      <div key={i} style={{ flex: 1, height: 28, borderRadius: 6, background: i < cycleVisits ? TEXT : SURFACE2, border: `1px solid ${i < cycleVisits ? TEXT : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, transition: 'all .3s' }}>
-                        {i === VISITS_PER_PRIZE - 1 ? '🎁' : <span style={{ color: i < cycleVisits ? BG : TEXT3, fontWeight: 700 }}>{i + 1}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '28px 28px 24px', marginBottom: 28 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Tus puntos</p>
+                <p style={{ fontSize: 56, fontWeight: 900, color: TEXT, letterSpacing: '-0.05em', lineHeight: 1, marginBottom: 10 }}>{customer.points.toLocaleString()}</p>
+                <p style={{ fontSize: 13, color: TEXT2 }}>Nivel <span style={{ color: TIER_COLORS[customer.tier] ?? TEXT2, fontWeight: 700, textTransform: 'capitalize' }}>{TIER_LABELS[customer.tier]}</span> · {customer.total_visits} visitas · ${customer.total_spent?.toFixed(0) ?? 0} gastado</p>
               </div>
 
               {/* Rewards grid */}
@@ -1324,23 +1311,63 @@ export default function DSDRestaurantePage() {
       {/* ── Promos tab ── */}
       {activeMainTab === 'promos' && (
         <section style={{ maxWidth: 1060, margin: '0 auto', padding: '48px 24px 120px' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 8 }}>Promociones</h2>
-          <p style={{ color: TEXT2, fontSize: 14, marginBottom: 36 }}>Ofertas y descuentos especiales del restaurante</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            {[
-              { emoji: '🌮', title: '2x1 en Tacos', desc: 'Todos los martes en tacos de asada y birria', tag: 'Martes', color: '#1a1400' },
-              { emoji: '🥤', title: 'Bebida gratis', desc: 'Con cualquier orden mayor a $150', tag: 'Siempre', color: '#0a1a0a' },
-              { emoji: '🎂', title: 'Descuento cumpleanos', desc: '20% off en tu mes de cumpleanos con cuenta activa', tag: 'Miembros', color: '#1a001a' },
-            ].map(p => (
-              <div key={p.title} style={{ background: p.color, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
-                <div style={{ padding: '28px 24px 20px' }}>
-                  <span style={{ fontSize: 36, display: 'block', marginBottom: 14 }}>{p.emoji}</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: ACCENT, background: 'rgba(232,66,26,.12)', borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.tag}</span>
-                  <h3 style={{ fontSize: 18, fontWeight: 900, color: TEXT, letterSpacing: '-0.02em', marginTop: 10, marginBottom: 6 }}>{p.title}</h3>
-                  <p style={{ fontSize: 13, color: TEXT2, lineHeight: 1.55 }}>{p.desc}</p>
+          <div style={{ marginBottom: 36 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 6 }}>Promociones</h2>
+            <p style={{ color: TEXT2, fontSize: 14 }}>Selecciona una promo para aplicar descuento a tu orden</p>
+          </div>
+
+          {selectedPromo && (
+            <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 14, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Tag size={15} color={TEXT2} />
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{selectedPromo.title} aplicada</p>
+                  <p style={{ fontSize: 11, color: TEXT3 }}>
+                    {selectedPromo.discount_type === 'flat'
+                      ? `$${selectedPromo.discount_value} de descuento con $${selectedPromo.min_order}+ en tu orden`
+                      : `${selectedPromo.discount_value}% off con $${selectedPromo.min_order}+ en tu orden`}
+                  </p>
                 </div>
               </div>
-            ))}
+              <button onClick={() => setSelectedPromo(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4 }}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+            {PROMOS.map(promo => {
+              const isSelected = selectedPromo?.id === promo.id
+              const eligible = subtotal >= promo.min_order || cart.length === 0
+              return (
+                <button key={promo.id}
+                  onClick={() => setSelectedPromo(isSelected ? null : promo)}
+                  style={{ background: isSelected ? SURFACE2 : SURFACE, border: `1.5px solid ${isSelected ? TEXT : BORDER}`, borderRadius: 18, overflow: 'hidden', textAlign: 'left', cursor: 'pointer', transition: 'border-color .2s, transform .15s, background .2s', transform: isSelected ? 'scale(1.01)' : 'scale(1)', padding: 0 }}
+                  onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = TEXT3; e.currentTarget.style.transform = 'scale(1.01)' } }}
+                  onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.transform = 'scale(1)' } }}>
+                  <div style={{ padding: '22px 22px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: isSelected ? TEXT : SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background .2s' }}>
+                        <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? BG : TEXT2, fontFamily: 'Inter, sans-serif' }}>{promo.icon}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: TEXT3, background: SURFACE2, borderRadius: 6, padding: '3px 8px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{promo.tag}</span>
+                        {isSelected && <Check size={16} color={TEXT} />}
+                      </div>
+                    </div>
+                    <h3 style={{ fontSize: 17, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 5 }}>{promo.title}</h3>
+                    <p style={{ fontSize: 12, color: TEXT3, lineHeight: 1.55, marginBottom: 14 }}>{promo.description}</p>
+                    <div style={{ display: 'inline-block', background: isSelected ? TEXT : SURFACE2, color: isSelected ? BG : TEXT3, borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 700, transition: 'all .2s', letterSpacing: '-0.01em' }}>
+                      {isSelected ? 'Seleccionada - Quitar' : promo.discount_type === 'flat' ? `-$${promo.discount_value}` : `-${promo.discount_value}%`}
+                    </div>
+                    {!eligible && cart.length > 0 && (
+                      <p style={{ fontSize: 10, color: TEXT3, marginTop: 8 }}>Minimo ${ promo.min_order} en orden</p>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </section>
       )}
@@ -1820,9 +1847,15 @@ export default function DSDRestaurantePage() {
                   </div>
                 ))}
                 {discount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: ACCENT, marginBottom: 10 }}>
-                    <span>Descuento ({selectedReward?.name})</span>
-                    <span style={{ fontWeight: 700 }}>-${discount.toFixed(2)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: TEXT2, marginBottom: 10 }}>
+                    <span>Premio ({selectedReward?.name})</span>
+                    <span style={{ fontWeight: 600, color: '#4ade80' }}>-${discount.toFixed(2)}</span>
+                  </div>
+                )}
+                {promoDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: TEXT2, marginBottom: 10 }}>
+                    <span>Promo ({selectedPromo?.title})</span>
+                    <span style={{ fontWeight: 600, color: '#4ade80' }}>-${promoDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 20, color: TEXT, paddingTop: 12, borderTop: `1px solid ${BORDER}`, letterSpacing: '-0.025em' }}>
