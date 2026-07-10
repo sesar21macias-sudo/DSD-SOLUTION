@@ -5,4 +5,7 @@ export declare function getPublicMenu(req: Request, res: Response): Promise<void
 export declare function createPublicOrder(req: Request, res: Response): Promise<void>;
 export declare function createOnlineOrder(req: Request, res: Response): Promise<void>;
 export declare function identifyLoyaltyCustomer(req: Request, res: Response): Promise<void>;
+export declare function setCustomerPin(req: Request, res: Response): Promise<void>;
+export declare function loginCustomer(req: Request, res: Response): Promise<void>;
+export declare function getCustomerProfile(req: Request, res: Response): Promise<void>;
 //# sourceMappingURL=public.controller.d.ts.map

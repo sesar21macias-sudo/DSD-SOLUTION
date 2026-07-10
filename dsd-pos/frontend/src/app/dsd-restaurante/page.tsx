@@ -3,24 +3,34 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import axios from 'axios'
-import {
-  ShoppingCart, Plus, Minus, Trash2, X,
-  ChevronRight, Star, Clock, MapPin, Phone, Flame,
-} from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, X, ChevronRight, Star, Clock, MapPin, Phone, Gift, User, LogOut } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
+const API          = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
+const pub          = axios.create({ baseURL: API })
+const TENANT_SLUG  = 'tacos-el-guero'
+const STORAGE_KEY  = `dsd_ct_${TENANT_SLUG}`
 
-const pub = axios.create({ baseURL: API })
-const TENANT_SLUG = 'tacos-el-guero'
+// ── Palette (black / white / grey — red only for key CTAs) ───────────────────
+const BG       = '#0d0d0d'
+const SURFACE  = '#161616'
+const SURFACE2 = '#1e1e1e'
+const BORDER   = '#262626'
+const TEXT     = '#f0f0f0'
+const TEXT2    = '#888888'
+const TEXT3    = '#444444'
+const ACCENT   = '#e8421a'
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface Category { id: string; name: string; sort_order: number }
 interface Product  { id: string; name: string; description?: string; price_mxn: number; category_id: string }
 interface CartItem { id: string; name: string; price: number; qty: number }
 interface Table    { id: string; name: string; status: string }
+interface Reward   { id: string; name: string; description?: string; points_required: number; reward_type: 'discount' | 'free_item' | 'percentage'; reward_value?: number }
+interface Customer { id: string; full_name: string | null; points: number; total_visits: number; tier: string }
 
-// ── Exact product-name → Unsplash photo map ──────────────────────────────────
+// ── Product photos ────────────────────────────────────────────────────────────
 const PRODUCT_PHOTOS: Record<string, string> = {
   'Taco de Birria':      'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80',
   'Taco de Asada':       'https://images.unsplash.com/photo-1611250188496-e966043a0629?w=600&q=80',
@@ -37,8 +47,6 @@ const PRODUCT_PHOTOS: Record<string, string> = {
   'Salsa Verde':         'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600&q=80',
   'Orden de Tortillas':  'https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&q=80',
 }
-
-// Keyword fallback for products not in the exact map
 const KEYWORD_PHOTOS: [string, string][] = [
   ['birria',     'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
   ['asada',      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
@@ -58,22 +66,21 @@ const FALLBACK_PHOTO = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab
 function photoFor(name: string): string {
   if (PRODUCT_PHOTOS[name]) return PRODUCT_PHOTOS[name]
   const n = name.toLowerCase()
-  for (const [kw, url] of KEYWORD_PHOTOS) {
-    if (n.includes(kw)) return url
-  }
+  for (const [kw, url] of KEYWORD_PHOTOS) { if (n.includes(kw)) return url }
   return FALLBACK_PHOTO
 }
 
-// ── Palette ───────────────────────────────────────────────────────────────────
-const ACCENT = '#e8421a'
-const DARK   = '#111111'
-const CREAM  = '#faf9f7'
+function calcDiscount(reward: Reward, subtotal: number): number {
+  if (reward.reward_type === 'discount')   return Math.min(reward.reward_value ?? 0, subtotal * 1.16)
+  if (reward.reward_type === 'percentage') return Math.min((subtotal * (reward.reward_value ?? 0)) / 100, subtotal * 1.16)
+  return 0
+}
 
-// ── Global styles injected once ───────────────────────────────────────────────
+// ── Global styles ─────────────────────────────────────────────────────────────
 const GLOBAL_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0 }
 
-  @keyframes slideUp   { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideUp   { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
   @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
   @keyframes bounceIn  { 0%{opacity:0;transform:translateX(-50%) translateY(20px) scale(.92)}
                          60%{transform:translateX(-50%) translateY(-5px) scale(1.02)}
@@ -84,61 +91,52 @@ const GLOBAL_STYLES = `
   @keyframes shimmer   { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
   @keyframes ripple    { from{transform:scale(0);opacity:.4} to{transform:scale(3.5);opacity:0} }
   @keyframes pillsIn   { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
-  @keyframes spinBadge { 0%{transform:rotate(-8deg) scale(.8)} 60%{transform:rotate(4deg) scale(1.06)} 100%{transform:rotate(0) scale(1)} }
-  @keyframes cardReveal{ from{opacity:0;transform:translateY(28px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes cardReveal{ from{opacity:0;transform:translateY(24px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   @keyframes gateIn    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
   @keyframes gateSpin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-  @keyframes dotPulse  { 0%,80%,100%{transform:scale(0);opacity:.3} 40%{transform:scale(1);opacity:1} }
+  @keyframes pinPop    { 0%{transform:scale(0.6);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+  @keyframes profileIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
 
-  .hero-badge  { animation: spinBadge .5s cubic-bezier(.34,1.56,.64,1) both .05s }
-  .hero-h1     { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .18s }
-  .hero-p      { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .32s }
-  .hero-ctas   { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .46s }
-  .hero-info   { animation: fadeIn    .7s ease both .65s }
-  .hero-mosaic { animation: fadeIn    .9s ease both .25s }
+  .hero-h1     { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .12s }
+  .hero-p      { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .26s }
+  .hero-ctas   { animation: slideUp   .7s cubic-bezier(.22,1,.36,1) both .40s }
+  .hero-info   { animation: fadeIn    .7s ease both .55s }
+  .hero-mosaic { animation: fadeIn    .9s ease both .2s }
   .pill-in     { animation: bounceIn  .42s cubic-bezier(.22,1,.36,1) both }
   .drawer-in   { animation: drawerIn  .35s cubic-bezier(.22,1,.36,1) both }
+  .profile-in  { animation: profileIn .35s cubic-bezier(.22,1,.36,1) both }
+  .gate-card   { animation: gateIn    .52s cubic-bezier(.22,1,.36,1) both }
   .check-anim  { animation: checkPop  .55s cubic-bezier(.34,1.56,.64,1) both .1s }
   .count-pop   { animation: countPop  .32s cubic-bezier(.34,1.56,.64,1) }
-
-  .card-hidden { opacity:0; transform:translateY(28px) scale(.97) }
-  .card-visible{ animation: cardReveal .48s cubic-bezier(.22,1,.36,1) both }
-
   .cat-pill    { animation: pillsIn .3s ease both }
-
+  .card-hidden { opacity:0; transform:translateY(24px) scale(.97) }
+  .card-visible{ animation: cardReveal .48s cubic-bezier(.22,1,.36,1) both }
   .add-btn { position:relative; overflow:hidden }
-  .add-btn .ripple-el { position:absolute; border-radius:50%; background:rgba(255,255,255,0.4); pointer-events:none;
-    animation:ripple .55s ease-out forwards }
-
+  .add-btn .ripple-el { position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);pointer-events:none;animation:ripple .55s ease-out forwards }
   .product-card img { transition: transform .45s cubic-bezier(.22,1,.36,1) }
   .product-card:hover img { transform: scale(1.07) }
-
-  .skeleton { background: linear-gradient(90deg,#f0ece8 25%,#e8e4e0 50%,#f0ece8 75%);
-    background-size:400px 100%; animation:shimmer 1.2s infinite }
-
-  ::-webkit-scrollbar { width:5px; height:5px }
+  .skeleton { background:linear-gradient(90deg,#1a1a1a 25%,#242424 50%,#1a1a1a 75%);background-size:400px 100%;animation:shimmer 1.2s infinite }
+  ::-webkit-scrollbar { width:4px;height:4px }
   ::-webkit-scrollbar-track { background:transparent }
-  ::-webkit-scrollbar-thumb { background:#d6d3d1; border-radius:99px }
+  ::-webkit-scrollbar-thumb { background:#333;border-radius:99px }
+  input:focus,textarea:focus,select:focus { outline:none }
 `
 
-// ── Ripple helper ─────────────────────────────────────────────────────────────
 function addRipple(e: React.MouseEvent<HTMLButtonElement>) {
   const btn = e.currentTarget
   const r = btn.getBoundingClientRect()
   const size = Math.max(r.width, r.height) * 1.4
-  const x = e.clientX - r.left - size / 2
-  const y = e.clientY - r.top  - size / 2
   const el = document.createElement('span')
   el.className = 'ripple-el'
-  el.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px`
+  el.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-r.left-size/2}px;top:${e.clientY-r.top-size/2}px`
   btn.appendChild(el)
   el.addEventListener('animationend', () => el.remove())
 }
 
+// ── Stripe ────────────────────────────────────────────────────────────────────
 const STRIPE_PK = 'pk_test_51TpZEEFxupxbJS8buDU9aoTjIcGLpvYc55eROC3BnaJAiipEyaklQKXaOnJTrjGrzK5RetJoA0wSiIi7Y8mKYAqi00tE0dCmhU'
 const stripePromise = loadStripe(STRIPE_PK)
 
-// ── Stripe checkout form ──────────────────────────────────────────────────────
 function StripeCheckoutForm({ orderId, orderNumber, total, onSuccess, onBack }: {
   orderId: string; orderNumber: string; total: number
   onSuccess: (orderNumber: string) => void
@@ -146,28 +144,20 @@ function StripeCheckoutForm({ orderId, orderNumber, total, onSuccess, onBack }: 
 }) {
   const stripe   = useStripe()
   const elements = useElements()
-  const [paying,   setPaying]   = useState(false)
-  const [errMsg,   setErrMsg]   = useState<string | null>(null)
+  const [paying, setPaying] = useState(false)
+  const [errMsg, setErrMsg] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!stripe || !elements) return
     setPaying(true); setErrMsg(null)
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-    })
-    if (error) {
-      setErrMsg(error.message ?? 'Error al procesar el pago')
-      setPaying(false); return
-    }
+    const { error, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
+    if (error) { setErrMsg(error.message ?? 'Error al procesar el pago'); setPaying(false); return }
     if (paymentIntent?.status === 'succeeded') {
       try {
         await axios.post(`${API}/stripe/confirm`, { payment_intent_id: paymentIntent.id, order_id: orderId })
         onSuccess(orderNumber)
-      } catch {
-        setErrMsg('Pago recibido pero error al confirmar. Contacta al restaurante.')
-      }
+      } catch { setErrMsg('Pago recibido pero error al confirmar. Contacta al restaurante.') }
     }
     setPaying(false)
   }
@@ -175,45 +165,28 @@ function StripeCheckoutForm({ orderId, orderNumber, total, onSuccess, onBack }: 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <PaymentElement options={{ layout: 'tabs' }} />
-      {errMsg && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#dc2626' }}>
-          {errMsg}
-        </div>
-      )}
-      <button
-        type="submit"
-        disabled={!stripe || paying}
-        style={{
-          width: '100%', background: paying ? '#6b7280' : '#635bff',
-          color: '#fff', fontWeight: 800, fontSize: 16,
-          padding: '17px 0', borderRadius: 16, border: 'none',
-          cursor: paying ? 'wait' : 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          transition: 'background .15s',
-        }}
+      {errMsg && <div style={{ background: '#1a0a0a', border: '1px solid #3d1515', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#f87171' }}>{errMsg}</div>}
+      <button type="submit" disabled={!stripe || paying}
+        style={{ width: '100%', background: paying ? TEXT3 : '#635bff', color: TEXT, fontWeight: 800, fontSize: 16, padding: '17px 0', borderRadius: 16, border: 'none', cursor: paying ? 'wait' : 'pointer', transition: 'background .15s' }}
       >
         {paying ? 'Procesando...' : `Pagar $${total.toFixed(2)} MXN`}
       </button>
-      <button
-        type="button"
-        onClick={onBack}
-        style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: 13, cursor: 'pointer', textAlign: 'center' }}
-      >
+      <button type="button" onClick={onBack} style={{ background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', textAlign: 'center' }}>
         Volver a elegir metodo de pago
       </button>
     </form>
   )
 }
 
-interface PaymentData {
-  preference_id: string
-  order_id:      string
-  order_number:  string
-  total:         number
-  public_key:    string
-}
+interface PaymentData { preference_id: string; order_id: string; order_number: string; total: number; public_key: string }
 
+// ── Tier helpers ──────────────────────────────────────────────────────────────
+const TIER_LABELS: Record<string, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum' }
+const TIER_COLORS: Record<string, string> = { bronze: '#cd7f32', silver: '#aaaaaa', gold: '#d4af37', platinum: '#e8e8e8' }
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function DSDRestaurantePage() {
+  // Cart / ordering
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [cart,        setCart]        = useState<CartItem[]>([])
   const [drawer,      setDrawer]      = useState(false)
@@ -221,30 +194,42 @@ export default function DSDRestaurantePage() {
   const [notes,       setNotes]       = useState('')
   const [tableId,     setTableId]     = useState<string>('')
   const [mpError,     setMpError]     = useState<string | null>(null)
-  const [paymentData,      setPaymentData]      = useState<PaymentData | null>(null)
-  const [paySuccess,       setPaySuccess]        = useState<string | null>(null)
-  const [mpSdkReady,       setMpSdkReady]        = useState(false)
-  const [payMethod,        setPayMethod]          = useState<'select' | 'mp' | 'stripe'>('select')
-  const [stripeSecret,     setStripeSecret]       = useState<string | null>(null)
-  const [stripeOrderId,    setStripeOrderId]      = useState<string | null>(null)
-  const [stripeOrderNum,   setStripeOrderNum]     = useState<string>('')
-  const [stripeTotal,      setStripeTotal]        = useState<number>(0)
-  const [stripeLoading,    setStripeLoading]      = useState(false)
-  const [stripeError,      setStripeError]        = useState<string | null>(null)
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
+  const [paySuccess,  setPaySuccess]  = useState<string | null>(null)
+  const [mpSdkReady,  setMpSdkReady] = useState(false)
+  const [payMethod,   setPayMethod]   = useState<'select'|'mp'|'stripe'>('select')
+  const [stripeSecret,   setStripeSecret]   = useState<string | null>(null)
+  const [stripeOrderId,  setStripeOrderId]  = useState<string | null>(null)
+  const [stripeOrderNum, setStripeOrderNum] = useState<string>('')
+  const [stripeTotal,    setStripeTotal]    = useState<number>(0)
+  const [stripeLoading,  setStripeLoading]  = useState(false)
+  const [stripeError,    setStripeError]    = useState<string | null>(null)
   const [countKey,    setCountKey]    = useState(0)
   const [filterAnim,  setFilterAnim]  = useState(false)
-  // ── Loyalty gate ─────────────────────────────────────────────────────────────
-  const [gateStep,     setGateStep]     = useState<'phone'|'loading'|'found'|'new'|'done'>('phone')
+
+  // Loyalty gate
+  const [gateStep,     setGateStep]     = useState<'phone'|'loading'|'found'|'enter-pin'|'new'|'set-pin'|'done'>('phone')
   const [gatePhone,    setGatePhone]    = useState('')
   const [gateName,     setGateName]     = useState('')
-  const [gateCustomer, setGateCustomer] = useState<{ full_name: string | null; points: number; total_visits: number; tier: string } | null>(null)
+  const [gatePin,      setGatePin]      = useState('')
+  const [gatePinErr,   setGatePinErr]   = useState<string | null>(null)
+  const [gateCustomer, setGateCustomer] = useState<Customer | null>(null)
+  const [gateHasPin,   setGateHasPin]   = useState(false)
   const [gateError,    setGateError]    = useState<string | null>(null)
 
-  const heroRef    = useRef<HTMLDivElement>(null)
-  const gridRef    = useRef<HTMLDivElement>(null)
-  const brickRef   = useRef<any>(null)
+  // Logged-in customer session
+  const [customerToken,  setCustomerToken]  = useState<string | null>(null)
+  const [customer,       setCustomer]       = useState<Customer | null>(null)
+  const [allRewards,     setAllRewards]     = useState<Reward[]>([])
+  const [availRewards,   setAvailRewards]   = useState<Reward[]>([])
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
+  const [profileOpen,    setProfileOpen]    = useState(false)
 
-  // Inject global styles once
+  const heroRef  = useRef<HTMLDivElement>(null)
+  const gridRef  = useRef<HTMLDivElement>(null)
+  const brickRef = useRef<any>(null)
+
+  // Inject global styles
   useEffect(() => {
     if (document.getElementById('dsd-gs')) return
     const s = document.createElement('style')
@@ -252,7 +237,7 @@ export default function DSDRestaurantePage() {
     document.head.appendChild(s)
   }, [])
 
-  // Load Mercado Pago SDK once
+  // Load MP SDK
   useEffect(() => {
     if ((window as any).MercadoPago) { setMpSdkReady(true); return }
     const script = document.createElement('script')
@@ -261,19 +246,36 @@ export default function DSDRestaurantePage() {
     document.head.appendChild(script)
   }, [])
 
+  // Restore saved customer session from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return
+    ;(async () => {
+      try {
+        const { data } = await pub.get(`/public/loyalty/profile/${TENANT_SLUG}`, { headers: { Authorization: `Bearer ${saved}` } })
+        const d = data.data
+        setCustomerToken(saved)
+        setCustomer(d.customer)
+        setAllRewards(d.all_rewards)
+        setAvailRewards(d.available_rewards)
+        setGateCustomer(d.customer)
+        setGateStep('done')
+      } catch {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    })()
+  }, [])
+
   // Hero parallax
   useEffect(() => {
     const hero = heroRef.current
     if (!hero) return
-    const onScroll = () => {
-      const y = window.scrollY
-      hero.style.backgroundPositionY = `${y * 0.35}px`
-    }
+    const onScroll = () => { hero.style.backgroundPositionY = `${window.scrollY * 0.35}px` }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // IntersectionObserver for card stagger
+  // Card intersection observer
   const observeCards = useCallback(() => {
     const grid = gridRef.current
     if (!grid) return
@@ -282,7 +284,7 @@ export default function DSDRestaurantePage() {
       entries.forEach((entry, i) => {
         if (entry.isIntersecting) {
           const el = entry.target as HTMLElement
-          el.style.animationDelay = `${i * 60}ms`
+          el.style.animationDelay = `${i * 55}ms`
           el.classList.remove('card-hidden')
           el.classList.add('card-visible')
           io.unobserve(el)
@@ -293,14 +295,18 @@ export default function DSDRestaurantePage() {
     return () => io.disconnect()
   }, [])
 
-  // ── Loyalty gate handlers ─────────────────────────────────────────────────────
+  // ── Gate handlers ─────────────────────────────────────────────────────────
   async function handleGateSubmit() {
     if (gatePhone.length < 7) return
     setGateStep('loading'); setGateError(null)
     try {
       const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: gatePhone })
-      setGateCustomer(data.data.customer)
-      setGateStep(data.data.is_new ? 'new' : 'found')
+      const d = data.data
+      setGateCustomer(d.customer)
+      setGateHasPin(d.has_pin)
+      if (d.is_new) { setGateStep('new') }
+      else if (d.has_pin) { setGateStep('enter-pin') }
+      else { setGateStep('found') }
     } catch {
       setGateStep('phone')
       setGateError('No se pudo conectar. Intenta de nuevo.')
@@ -310,26 +316,102 @@ export default function DSDRestaurantePage() {
   async function handleGateRegister() {
     setGateStep('loading')
     try {
-      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, {
-        phone: gatePhone,
-        name:  gateName.trim() || undefined,
-      })
+      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: gatePhone, name: gateName.trim() || undefined })
       setGateCustomer(data.data.customer)
+      setGateStep('set-pin')
+    } catch { setGateStep('new') }
+  }
+
+  async function handleSetPin() {
+    if (gatePin.length !== 4) return
+    setGatePinErr(null)
+    try {
+      const { data } = await pub.post(`/public/loyalty/set-pin/${TENANT_SLUG}`, { phone: gatePhone, pin: gatePin })
+      const token = data.data.token
+      saveSession(token)
       setGateStep('done')
-    } catch {
-      setGateStep('new')
+    } catch { setGatePinErr('No se pudo guardar el PIN. Intenta de nuevo.') }
+  }
+
+  async function handleEnterPin() {
+    if (gatePin.length !== 4) return
+    setGatePinErr(null)
+    try {
+      const { data } = await pub.post(`/public/loyalty/login/${TENANT_SLUG}`, { phone: gatePhone, pin: gatePin })
+      const token = data.data.token
+      saveSession(token)
+      setGateCustomer(data.data.customer)
+      setGateStep('found')
+    } catch (e: any) {
+      setGatePinErr(e?.response?.data?.error ?? 'PIN incorrecto')
+      setGatePin('')
     }
+  }
+
+  async function saveSession(token: string) {
+    localStorage.setItem(STORAGE_KEY, token)
+    setCustomerToken(token)
+    try {
+      const { data } = await pub.get(`/public/loyalty/profile/${TENANT_SLUG}`, { headers: { Authorization: `Bearer ${token}` } })
+      setCustomer(data.data.customer)
+      setAllRewards(data.data.all_rewards)
+      setAvailRewards(data.data.available_rewards)
+    } catch {}
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(STORAGE_KEY)
+    setCustomerToken(null)
+    setCustomer(null)
+    setAllRewards([])
+    setAvailRewards([])
+    setSelectedReward(null)
+    setProfileOpen(false)
+    setGateStep('phone')
+    setGatePhone('')
+    setGatePin('')
+    setGateCustomer(null)
+  }
+
+  // MP Brick
+  useEffect(() => {
+    if (!paymentData || !mpSdkReady || payMethod !== 'mp') return
+    const container = document.getElementById('dsd-payment-brick')
+    if (!container) return
+    if (brickRef.current) { brickRef.current.unmount?.(); brickRef.current = null }
+    const mp = new (window as any).MercadoPago(paymentData.public_key, { locale: 'es-MX' })
+    mp.bricks().create('payment', 'dsd-payment-brick', {
+      initialization: { amount: paymentData.total, preferenceId: paymentData.preference_id },
+      customization: {
+        paymentMethods: { wallet_purchase: 'all', creditCard: 'all', debitCard: 'all' },
+        visual: { hidePaymentButton: false, hideFormTitle: false, style: { theme: 'default' } },
+      },
+      callbacks: {
+        onReady: () => {},
+        onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
+          if (selectedPaymentMethod === 'wallet_purchase') return
+          try {
+            await pub.post(`/mp/process-card/${TENANT_SLUG}`, { order_id: paymentData.order_id, ...formData })
+            setPaySuccess(paymentData.order_number)
+            setPaymentData(null)
+          } catch (e: any) { throw new Error(e?.response?.data?.error ?? 'Error al procesar el pago') }
+        },
+        onError: (err: any) => { console.error('[MP Brick]', err) },
+      },
+    }).then((brick: any) => { brickRef.current = brick })
+    return () => { brickRef.current?.unmount?.(); brickRef.current = null }
+  }, [paymentData, mpSdkReady, payMethod])
+
+  function switchCategory(id: string | null) {
+    setFilterAnim(true)
+    setTimeout(() => { setActiveCategory(id); setFilterAnim(false) }, 160)
   }
 
   const { data, isLoading } = useQuery({
     queryKey: ['dsd-menu'],
     queryFn: async () => {
       const { data } = await pub.get(`/public/menu/${TENANT_SLUG}`)
-      return data.data as {
-        tenant: { name: string; currency: string }
-        categories: Category[]
-        products: Product[]
-      }
+      return data.data as { tenant: { name: string; currency: string }; categories: Category[]; products: Product[] }
     },
   })
 
@@ -341,7 +423,6 @@ export default function DSDRestaurantePage() {
     },
   })
 
-  // Re-observe after data or filter change
   useEffect(() => {
     const t = setTimeout(() => observeCards(), 60)
     return () => clearTimeout(t)
@@ -350,20 +431,19 @@ export default function DSDRestaurantePage() {
   const placeOrder = useMutation({
     mutationFn: async () => {
       const { data: orderRes } = await pub.post(`/public/online-order/${TENANT_SLUG}`, {
-        customer_name:   name || gateCustomer?.full_name || 'Cliente',
+        customer_name:   name || customer?.full_name || 'Cliente',
         customer_phone:  gatePhone || undefined,
+        customer_token:  customerToken || undefined,
+        reward_id:       selectedReward?.id || undefined,
         notes:           notes || undefined,
         order_type:      tableId ? 'dine_in' : 'takeout',
         table_id:        tableId || undefined,
         require_payment: true,
         items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
       })
-      const orderData = orderRes.data as { order_id: string; order_number: string; total: number }
+      const orderData = orderRes.data as { order_id: string; order_number: string; total: number; discount?: number }
 
-      const { data: mpRes } = await pub.post(`/mp/preference/${TENANT_SLUG}`, {
-        order_id:    orderData.order_id,
-        tip_percent: 0,
-      })
+      const { data: mpRes } = await pub.post(`/mp/preference/${TENANT_SLUG}`, { order_id: orderData.order_id, tip_percent: 0 })
       const mpData = mpRes.data as { preference_id: string; init_point: string; public_key: string }
 
       return {
@@ -376,104 +456,22 @@ export default function DSDRestaurantePage() {
       }
     },
     onSuccess: (d) => {
-      setCart([]); setDrawer(false); setName(''); setNotes(''); setTableId('')
+      setCart([]); setDrawer(false); setName(''); setNotes(''); setTableId(''); setSelectedReward(null)
       if (mpSdkReady) {
-        setPaymentData({
-          preference_id: d.preference_id,
-          order_id:      d.order_id,
-          order_number:  d.order_number,
-          total:         d.total,
-          public_key:    d.public_key,
-        })
-      } else {
-        // SDK not loaded yet — fall back to redirect
-        window.location.href = d.init_point
-      }
+        setPaymentData({ preference_id: d.preference_id, order_id: d.order_id, order_number: d.order_number, total: d.total, public_key: d.public_key })
+      } else { window.location.href = d.init_point }
     },
     onError: (e: any) => {
-      setMpError(e?.response?.data?.error ?? 'No se pudo conectar con Mercado Pago. Intenta de nuevo.')
+      setMpError(e?.response?.data?.error ?? 'No se pudo conectar. Intenta de nuevo.')
       setDrawer(false)
     },
   })
-
-  // Initialize Payment Brick when showing MP screen
-  useEffect(() => {
-    if (!paymentData || !mpSdkReady || payMethod !== 'mp') return
-    const container = document.getElementById('dsd-payment-brick')
-    if (!container) return
-
-    // Destroy previous brick instance if exists
-    if (brickRef.current) {
-      brickRef.current.unmount?.()
-      brickRef.current = null
-    }
-
-    const mp = new (window as any).MercadoPago(paymentData.public_key, { locale: 'es-MX' })
-
-    mp.bricks().create('payment', 'dsd-payment-brick', {
-      initialization: {
-        amount:       paymentData.total,
-        preferenceId: paymentData.preference_id,
-      },
-      customization: {
-        paymentMethods: {
-          wallet_purchase: 'all',  // Apple Pay / Google Pay / MP Wallet
-          creditCard:      'all',
-          debitCard:       'all',
-        },
-        visual: {
-          hidePaymentButton:     false,
-          hideFormTitle:         false,
-          style: { theme: 'default' },
-        },
-      },
-      callbacks: {
-        onReady: () => {},
-        onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
-          if (selectedPaymentMethod === 'wallet_purchase') return  // MP handles redirect
-          try {
-            await pub.post(`/mp/process-card/${TENANT_SLUG}`, {
-              order_id: paymentData.order_id,
-              ...formData,
-            })
-            setPaySuccess(paymentData.order_number)
-            setPaymentData(null)
-          } catch (e: any) {
-            throw new Error(e?.response?.data?.error ?? 'Error al procesar el pago')
-          }
-        },
-        onError: (err: any) => {
-          console.error('[MP Brick]', err)
-        },
-      },
-    }).then((brick: any) => { brickRef.current = brick })
-
-    return () => {
-      brickRef.current?.unmount?.()
-      brickRef.current = null
-    }
-  }, [paymentData, mpSdkReady, payMethod])
-
-  // Smooth category switch
-  function switchCategory(id: string | null) {
-    setFilterAnim(true)
-    setTimeout(() => {
-      setActiveCategory(id)
-      setFilterAnim(false)
-    }, 160)
-  }
-
-  const filtered = (data?.products ?? []).filter(
-    p => !activeCategory || p.category_id === activeCategory
-  )
 
   function addToCart(p: Product, e: React.MouseEvent<HTMLButtonElement>) {
     addRipple(e)
     setCart(c => {
       const ex = c.find(i => i.id === p.id)
-      return ex
-        ? c.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i)
-        : [...c, { id: p.id, name: p.name, price: p.price_mxn, qty: 1 }]
+      return ex ? c.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i) : [...c, { id: p.id, name: p.name, price: p.price_mxn, qty: 1 }]
     })
     setCountKey(k => k + 1)
   }
@@ -485,195 +483,208 @@ export default function DSDRestaurantePage() {
   const totalItems = cart.reduce((s, i) => s + i.qty, 0)
   const subtotal   = cart.reduce((s, i) => s + i.price * i.qty, 0)
   const tax        = subtotal * 0.16
-  const total      = subtotal + tax
+  const baseTotal  = subtotal + tax
+  const discount   = selectedReward ? calcDiscount(selectedReward, subtotal) : 0
+  const total      = Math.max(0, baseTotal - discount)
+  const filtered   = (data?.products ?? []).filter(p => !activeCategory || p.category_id === activeCategory)
 
-  // Lock scroll when drawer open
-  useEffect(() => {
-    document.body.style.overflow = drawer ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [drawer])
+  useEffect(() => { document.body.style.overflow = (drawer || profileOpen) ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [drawer, profileOpen])
 
-  // ── Loyalty gate ─────────────────────────────────────────────────────────────
+  // ── GATE SCREEN ───────────────────────────────────────────────────────────
   if (gateStep !== 'done') {
     const VISITS_PER_PRIZE = 8
-    const cycleVisits   = gateCustomer ? gateCustomer.total_visits % VISITS_PER_PRIZE : 0
-    const toNextPrize   = VISITS_PER_PRIZE - cycleVisits
-    const progressPct   = Math.round((cycleVisits / VISITS_PER_PRIZE) * 100)
-    const firstName     = gateCustomer?.full_name?.split(' ')[0] ?? 'de vuelta'
+    const cycleVisits = gateCustomer ? gateCustomer.total_visits % VISITS_PER_PRIZE : 0
+    const progressPct = Math.round((cycleVisits / VISITS_PER_PRIZE) * 100)
+    const toNextPrize = VISITS_PER_PRIZE - cycleVisits
+    const firstName   = gateCustomer?.full_name?.split(' ')[0] ?? ''
 
     return (
-      <div style={{ minHeight: '100vh', background: '#0d0d0d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 20px', fontFamily: 'system-ui,-apple-system,sans-serif', position: 'relative', overflow: 'hidden' }}>
-        <style>{`
-          * { box-sizing: border-box; margin: 0; padding: 0 }
-          @keyframes gateIn   { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-          @keyframes gateSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-          .gate-card { animation: gateIn .52s cubic-bezier(.22,1,.36,1) both }
-          input:focus { outline: none }
-        `}</style>
+      <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 20px', fontFamily: 'system-ui,-apple-system,sans-serif', position: 'relative', overflow: 'hidden' }}>
+        <style>{`* { box-sizing:border-box;margin:0;padding:0 } @keyframes gateIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}} @keyframes gateSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes pinPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}} .gate-card{animation:gateIn .52s cubic-bezier(.22,1,.36,1) both}`}</style>
 
         {/* Ambient glow */}
-        <div style={{ position: 'absolute', top: -160, left: '50%', transform: 'translateX(-50%)', width: 520, height: 520, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,66,26,.15) 0%, transparent 68%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -100, right: -80, width: 340, height: 340, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,66,26,.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: -140, left: '50%', transform: 'translateX(-50%)', width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,240,240,.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         <div className="gate-card" style={{ width: '100%', maxWidth: 400 }}>
 
-          {/* Logo mark */}
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ width: 60, height: 60, borderRadius: 20, background: 'linear-gradient(135deg, #1a1a1a, #111)', border: '1px solid #2a2a2a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 6px rgba(232,66,26,.08)' }}>
-              <span style={{ color: '#e8421a', fontWeight: 900, fontSize: 26, fontStyle: 'italic', letterSpacing: '-1px' }}>D</span>
+          {/* Logo */}
+          <div style={{ textAlign: 'center', marginBottom: 36 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 18, background: SURFACE, border: `1px solid ${BORDER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: ACCENT, fontWeight: 900, fontSize: 24, fontStyle: 'italic' }}>D</span>
             </div>
           </div>
 
-          {/* ── Phone input step ── */}
+          {/* Phone */}
           {gateStep === 'phone' && (
             <>
-              <h1 style={{ fontSize: 30, fontWeight: 900, color: '#faf9f7', textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Bienvenido</h1>
-              <p style={{ color: '#6b7280', fontSize: 14, textAlign: 'center', lineHeight: 1.6, marginBottom: 36 }}>
-                Ingresa tu numero para acumular<br />puntos en cada visita
-              </p>
-
+              <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Bienvenido</h1>
+              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 36 }}>Ingresa tu numero para acumular<br />puntos en cada visita</p>
               <div style={{ position: 'relative', marginBottom: 12 }}>
-                <span style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', color: '#4b5563', fontSize: 15, fontWeight: 700, userSelect: 'none' }}>+52</span>
-                <div style={{ position: 'absolute', left: 54, top: '50%', transform: 'translateY(-50%)', width: 1, height: 20, background: '#2a2a2a' }} />
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={gatePhone}
+                <span style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', color: TEXT3, fontSize: 15, fontWeight: 700, userSelect: 'none' }}>+52</span>
+                <div style={{ position: 'absolute', left: 54, top: '50%', transform: 'translateY(-50%)', width: 1, height: 20, background: BORDER }} />
+                <input type="tel" inputMode="numeric" value={gatePhone} maxLength={10} autoFocus
                   onChange={e => setGatePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   onKeyDown={e => e.key === 'Enter' && gatePhone.length >= 7 && handleGateSubmit()}
                   placeholder="Numero de telefono"
-                  maxLength={10}
-                  autoFocus
-                  style={{ width: '100%', background: '#161616', border: `1.5px solid ${gatePhone.length >= 7 ? '#e8421a' : '#222'}`, borderRadius: 16, padding: '17px 18px 17px 70px', fontSize: 17, color: '#faf9f7', letterSpacing: '0.06em', transition: 'border-color .2s' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#e8421a' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = gatePhone.length >= 7 ? '#e8421a' : '#222' }}
+                  style={{ width: '100%', background: SURFACE, border: `1.5px solid ${gatePhone.length >= 7 ? TEXT3 : BORDER}`, borderRadius: 16, padding: '17px 18px 17px 70px', fontSize: 17, color: TEXT, letterSpacing: '0.06em', transition: 'border-color .2s' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = TEXT2 }}
+                  onBlur={e => { e.currentTarget.style.borderColor = gatePhone.length >= 7 ? TEXT3 : BORDER }}
                 />
               </div>
-
-              {gateError && (
-                <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10, padding: '0 4px' }}>{gateError}</p>
-              )}
-
-              <button
-                onClick={handleGateSubmit}
-                disabled={gatePhone.length < 7}
-                style={{ width: '100%', background: gatePhone.length < 7 ? '#1a1a1a' : '#e8421a', color: gatePhone.length < 7 ? '#4b5563' : '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePhone.length < 7 ? 'not-allowed' : 'pointer', transition: 'background .2s, color .2s', marginBottom: 14, letterSpacing: '-0.01em' }}
-              >
+              {gateError && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gateError}</p>}
+              <button onClick={handleGateSubmit} disabled={gatePhone.length < 7}
+                style={{ width: '100%', background: gatePhone.length < 7 ? SURFACE : ACCENT, color: gatePhone.length < 7 ? TEXT3 : '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePhone.length < 7 ? 'not-allowed' : 'pointer', transition: 'background .2s', marginBottom: 14 }}>
                 Continuar
               </button>
-
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: '#374151', fontSize: 13, cursor: 'pointer', padding: '10px 0', transition: 'color .15s' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#6b7280')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#374151')}
-              >
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
                 Saltar por ahora
               </button>
             </>
           )}
 
-          {/* ── Loading step ── */}
+          {/* Loading */}
           {gateStep === 'loading' && (
-            <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <div style={{ width: 44, height: 44, border: '3px solid #1f1f1f', borderTop: '3px solid #e8421a', borderRadius: '50%', animation: 'gateSpin .75s linear infinite', margin: '0 auto 20px' }} />
-              <p style={{ color: '#4b5563', fontSize: 14 }}>Buscando tu cuenta...</p>
+            <div style={{ textAlign: 'center', padding: '52px 0' }}>
+              <div style={{ width: 40, height: 40, border: `3px solid ${SURFACE2}`, borderTop: `3px solid ${TEXT}`, borderRadius: '50%', animation: 'gateSpin .75s linear infinite', margin: '0 auto 20px' }} />
+              <p style={{ color: TEXT2, fontSize: 14 }}>Un momento...</p>
             </div>
           )}
 
-          {/* ── Found: returning customer ── */}
+          {/* New customer — name */}
+          {gateStep === 'new' && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                <div style={{ fontSize: 50, marginBottom: 14 }}>🎉</div>
+                <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 8 }}>Primera visita</h1>
+                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.65 }}>Gana puntos desde hoy.<br />Cada {VISITS_PER_PRIZE} visitas recibes un premio.</p>
+              </div>
+              <input type="text" value={gateName} autoFocus onChange={e => setGateName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGateRegister()} placeholder="Tu nombre (opcional)"
+                style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '17px 18px', fontSize: 16, color: TEXT, marginBottom: 12, transition: 'border-color .2s' }}
+                onFocus={e => { e.currentTarget.style.borderColor = TEXT2 }} onBlur={e => { e.currentTarget.style.borderColor = BORDER }}
+              />
+              <button onClick={handleGateRegister} style={{ width: '100%', background: ACCENT, color: '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', marginBottom: 12 }}>
+                Continuar
+              </button>
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                Saltar
+              </button>
+            </>
+          )}
+
+          {/* Set PIN */}
+          {gateStep === 'set-pin' && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 10 }}>Crea tu PIN</h1>
+                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.65 }}>Un PIN de 4 digitos para acceder a tus<br />puntos y recompensas en tu proxima visita</p>
+              </div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} style={{ width: 52, height: 64, borderRadius: 14, background: SURFACE, border: `2px solid ${gatePin.length > i ? TEXT2 : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: TEXT, transition: 'border-color .2s', animation: gatePin.length === i + 1 ? 'pinPop .28s cubic-bezier(.34,1.56,.64,1)' : 'none' }}>
+                    {gatePin.length > i ? '•' : ''}
+                  </div>
+                ))}
+              </div>
+              <input type="tel" inputMode="numeric" value={gatePin} maxLength={4} autoFocus
+                onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setGatePin(v); if (v.length === 4) setTimeout(() => handleSetPin(), 200) }}
+                style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
+              />
+              {/* Tap-to-focus hint */}
+              <div onClick={() => document.querySelector<HTMLInputElement>('input[type=tel]')?.focus()}
+                style={{ textAlign: 'center', fontSize: 13, color: TEXT3, marginBottom: 16, cursor: 'pointer' }}>
+                Toca aqui para escribir tu PIN
+              </div>
+              {gatePinErr && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gatePinErr}</p>}
+              <button onClick={() => { setGateStep('done') }} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                Saltar, crear PIN despues
+              </button>
+            </>
+          )}
+
+          {/* Enter PIN */}
+          {gateStep === 'enter-pin' && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 10 }}>
+                  Hola{gateCustomer?.full_name ? `, ${gateCustomer.full_name.split(' ')[0]}` : ''}
+                </h1>
+                <p style={{ color: TEXT2, fontSize: 14 }}>Ingresa tu PIN de 4 digitos</p>
+              </div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} style={{ width: 52, height: 64, borderRadius: 14, background: SURFACE, border: `2px solid ${gatePin.length > i ? TEXT2 : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: TEXT, transition: 'border-color .2s', animation: gatePin.length === i + 1 ? 'pinPop .28s cubic-bezier(.34,1.56,.64,1)' : 'none' }}>
+                    {gatePin.length > i ? '•' : ''}
+                  </div>
+                ))}
+              </div>
+              <input type="tel" inputMode="numeric" value={gatePin} maxLength={4} autoFocus
+                onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setGatePin(v); if (v.length === 4) setTimeout(() => handleEnterPin(), 200) }}
+                style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
+              />
+              <div onClick={() => document.querySelector<HTMLInputElement>('input[type=tel]')?.focus()} style={{ textAlign: 'center', fontSize: 13, color: TEXT3, marginBottom: 16, cursor: 'pointer' }}>
+                Toca aqui para escribir tu PIN
+              </div>
+              {gatePinErr && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gatePinErr}</p>}
+              <button onClick={() => { setGateCustomer(gateCustomer); setGateStep('found') }} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                Ver menu sin iniciar sesion
+              </button>
+            </>
+          )}
+
+          {/* Returning customer - found */}
           {gateStep === 'found' && gateCustomer && (
             <>
               <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(34,197,94,.1)', border: '2px solid rgba(34,197,94,.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div style={{ width: 60, height: 60, borderRadius: '50%', background: SURFACE2, border: `2px solid ${BORDER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={TEXT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <h1 style={{ fontSize: 28, fontWeight: 900, color: '#faf9f7', letterSpacing: '-0.04em', marginBottom: 6 }}>
-                  Hola, {firstName}!
+                <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 6 }}>
+                  {firstName ? `Hola, ${firstName}!` : 'Bienvenido!'}
                 </h1>
-                <p style={{ color: '#4b5563', fontSize: 13 }}>Que gusto verte de nuevo</p>
+                <p style={{ color: TEXT2, fontSize: 13 }}>Que gusto verte de nuevo</p>
               </div>
 
-              {/* Stats card */}
-              <div style={{ background: '#131313', border: '1px solid #1e1e1e', borderRadius: 20, padding: '22px 22px 20px', marginBottom: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+              <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '20px 20px 18px', marginBottom: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 18 }}>
                   <div>
-                    <p style={{ fontSize: 10, color: '#4b5563', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Puntos</p>
-                    <p style={{ fontSize: 40, fontWeight: 900, color: '#faf9f7', letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.points.toLocaleString()}</p>
+                    <p style={{ fontSize: 10, color: TEXT3, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>Puntos</p>
+                    <p style={{ fontSize: 38, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.points.toLocaleString()}</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 10, color: '#4b5563', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Visitas</p>
-                    <p style={{ fontSize: 40, fontWeight: 900, color: '#e8421a', letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.total_visits}</p>
+                    <p style={{ fontSize: 10, color: TEXT3, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>Visitas</p>
+                    <p style={{ fontSize: 38, fontWeight: 900, color: TEXT2, letterSpacing: '-0.04em', lineHeight: 1 }}>{gateCustomer.total_visits}</p>
                   </div>
                 </div>
-
-                {/* Progress toward prize */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <p style={{ fontSize: 12, color: '#6b7280' }}>
-                      {cycleVisits} de {VISITS_PER_PRIZE} visitas para tu premio
-                    </p>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: toNextPrize > 0 ? '#e8421a' : '#22c55e' }}>
-                      {toNextPrize > 0 ? `${toNextPrize} mas` : 'Premio disponible'}
-                    </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <p style={{ fontSize: 12, color: TEXT3 }}>{cycleVisits} de {VISITS_PER_PRIZE} visitas para tu premio</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: toNextPrize > 0 ? TEXT2 : '#22c55e' }}>{toNextPrize > 0 ? `${toNextPrize} mas` : 'Premio!'}</p>
                   </div>
-                  <div style={{ height: 6, background: '#1e1e1e', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
-                    <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg, #c23614, #e8421a, #ff6340)', borderRadius: 99, transition: 'width 1.2s cubic-bezier(.22,1,.36,1)' }} />
+                  <div style={{ height: 5, background: SURFACE2, borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
+                    <div style={{ height: '100%', width: `${progressPct}%`, background: TEXT, borderRadius: 99, transition: 'width 1s cubic-bezier(.22,1,.36,1)' }} />
                   </div>
-                  {/* Dot trail */}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     {Array.from({ length: VISITS_PER_PRIZE }).map((_, i) => (
-                      <div key={i} style={{ width: 24, height: 24, borderRadius: '50%', background: i < cycleVisits ? '#e8421a' : '#1a1a1a', border: `2px solid ${i < cycleVisits ? '#e8421a' : '#252525'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === VISITS_PER_PRIZE - 1 ? 11 : 9, transition: 'all .3s' }}>
-                        {i === VISITS_PER_PRIZE - 1 ? '🎁' : <span style={{ color: i < cycleVisits ? '#fff' : '#374151', fontWeight: 700 }}>{i + 1}</span>}
+                      <div key={i} style={{ width: 26, height: 26, borderRadius: '50%', background: i < cycleVisits ? TEXT : SURFACE2, border: `2px solid ${i < cycleVisits ? TEXT : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === VISITS_PER_PRIZE - 1 ? 11 : 9, transition: 'all .3s' }}>
+                        {i === VISITS_PER_PRIZE - 1 ? '🎁' : <span style={{ color: i < cycleVisits ? BG : TEXT3, fontWeight: 700 }}>{i + 1}</span>}
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <button
-                onClick={() => setGateStep('done')}
-                style={{ width: '100%', background: '#e8421a', color: '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', letterSpacing: '-0.01em' }}
-              >
+              {!gateHasPin && (
+                <button onClick={() => { setGatePin(''); setGateStep('set-pin') }}
+                  style={{ width: '100%', background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '14px 0', fontWeight: 700, fontSize: 14, color: TEXT2, cursor: 'pointer', marginBottom: 10 }}>
+                  Crear PIN para la proxima vez
+                </button>
+              )}
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}>
                 Ver el menu
-              </button>
-            </>
-          )}
-
-          {/* ── New customer step ── */}
-          {gateStep === 'new' && (
-            <>
-              <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                <div style={{ fontSize: 52, marginBottom: 14, display: 'block' }}>🎉</div>
-                <h1 style={{ fontSize: 28, fontWeight: 900, color: '#faf9f7', letterSpacing: '-0.04em', marginBottom: 8 }}>Primera visita!</h1>
-                <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6 }}>
-                  Gana puntos desde hoy.<br />
-                  Despues de {VISITS_PER_PRIZE} visitas recibes un premio.
-                </p>
-              </div>
-
-              <input
-                type="text"
-                value={gateName}
-                onChange={e => setGateName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleGateRegister()}
-                placeholder="Tu nombre (opcional)"
-                autoFocus
-                style={{ width: '100%', background: '#161616', border: '1.5px solid #222', borderRadius: 16, padding: '17px 18px', fontSize: 16, color: '#faf9f7', marginBottom: 12, transition: 'border-color .2s' }}
-                onFocus={e => { e.currentTarget.style.borderColor = '#e8421a' }}
-                onBlur={e => { e.currentTarget.style.borderColor = '#222' }}
-              />
-
-              <button
-                onClick={handleGateRegister}
-                style={{ width: '100%', background: '#e8421a', color: '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', marginBottom: 12, letterSpacing: '-0.01em' }}
-              >
-                Registrarme y ordenar
-              </button>
-
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: '#374151', fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#6b7280')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#374151')}
-              >
-                Saltar
               </button>
             </>
           )}
@@ -683,30 +694,24 @@ export default function DSDRestaurantePage() {
     )
   }
 
-  // ── Stripe payment screen ───────────────────────────────────────────────────
+  // ── STRIPE SCREEN ─────────────────────────────────────────────────────────
   if (payMethod === 'stripe' && stripeSecret && stripeOrderId) return (
-    <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
-      <div style={{ background: DARK, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <button
-          onClick={() => setPayMethod('select')}
-          style={{ background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
-        >
+    <div style={{ minHeight: '100vh', background: '#0f0f0f', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+      <div style={{ background: SURFACE, padding: '16px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button onClick={() => setPayMethod('select')} style={{ background: SURFACE2, border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: TEXT }}>
           <X size={18} />
         </button>
         <div>
-          <p style={{ color: '#fff', fontWeight: 800, fontSize: 15, lineHeight: 1 }}>Pagar con Stripe</p>
-          <p style={{ color: '#6b7280', fontSize: 11, marginTop: 2 }}>Orden {stripeOrderNum} · ${stripeTotal.toFixed(2)} MXN</p>
+          <p style={{ color: TEXT, fontWeight: 800, fontSize: 15, lineHeight: 1 }}>Pagar con Stripe</p>
+          <p style={{ color: TEXT2, fontSize: 11, marginTop: 2 }}>Orden {stripeOrderNum} · ${stripeTotal.toFixed(2)} MXN</p>
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <svg width="44" height="20" viewBox="0 0 60 25" fill="none"><text x="0" y="18" fontSize="18" fontWeight="700" fill="#635bff" fontFamily="sans-serif">stripe</text></svg>
         </div>
       </div>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 100px' }}>
-        <Elements stripe={stripePromise} options={{ clientSecret: stripeSecret, appearance: { theme: 'stripe' } }}>
-          <StripeCheckoutForm
-            orderId={stripeOrderId}
-            orderNumber={stripeOrderNum}
-            total={stripeTotal}
+        <Elements stripe={stripePromise} options={{ clientSecret: stripeSecret, appearance: { theme: 'night' } }}>
+          <StripeCheckoutForm orderId={stripeOrderId} orderNumber={stripeOrderNum} total={stripeTotal}
             onSuccess={(num) => { setPayMethod('select'); setStripeSecret(null); setPaySuccess(num) }}
             onBack={() => setPayMethod('select')}
           />
@@ -715,31 +720,22 @@ export default function DSDRestaurantePage() {
     </div>
   )
 
-  // ── Payment method selector ──────────────────────────────────────────────────
-  if (payMethod !== 'select' || (paymentData && payMethod === 'select')) {
-    // show selector only when paymentData is set and method not chosen yet
-  }
+  // ── PAYMENT METHOD SELECTOR ───────────────────────────────────────────────
   if (paymentData && payMethod === 'select') return (
-    <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui,-apple-system,sans-serif', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: DARK, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <button
-          onClick={() => { setPaymentData(null); setPayMethod('select') }}
-          style={{ background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
-        >
+    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'system-ui,-apple-system,sans-serif', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: SURFACE, padding: '16px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button onClick={() => { setPaymentData(null); setPayMethod('select') }} style={{ background: SURFACE2, border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: TEXT }}>
           <X size={18} />
         </button>
         <div>
-          <p style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>Elige como pagar</p>
-          <p style={{ color: '#6b7280', fontSize: 11, marginTop: 2 }}>Orden {paymentData.order_number} · ${paymentData.total.toFixed(2)} MXN</p>
+          <p style={{ color: TEXT, fontWeight: 800, fontSize: 15 }}>Elige como pagar</p>
+          <p style={{ color: TEXT2, fontSize: 11, marginTop: 2 }}>Orden {paymentData.order_number} · ${paymentData.total.toFixed(2)} MXN</p>
         </div>
       </div>
-
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 20px', width: '100%' }}>
-        <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', marginBottom: 24 }}>Selecciona tu metodo de pago preferido</p>
-
+        <p style={{ fontSize: 13, color: TEXT2, textAlign: 'center', marginBottom: 24 }}>Selecciona tu metodo de pago preferido</p>
         {/* Stripe */}
-        <button
-          onClick={async () => {
+        <button onClick={async () => {
             setStripeLoading(true); setStripeError(null)
             try {
               const { data } = await pub.post('/stripe/payment-intent', { order_id: paymentData.order_id })
@@ -748,191 +744,139 @@ export default function DSDRestaurantePage() {
               setStripeOrderNum(paymentData.order_number)
               setStripeTotal(paymentData.total)
               setPayMethod('stripe')
-            } catch (e: any) {
-              setStripeError(e?.response?.data?.error ?? 'Error al conectar con Stripe')
-            }
+            } catch (e: any) { setStripeError(e?.response?.data?.error ?? 'Error al conectar con Stripe') }
             setStripeLoading(false)
           }}
           disabled={stripeLoading}
-          style={{
-            width: '100%', background: '#fff', border: '2px solid #635bff',
-            borderRadius: 20, padding: '20px 24px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14,
-            transition: 'box-shadow .15s', boxShadow: '0 2px 12px rgba(99,91,255,.1)',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,91,255,.2)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(99,91,255,.1)')}
+          style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 20, padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14, transition: 'border-color .15s' }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}
         >
           <div style={{ width: 48, height: 48, borderRadius: 12, background: '#635bff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="#fff"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="#fff"/></svg>
           </div>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{ fontWeight: 800, fontSize: 16, color: '#111', marginBottom: 4 }}>
-              {stripeLoading ? 'Conectando...' : 'Apple Pay / Google Pay / Tarjeta'}
-            </p>
-            <p style={{ fontSize: 12, color: '#6b7280' }}>Powered by Stripe · Pago inmediato</p>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <span style={{ background: '#000', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6 }}> Pay</span>
-            <span style={{ background: '#fff', border: '1px solid #e5e7eb', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: '#555' }}>G Pay</span>
+            <p style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: 3 }}>{stripeLoading ? 'Conectando...' : 'Apple Pay / Google Pay / Tarjeta'}</p>
+            <p style={{ fontSize: 12, color: TEXT2 }}>Powered by Stripe</p>
           </div>
         </button>
-
-        {/* Mercado Pago */}
-        <button
-          onClick={() => setPayMethod('mp')}
-          style={{
-            width: '100%', background: '#fff', border: '2px solid #009ee3',
-            borderRadius: 20, padding: '20px 24px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14,
-            transition: 'box-shadow .15s', boxShadow: '0 2px 12px rgba(0,158,227,.08)',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,158,227,.18)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,158,227,.08)')}
+        {/* MP */}
+        <button onClick={() => setPayMethod('mp')}
+          style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 20, padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14, transition: 'border-color .15s' }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}
         >
           <div style={{ width: 48, height: 48, borderRadius: 12, background: '#009ee3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
           </div>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{ fontWeight: 800, fontSize: 16, color: '#111', marginBottom: 4 }}>Mercado Pago</p>
-            <p style={{ fontSize: 12, color: '#6b7280' }}>Tarjeta, OXXO, cartera MP</p>
+            <p style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: 3 }}>Mercado Pago</p>
+            <p style={{ fontSize: 12, color: TEXT2 }}>Tarjeta, OXXO, cartera MP</p>
           </div>
         </button>
-
-        {stripeError && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#dc2626', marginTop: 8 }}>
-            {stripeError}
-          </div>
-        )}
+        {stripeError && <div style={{ background: '#1a0a0a', border: `1px solid #3d1515`, borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#f87171', marginTop: 8 }}>{stripeError}</div>}
       </div>
     </div>
   )
 
-  // ── Payment Brick screen (MP) ────────────────────────────────────────────────
+  // ── MP BRICK SCREEN ───────────────────────────────────────────────────────
   if (paymentData && payMethod === 'mp') return (
-    <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
-      {/* Header */}
-      <div style={{ background: DARK, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <button
-          onClick={() => setPayMethod('select')}
-          style={{ background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', flexShrink: 0 }}
-        >
+    <div style={{ minHeight: '100vh', background: BG, fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+      <div style={{ background: SURFACE, padding: '16px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button onClick={() => setPayMethod('select')} style={{ background: SURFACE2, border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: TEXT, flexShrink: 0 }}>
           <X size={18} />
         </button>
         <div>
-          <p style={{ color: '#fff', fontWeight: 800, fontSize: 15, lineHeight: 1 }}>Completa tu pago</p>
-          <p style={{ color: '#6b7280', fontSize: 11, marginTop: 2 }}>Orden {paymentData.order_number} · ${paymentData.total.toFixed(2)} MXN</p>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Apple Pay icon */}
-          <svg width="36" height="22" viewBox="0 0 36 22" fill="none"><rect width="36" height="22" rx="4" fill="#fff"/><text x="5" y="15" fontSize="9" fontWeight="700" fill="#000" fontFamily="system-ui"></text><text x="4" y="15" fontSize="8" fill="#000" fontFamily="-apple-system,sans-serif" fontWeight="600"> Pay</text></svg>
-          {/* Google Pay icon */}
-          <svg width="44" height="22" viewBox="0 0 44 22" fill="none"><rect width="44" height="22" rx="4" fill="#fff"/><text x="4" y="15" fontSize="8" fill="#4285F4" fontFamily="sans-serif" fontWeight="700">G</text><text x="12" y="15" fontSize="8" fill="#555" fontFamily="sans-serif">Pay</text></svg>
+          <p style={{ color: TEXT, fontWeight: 800, fontSize: 15, lineHeight: 1 }}>Completa tu pago</p>
+          <p style={{ color: TEXT2, fontSize: 11, marginTop: 2 }}>Orden {paymentData.order_number} · ${paymentData.total.toFixed(2)} MXN</p>
         </div>
       </div>
-
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 100px' }}>
-        <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', marginBottom: 20 }}>
-          Elige tu metodo de pago preferido
-        </p>
-        {/* MP Payment Brick renders here */}
+        <p style={{ fontSize: 13, color: TEXT2, textAlign: 'center', marginBottom: 20 }}>Elige tu metodo de pago preferido</p>
         <div id="dsd-payment-brick" />
       </div>
-
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#f5f6fa', borderTop: '1px solid #e5e7eb', padding: '12px 20px', textAlign: 'center' }}>
-        <p style={{ fontSize: 11, color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="#009ee3"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-          Pago seguro con Mercado Pago · SSL cifrado
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: SURFACE, borderTop: `1px solid ${BORDER}`, padding: '12px 20px', textAlign: 'center' }}>
+        <p style={{ fontSize: 11, color: TEXT3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#009ee3"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+          Pago seguro con Mercado Pago
         </p>
       </div>
     </div>
   )
 
-  // ── Pay success screen ───────────────────────────────────────────────────────
+  // ── PAY SUCCESS ───────────────────────────────────────────────────────────
   if (paySuccess) return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui,-apple-system,sans-serif' }}>
       <div style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
-        <div style={{ width: 100, height: 100, borderRadius: '50%', background: '#fff', border: '3px solid #16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: '0 8px 32px rgba(22,163,74,.2)' }}>
-          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div style={{ width: 96, height: 96, borderRadius: '50%', background: SURFACE, border: `2px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={TEXT} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <h1 style={{ fontSize: 34, fontWeight: 900, color: DARK, letterSpacing: '-0.03em', marginBottom: 10 }}>Pago exitoso</h1>
-        <p style={{ fontSize: 16, color: '#374151', lineHeight: 1.6, marginBottom: 28 }}>Tu pedido ya esta en camino a la cocina.</p>
-        <div style={{ background: '#fff', border: '1px solid #bbf7d0', borderRadius: 20, padding: '24px 28px', marginBottom: 28, boxShadow: '0 4px 20px rgba(0,166,80,.08)' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 }}>Orden</p>
-          <p style={{ fontSize: 36, fontWeight: 900, color: DARK, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{paySuccess}</p>
-          <p style={{ marginTop: 12, fontSize: 13, color: '#6b7280' }}>Tiempo estimado: 15-20 min</p>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 10 }}>Pago exitoso</h1>
+        <p style={{ fontSize: 15, color: TEXT2, lineHeight: 1.6, marginBottom: 28 }}>Tu pedido ya esta en camino a la cocina.</p>
+        <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '24px 28px', marginBottom: 28 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: TEXT3, textTransform: 'uppercase', marginBottom: 8 }}>Numero de orden</p>
+          <p style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em' }}>{paySuccess}</p>
+          <p style={{ marginTop: 12, fontSize: 13, color: TEXT2 }}>Tiempo estimado: 15-20 min</p>
         </div>
-        <button
-          onClick={() => setPaySuccess(null)}
-          style={{ width: '100%', background: DARK, color: '#fff', fontWeight: 700, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer' }}
-        >
+        {customer && (
+          <p style={{ fontSize: 13, color: TEXT2, marginBottom: 20 }}>Puntos acumulados: <strong style={{ color: TEXT }}>{customer.points}</strong></p>
+        )}
+        <button onClick={() => setPaySuccess(null)} style={{ width: '100%', background: TEXT, color: BG, fontWeight: 800, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer' }}>
           Hacer otro pedido
         </button>
       </div>
     </div>
   )
 
-  // ── MP error screen ──────────────────────────────────────────────────────────
+  // ── MP ERROR ──────────────────────────────────────────────────────────────
   if (mpError) return (
-    <div style={{ minHeight: '100vh', background: CREAM, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui,sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui,sans-serif' }}>
       <div style={{ maxWidth: 420, width: '100%', textAlign: 'center' }}>
-        <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#fef2f2', border: '2px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-          <span style={{ fontSize: 36 }}>!</span>
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: SURFACE, border: `1px solid #3d1515`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+          <span style={{ fontSize: 36, color: '#f87171' }}>!</span>
         </div>
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1c1917', marginBottom: 10 }}>Error al procesar pago</h1>
-        <p style={{ color: '#78716c', fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>{mpError}</p>
-        <button
-          onClick={() => setMpError(null)}
-          style={{ width: '100%', background: DARK, color: '#fff', fontWeight: 700, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer' }}
-        >
+        <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, marginBottom: 10 }}>Error al procesar pago</h1>
+        <p style={{ color: TEXT2, fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>{mpError}</p>
+        <button onClick={() => setMpError(null)} style={{ width: '100%', background: TEXT, color: BG, fontWeight: 700, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer' }}>
           Intentar de nuevo
         </button>
       </div>
     </div>
   )
 
-  // ── Main layout ─────────────────────────────────────────────────────────────
+  // ── MAIN LAYOUT ───────────────────────────────────────────────────────────
   return (
-    <div style={{ background: CREAM, minHeight: '100vh', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+    <div style={{ background: BG, minHeight: '100vh', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
 
-      {/* ── Sticky nav ── */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(250,249,247,0.88)', backdropFilter: 'blur(18px) saturate(1.4)',
-        borderBottom: '1px solid rgba(0,0,0,0.07)',
-        padding: '0 28px', height: 68,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      {/* Nav */}
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(13,13,13,0.92)', backdropFilter: 'blur(18px)', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 13, background: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 17, fontStyle: 'italic' }}>D</span>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ color: ACCENT, fontWeight: 900, fontSize: 16, fontStyle: 'italic' }}>D</span>
           </div>
           <div>
-            <p style={{ fontWeight: 900, fontSize: 16, color: '#1c1917', letterSpacing: '-0.02em', lineHeight: 1.1 }}>DSD Restaurante</p>
-            <p style={{ fontSize: 10, color: '#a8a29e', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Ordena en linea</p>
+            <p style={{ fontWeight: 900, fontSize: 15, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1.1 }}>DSD Restaurante</p>
+            <p style={{ fontSize: 10, color: TEXT3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Ordena en linea</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            onClick={() => document.getElementById('menu-section')?.scrollIntoView({ behavior: 'smooth' })}
-            style={{ fontSize: 14, fontWeight: 600, color: '#78716c', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 14px', borderRadius: 10, transition: 'color .15s, background .15s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f0efed'; e.currentTarget.style.color = '#1c1917' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#78716c' }}
+          {/* Customer badge */}
+          {customer && (
+            <button onClick={() => setProfileOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '7px 14px', cursor: 'pointer', transition: 'border-color .15s' }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}
+            >
+              <User size={14} color={TEXT2} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{customer.points} pts</span>
+              <span style={{ fontSize: 11, color: TEXT3 }}>{TIER_LABELS[customer.tier]}</span>
+            </button>
+          )}
+          <button className="add-btn" onClick={e => { addRipple(e); setDrawer(true) }}
+            style={{ background: TEXT, color: BG, border: 'none', borderRadius: 12, padding: '9px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background .15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#d4d4d4')} onMouseLeave={e => (e.currentTarget.style.background = TEXT)}
           >
-            Menu
-          </button>
-          <button
-            className="add-btn"
-            onClick={e => { addRipple(e); setDrawer(true) }}
-            style={{ background: DARK, color: '#fff', border: 'none', borderRadius: 14, padding: '10px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, transition: 'background .15s' }}
-            onMouseEnter={e => (e.currentTarget.style.background = ACCENT)}
-            onMouseLeave={e => (e.currentTarget.style.background = DARK)}
-          >
-            <ShoppingCart size={16} />
+            <ShoppingCart size={15} />
             Carrito
             {totalItems > 0 && (
-              <span key={countKey} className="count-pop"
-                style={{ background: ACCENT, borderRadius: 99, minWidth: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900 }}>
+              <span key={countKey} className="count-pop" style={{ background: ACCENT, color: '#fff', borderRadius: 99, minWidth: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900 }}>
                 {totalItems}
               </span>
             )}
@@ -940,122 +884,83 @@ export default function DSDRestaurantePage() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
-      <section
-        ref={heroRef}
-        style={{
-          background: 'linear-gradient(135deg,#1a0600 0%,#1c1208 45%,#111111 100%)',
-          padding: '88px 28px 96px',
-          position: 'relative', overflow: 'hidden',
-        }}
-      >
-        {/* Glows */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 65% 60% at 70% 40%, rgba(232,66,26,.13) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -120, left: '10%', width: 380, height: 380, background: 'radial-gradient(circle, rgba(249,115,22,.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-        <div style={{ maxWidth: 1060, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr auto', gap: 60, alignItems: 'center' }}>
-          {/* Left */}
+      {/* Hero */}
+      <section ref={heroRef} style={{ background: `linear-gradient(135deg, ${SURFACE} 0%, #0d0d0d 60%, #111 100%)`, padding: '80px 28px 88px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 55% at 70% 40%, rgba(240,240,240,.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1060, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr auto', gap: 56, alignItems: 'center' }}>
           <div>
-            <div className="hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(232,66,26,.15)', border: '1px solid rgba(232,66,26,.3)', borderRadius: 99, padding: '6px 16px', marginBottom: 30 }}>
-              <Flame size={13} fill={ACCENT} color={ACCENT} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: ACCENT }}>Ordena en linea, listo en 15 min</span>
-            </div>
-            <h1 className="hero-h1" style={{ fontSize: 'clamp(44px,6.5vw,82px)', fontWeight: 900, color: '#faf9f7', lineHeight: 1.02, letterSpacing: '-0.038em', marginBottom: 20 }}>
+            <h1 className="hero-h1" style={{ fontSize: 'clamp(40px,6vw,76px)', fontWeight: 900, color: TEXT, lineHeight: 1.04, letterSpacing: '-0.04em', marginBottom: 20 }}>
               Sabor autentico,<br />
               <span style={{ color: ACCENT }}>entregado</span> a ti
             </h1>
-            <p className="hero-p" style={{ fontSize: 17, color: '#a8a29e', lineHeight: 1.7, maxWidth: 500, marginBottom: 38 }}>
-              Tacos, quesadillas y mas. Todo preparado al momento con ingredientes frescos. Sin conservadores, sin compromisos.
+            <p className="hero-p" style={{ fontSize: 16, color: TEXT2, lineHeight: 1.75, maxWidth: 480, marginBottom: 36 }}>
+              Tacos, quesadillas y mas. Todo preparado al momento con ingredientes frescos.
             </p>
             <div className="hero-ctas" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button
-                className="add-btn"
-                onClick={e => { addRipple(e); document.getElementById('menu-section')?.scrollIntoView({ behavior: 'smooth' }) }}
-                style={{ background: ACCENT, color: '#fff', fontWeight: 700, fontSize: 16, padding: '16px 34px', borderRadius: 16, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'opacity .15s, transform .15s' }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '.87'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = '' }}
+              <button className="add-btn" onClick={e => { addRipple(e); document.getElementById('menu-section')?.scrollIntoView({ behavior: 'smooth' }) }}
+                style={{ background: TEXT, color: BG, fontWeight: 800, fontSize: 15, padding: '14px 30px', borderRadius: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background .15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#d4d4d4')} onMouseLeave={e => (e.currentTarget.style.background = TEXT)}
               >
-                Ordenar ahora <ChevronRight size={17} />
+                Ordenar ahora <ChevronRight size={16} />
               </button>
-              <button
-                style={{ background: 'rgba(255,255,255,.07)', color: '#e7e5e4', fontWeight: 600, fontSize: 16, padding: '16px 30px', borderRadius: 16, border: '1px solid rgba(255,255,255,.12)', cursor: 'pointer', transition: 'border-color .15s, background .15s' }}
-                onClick={() => document.getElementById('menu-section')?.scrollIntoView({ behavior: 'smooth' })}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.28)'; e.currentTarget.style.background = 'rgba(255,255,255,.11)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)'; e.currentTarget.style.background = 'rgba(255,255,255,.07)' }}
-              >
-                Ver el menu
-              </button>
+              {customer && availRewards.length > 0 && (
+                <button onClick={() => setDrawer(true)}
+                  style={{ background: 'transparent', color: ACCENT, border: `1.5px solid ${ACCENT}`, fontWeight: 700, fontSize: 15, padding: '14px 24px', borderRadius: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,66,26,.08)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                >
+                  <Gift size={15} /> {availRewards.length} recompensa{availRewards.length > 1 ? 's' : ''}
+                </button>
+              )}
             </div>
           </div>
-
           {/* Mosaic */}
-          <div className="hero-mosaic" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: 310, flexShrink: 0 }}>
+          <div className="hero-mosaic" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: 300, flexShrink: 0 }}>
             {([
-              { name: 'Taco de Birria',    borderRadius: '22px 4px 22px 4px', mt: '0' },
-              { name: 'Taco de Pastor',   borderRadius: '4px 22px 4px 22px', mt: '-12px' },
-              { name: 'Agua Fresca',      borderRadius: '4px 22px 4px 22px', mt: '12px' },
-              { name: 'Quesadilla Sencilla', borderRadius: '22px 4px 22px 4px', mt: '0' },
+              { name: 'Taco de Birria',       borderRadius: '20px 4px 20px 4px', mt: '0' },
+              { name: 'Taco de Pastor',        borderRadius: '4px 20px 4px 20px', mt: '-10px' },
+              { name: 'Agua Fresca',           borderRadius: '4px 20px 4px 20px', mt: '10px' },
+              { name: 'Quesadilla Sencilla',   borderRadius: '20px 4px 20px 4px', mt: '0' },
             ] as { name: string; borderRadius: string; mt: string }[]).map((item, i) => (
               <div key={i} style={{ aspectRatio: '1', borderRadius: item.borderRadius, overflow: 'hidden', marginTop: item.mt, transition: 'transform .3s' }}
                 onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.04)')}
                 onMouseLeave={e => (e.currentTarget.style.transform = '')}
               >
-                <img
-                  src={photoFor(item.name)}
-                  alt={item.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: .82 }}
-                  onError={e => { e.currentTarget.src = FALLBACK_PHOTO }}
-                  loading="eager"
-                />
+                <img src={photoFor(item.name)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: .75 }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} loading="eager" />
               </div>
             ))}
           </div>
         </div>
-
         {/* Info strip */}
-        <div className="hero-info" style={{ maxWidth: 1060, margin: '52px auto 0', display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+        <div className="hero-info" style={{ maxWidth: 1060, margin: '48px auto 0', display: 'flex', gap: 28, flexWrap: 'wrap' }}>
           {[
-            { icon: <MapPin size={13} />,  text: 'Av. Reforma 245, Col. Centro' },
-            { icon: <Clock size={13} />,   text: 'Lun-Dom  8am - 10pm' },
-            { icon: <Phone size={13} />,   text: '(55) 1234-5678' },
-            { icon: <Star size={13} fill="#e8421a" color="#e8421a" />, text: '4.9 de 5 en resenas' },
+            { icon: <MapPin size={12} />,  text: 'Av. Reforma 245, Col. Centro' },
+            { icon: <Clock size={12} />,   text: 'Lun-Dom 8am - 10pm' },
+            { icon: <Phone size={12} />,   text: '(55) 1234-5678' },
+            { icon: <Star size={12} fill={TEXT3} color={TEXT3} />, text: '4.9 de 5 en resenas' },
           ].map(({ icon, text }) => (
-            <span key={text} style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#57534e', fontSize: 13, fontWeight: 500 }}>
+            <span key={text} style={{ display: 'flex', alignItems: 'center', gap: 7, color: TEXT3, fontSize: 12, fontWeight: 500 }}>
               {icon}{text}
             </span>
           ))}
         </div>
       </section>
 
-      {/* ── Menu ── */}
-      <section id="menu-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '64px 24px 112px' }}>
-        {/* Header */}
-        <div style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 38, fontWeight: 900, color: '#1c1917', letterSpacing: '-0.028em', marginBottom: 6 }}>Nuestro menu</h2>
-          <p style={{ color: '#78716c', fontSize: 15 }}>Preparado al momento, con ingredientes frescos</p>
+      {/* Menu */}
+      <section id="menu-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '56px 24px 120px' }}>
+        <div style={{ marginBottom: 36 }}>
+          <h2 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 6 }}>Nuestro menu</h2>
+          <p style={{ color: TEXT2, fontSize: 14 }}>Preparado al momento con ingredientes frescos</p>
         </div>
 
         {/* Category pills */}
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 38, scrollbarWidth: 'none' }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 36, scrollbarWidth: 'none' }}>
           {[{ id: null, name: 'Todo' }, ...(data?.categories ?? [])].map((cat, i) => {
             const active = activeCategory === cat.id
             return (
-              <button
-                key={cat.id ?? 'all'}
-                className="cat-pill add-btn"
-                style={{
-                  animationDelay: `${i * 55}ms`,
-                  flexShrink: 0, padding: '10px 24px', borderRadius: 99,
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                  border: active ? 'none' : '1px solid #e7e5e4',
-                  background: active ? DARK : '#fff',
-                  color: active ? '#fff' : '#44403c',
-                  transition: 'all .2s',
-                  transform: active ? 'scale(1.04)' : 'scale(1)',
-                }}
+              <button key={cat.id ?? 'all'} className="cat-pill add-btn" style={{ animationDelay: `${i * 50}ms`, flexShrink: 0, padding: '9px 22px', borderRadius: 99, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: `1px solid ${active ? 'transparent' : BORDER}`, background: active ? TEXT : 'transparent', color: active ? BG : TEXT2, transition: 'all .18s', transform: active ? 'scale(1.03)' : 'scale(1)' }}
                 onClick={e => { addRipple(e); switchCategory(cat.id) }}
-                onMouseEnter={e => { if (!active) { e.currentTarget.style.background = '#f0efed'; e.currentTarget.style.borderColor = '#d6d3d1' } }}
-                onMouseLeave={e => { if (!active) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e7e5e4' } }}
+                onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = TEXT3; e.currentTarget.style.color = TEXT } }}
+                onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT2 } }}
               >
                 {cat.name}
               </button>
@@ -1063,18 +968,18 @@ export default function DSDRestaurantePage() {
           })}
         </div>
 
-        {/* Skeleton while loading */}
+        {/* Skeleton */}
         {isLoading && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ borderRadius: 22, overflow: 'hidden', border: '1px solid #e7e5e4' }}>
-                <div className="skeleton" style={{ height: 190 }} />
-                <div style={{ padding: '16px 18px 20px' }}>
-                  <div className="skeleton" style={{ height: 18, borderRadius: 8, marginBottom: 10, width: '65%' }} />
-                  <div className="skeleton" style={{ height: 13, borderRadius: 6, marginBottom: 18, width: '80%' }} />
+              <div key={i} style={{ borderRadius: 20, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
+                <div className="skeleton" style={{ height: 188 }} />
+                <div style={{ padding: '16px 18px 20px', background: SURFACE }}>
+                  <div className="skeleton" style={{ height: 16, borderRadius: 8, marginBottom: 10, width: '60%' }} />
+                  <div className="skeleton" style={{ height: 12, borderRadius: 6, marginBottom: 18, width: '80%' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div className="skeleton" style={{ height: 24, borderRadius: 8, width: 60 }} />
-                    <div className="skeleton" style={{ height: 38, width: 38, borderRadius: '50%' }} />
+                    <div className="skeleton" style={{ height: 22, borderRadius: 8, width: 55 }} />
+                    <div className="skeleton" style={{ height: 36, width: 36, borderRadius: '50%' }} />
                   </div>
                 </div>
               </div>
@@ -1084,102 +989,36 @@ export default function DSDRestaurantePage() {
 
         {/* Product grid */}
         {!isLoading && (
-          <div
-            ref={gridRef}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))',
-              gap: 18,
-              opacity: filterAnim ? 0 : 1,
-              transform: filterAnim ? 'translateY(8px)' : 'translateY(0)',
-              transition: 'opacity .16s, transform .16s',
-            }}
-          >
+          <div ref={gridRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, opacity: filterAnim ? 0 : 1, transform: filterAnim ? 'translateY(8px)' : 'translateY(0)', transition: 'opacity .16s, transform .16s' }}>
             {filtered.map(p => {
               const inCart = cart.find(i => i.id === p.id)
               return (
-                <div
-                  key={p.id}
-                  className="product-card card-hidden"
-                  style={{
-                    background: '#fff', borderRadius: 22, overflow: 'hidden',
-                    border: '1px solid #ede8e3',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-                    transition: 'box-shadow .25s, transform .25s',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.boxShadow = '0 14px 40px rgba(0,0,0,0.12)'
-                    e.currentTarget.style.transform = 'translateY(-5px)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.05)'
-                    e.currentTarget.style.transform = ''
-                  }}
+                <div key={p.id} className="product-card card-hidden"
+                  style={{ background: SURFACE, borderRadius: 20, overflow: 'hidden', border: `1px solid ${BORDER}`, transition: 'box-shadow .25s, transform .25s, border-color .2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,.5)'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = TEXT3 }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }}
                 >
-                  {/* Photo */}
-                  <div style={{ height: 196, overflow: 'hidden', position: 'relative', background: '#f0ece8' }}>
-                    <img
-                      src={photoFor(p.name)}
-                      alt={p.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { e.currentTarget.src = FALLBACK_PHOTO }}
-                      loading="lazy"
-                    />
+                  <div style={{ height: 192, overflow: 'hidden', position: 'relative', background: SURFACE2 }}>
+                    <img src={photoFor(p.name)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} loading="lazy" />
                     {inCart && (
-                      <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(17,17,17,.82)', backdropFilter: 'blur(6px)', color: '#fff', borderRadius: 99, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
+                      <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(13,13,13,.85)', backdropFilter: 'blur(6px)', color: TEXT, borderRadius: 99, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
                         {inCart.qty} en carrito
                       </div>
                     )}
                   </div>
-
-                  {/* Info */}
                   <div style={{ padding: '16px 18px 20px' }}>
-                    <h3 style={{ fontWeight: 800, fontSize: 16, color: '#1c1917', marginBottom: p.description ? 6 : 14, letterSpacing: '-0.01em' }}>
-                      {p.name}
-                    </h3>
-                    {p.description && (
-                      <p style={{ fontSize: 13, color: '#78716c', lineHeight: 1.5, marginBottom: 14 }}>
-                        {p.description}
-                      </p>
-                    )}
+                    <h3 style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: p.description ? 5 : 14, letterSpacing: '-0.01em' }}>{p.name}</h3>
+                    {p.description && <p style={{ fontSize: 12, color: TEXT2, lineHeight: 1.55, marginBottom: 14 }}>{p.description}</p>}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 900, fontSize: 24, color: '#1c1917', letterSpacing: '-0.02em' }}>
-                        ${p.price_mxn}
-                      </span>
+                      <span style={{ fontWeight: 900, fontSize: 22, color: TEXT, letterSpacing: '-0.02em' }}>${p.price_mxn}</span>
                       {inCart ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <button
-                            className="add-btn"
-                            onClick={e => { addRipple(e); setQty(p.id, inCart.qty - 1) }}
-                            style={{ width: 34, height: 34, borderRadius: '50%', background: '#f0efed', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#44403c', transition: 'background .15s' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#e5e1dd')}
-                            onMouseLeave={e => (e.currentTarget.style.background = '#f0efed')}
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span style={{ fontWeight: 900, minWidth: 24, textAlign: 'center', color: '#1c1917', fontSize: 16 }}>
-                            {inCart.qty}
-                          </span>
-                          <button
-                            className="add-btn"
-                            onClick={e => addToCart(p, e)}
-                            style={{ width: 34, height: 34, borderRadius: '50%', background: DARK, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'background .15s' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = ACCENT)}
-                            onMouseLeave={e => (e.currentTarget.style.background = DARK)}
-                          >
-                            <Plus size={14} />
-                          </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <button className="add-btn" onClick={e => { addRipple(e); setQty(p.id, inCart.qty - 1) }} style={{ width: 32, height: 32, borderRadius: '50%', background: SURFACE2, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT2, transition: 'background .15s' }} onMouseEnter={e => (e.currentTarget.style.background = BORDER)} onMouseLeave={e => (e.currentTarget.style.background = SURFACE2)}><Minus size={13} /></button>
+                          <span style={{ fontWeight: 900, minWidth: 22, textAlign: 'center', color: TEXT, fontSize: 15 }}>{inCart.qty}</span>
+                          <button className="add-btn" onClick={e => addToCart(p, e)} style={{ width: 32, height: 32, borderRadius: '50%', background: TEXT, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: BG, transition: 'background .15s' }} onMouseEnter={e => (e.currentTarget.style.background = '#d4d4d4')} onMouseLeave={e => (e.currentTarget.style.background = TEXT)}><Plus size={13} /></button>
                         </div>
                       ) : (
-                        <button
-                          className="add-btn"
-                          onClick={e => addToCart(p, e)}
-                          style={{ width: 42, height: 42, borderRadius: '50%', background: DARK, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'background .15s, transform .18s' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.transform = 'scale(1.13) rotate(5deg)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = DARK;  e.currentTarget.style.transform = '' }}
-                        >
-                          <Plus size={18} />
-                        </button>
+                        <button className="add-btn" onClick={e => addToCart(p, e)} style={{ width: 40, height: 40, borderRadius: '50%', background: TEXT, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: BG, transition: 'background .18s, transform .18s' }} onMouseEnter={e => { e.currentTarget.style.background = '#d4d4d4'; e.currentTarget.style.transform = 'scale(1.12) rotate(5deg)' }} onMouseLeave={e => { e.currentTarget.style.background = TEXT; e.currentTarget.style.transform = '' }}><Plus size={17} /></button>
                       )}
                     </div>
                   </div>
@@ -1190,222 +1029,254 @@ export default function DSDRestaurantePage() {
         )}
       </section>
 
-      {/* ── Floating pill ── */}
+      {/* Floating pill */}
       {totalItems > 0 && !drawer && (
-        <button
-          className="pill-in add-btn"
-          onClick={e => { addRipple(e); setDrawer(true) }}
-          style={{
-            position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
-            background: DARK, color: '#fff', border: 'none', borderRadius: 99,
-            padding: '15px 32px', fontWeight: 700, fontSize: 15, cursor: 'pointer', zIndex: 50,
-            display: 'flex', alignItems: 'center', gap: 18,
-            boxShadow: '0 10px 44px rgba(0,0,0,.32), 0 2px 8px rgba(0,0,0,.16)',
-            whiteSpace: 'nowrap', transition: 'background .15s, transform .2s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = ACCENT; e.currentTarget.style.transform = 'translateX(-50%) scale(1.04)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = DARK;   e.currentTarget.style.transform = 'translateX(-50%) scale(1)' }}
+        <button className="pill-in add-btn" onClick={e => { addRipple(e); setDrawer(true) }}
+          style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: TEXT, color: BG, border: 'none', borderRadius: 99, padding: '14px 28px', fontWeight: 700, fontSize: 14, cursor: 'pointer', zIndex: 50, display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 12px 48px rgba(0,0,0,.6)', whiteSpace: 'nowrap', transition: 'background .15s, transform .2s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#d4d4d4'; e.currentTarget.style.transform = 'translateX(-50%) scale(1.04)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = TEXT; e.currentTarget.style.transform = 'translateX(-50%) scale(1)' }}
         >
-          <span style={{ background: ACCENT, borderRadius: 99, padding: '3px 12px', fontSize: 13, fontWeight: 900 }}>
-            {totalItems}
-          </span>
+          <span style={{ background: ACCENT, color: '#fff', borderRadius: 99, padding: '3px 10px', fontSize: 12, fontWeight: 900 }}>{totalItems}</span>
           Ver mi pedido
-          <span style={{ fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>${total.toFixed(2)}</span>
+          <span style={{ fontWeight: 900 }}>${total.toFixed(2)}</span>
         </button>
       )}
 
       {/* ── Cart drawer ── */}
       {drawer && (
         <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setDrawer(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.48)', backdropFilter: 'blur(5px)', zIndex: 200 }}
-          />
-          {/* Panel */}
-          <div
-            className="drawer-in"
-            style={{
-              position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 460,
-              background: CREAM, zIndex: 201, display: 'flex', flexDirection: 'column',
-              boxShadow: '-28px 0 80px rgba(0,0,0,.2)',
-            }}
-          >
+          <div onClick={() => setDrawer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', backdropFilter: 'blur(5px)', zIndex: 200 }} />
+          <div className="drawer-in" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 460, background: SURFACE, zIndex: 201, display: 'flex', flexDirection: 'column', boxShadow: '-24px 0 80px rgba(0,0,0,.5)' }}>
+
             {/* Header */}
-            <div style={{ padding: '22px 26px', borderBottom: '1px solid #e7e5e4', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h2 style={{ fontWeight: 900, fontSize: 22, color: '#1c1917', letterSpacing: '-0.025em' }}>Mi pedido</h2>
-                <p style={{ fontSize: 12, color: '#a8a29e', marginTop: 2 }}>
-                  {totalItems} producto{totalItems !== 1 ? 's' : ''}
-                </p>
+                <h2 style={{ fontWeight: 900, fontSize: 20, color: TEXT, letterSpacing: '-0.025em' }}>Mi pedido</h2>
+                <p style={{ fontSize: 12, color: TEXT2, marginTop: 2 }}>{totalItems} producto{totalItems !== 1 ? 's' : ''}</p>
               </div>
-              <button
-                className="add-btn"
-                onClick={e => { addRipple(e); setDrawer(false) }}
-                style={{ width: 38, height: 38, borderRadius: 12, background: '#f0efed', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#78716c', transition: 'background .15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#e5e1dd')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#f0efed')}
-              >
-                <X size={17} />
+              <button className="add-btn" onClick={e => { addRipple(e); setDrawer(false) }} style={{ width: 36, height: 36, borderRadius: 11, background: SURFACE2, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT2, transition: 'background .15s' }} onMouseEnter={e => (e.currentTarget.style.background = BORDER)} onMouseLeave={e => (e.currentTarget.style.background = SURFACE2)}>
+                <X size={16} />
               </button>
             </div>
 
-            {/* Scrollable body */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Scrollable */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
               {/* Name */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#a8a29e', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
-                  Tu nombre
-                </label>
-                <input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Ej. Carlos Mendez"
-                  style={{ width: '100%', background: '#fff', border: '1.5px solid #e7e5e4', borderRadius: 14, padding: '13px 16px', fontSize: 14, color: '#1c1917', outline: 'none', transition: 'border-color .15s' }}
-                  onFocus={e => (e.currentTarget.style.borderColor = DARK)}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#e7e5e4')}
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Tu nombre</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder={customer?.full_name || 'Ej. Carlos Mendez'}
+                  style={{ width: '100%', background: SURFACE2, border: `1.5px solid ${BORDER}`, borderRadius: 13, padding: '12px 15px', fontSize: 14, color: TEXT, transition: 'border-color .15s' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = TEXT3)} onBlur={e => (e.currentTarget.style.borderColor = BORDER)}
                 />
               </div>
 
-              {/* Mesa (opcional) */}
+              {/* Mesa */}
               {tables && tables.length > 0 && (
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#a8a29e', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
-                    Mesa <span style={{ color: '#d6d3d1', fontWeight: 400 }}>(opcional)</span>
-                  </label>
-                  <select
-                    value={tableId}
-                    onChange={e => setTableId(e.target.value)}
-                    style={{ width: '100%', background: '#fff', border: '1.5px solid #e7e5e4', borderRadius: 14, padding: '13px 16px', fontSize: 14, color: tableId ? '#1c1917' : '#a8a29e', outline: 'none', cursor: 'pointer', appearance: 'none' }}
-                  >
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Mesa <span style={{ color: TEXT3, fontWeight: 400 }}>(opcional)</span></label>
+                  <select value={tableId} onChange={e => setTableId(e.target.value)} style={{ width: '100%', background: SURFACE2, border: `1.5px solid ${BORDER}`, borderRadius: 13, padding: '12px 15px', fontSize: 14, color: tableId ? TEXT : TEXT2, cursor: 'pointer', appearance: 'none' }}>
                     <option value=''>Para llevar</option>
-                    {tables.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
+                    {tables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
-                  {tableId && (
-                    <p style={{ marginTop: 6, fontSize: 12, color: '#009ee3', fontWeight: 600 }}>
-                      Pagaras con Mercado Pago antes de que llegue a cocina
-                    </p>
-                  )}
                 </div>
               )}
 
               {/* Items */}
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  Productos
-                </p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Productos</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {cart.map(item => (
-                    <div key={item.id} style={{ background: '#fff', borderRadius: 18, padding: '14px 16px', border: '1px solid #ede8e3', display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div key={item.id} style={{ background: SURFACE2, borderRadius: 16, padding: '13px 15px', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, fontSize: 14, color: '#1c1917', marginBottom: 3 }}>{item.name}</p>
-                        <p style={{ fontSize: 13, color: '#78716c', fontWeight: 600 }}>${(item.price * item.qty).toFixed(2)}</p>
+                        <p style={{ fontWeight: 700, fontSize: 14, color: TEXT, marginBottom: 2 }}>{item.name}</p>
+                        <p style={{ fontSize: 13, color: TEXT2, fontWeight: 600 }}>${(item.price * item.qty).toFixed(2)}</p>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button
-                          onClick={() => setQty(item.id, item.qty - 1)}
-                          style={{ width: 32, height: 32, borderRadius: '50%', background: '#f0efed', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#44403c', transition: 'background .15s' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#e5e1dd')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '#f0efed')}
-                        >
-                          <Minus size={13} />
-                        </button>
-                        <span style={{ fontWeight: 900, minWidth: 22, textAlign: 'center', color: '#1c1917', fontSize: 15 }}>
-                          {item.qty}
-                        </span>
-                        <button
-                          onClick={() => setQty(item.id, item.qty + 1)}
-                          style={{ width: 32, height: 32, borderRadius: '50%', background: DARK, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: 'background .15s' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = ACCENT)}
-                          onMouseLeave={e => (e.currentTarget.style.background = DARK)}
-                        >
-                          <Plus size={13} />
-                        </button>
-                        <button
-                          onClick={() => setQty(item.id, 0)}
-                          style={{ width: 30, height: 30, borderRadius: '50%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d6d3d1', transition: 'color .15s' }}
-                          onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')}
-                          onMouseLeave={e => (e.currentTarget.style.color = '#d6d3d1')}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <button onClick={() => setQty(item.id, item.qty - 1)} style={{ width: 30, height: 30, borderRadius: '50%', background: SURFACE, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT2 }}><Minus size={12} /></button>
+                        <span style={{ fontWeight: 900, minWidth: 20, textAlign: 'center', color: TEXT, fontSize: 14 }}>{item.qty}</span>
+                        <button onClick={() => setQty(item.id, item.qty + 1)} style={{ width: 30, height: 30, borderRadius: '50%', background: TEXT, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: BG }}><Plus size={12} /></button>
+                        <button onClick={() => setQty(item.id, 0)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT3 }} onMouseEnter={e => (e.currentTarget.style.color = '#f87171')} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}><Trash2 size={13} /></button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
+              {/* Rewards section */}
+              {customer && allRewards.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                    Recompensas
+                    {customer.points > 0 && <span style={{ marginLeft: 8, color: TEXT2, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>{customer.points} pts disponibles</span>}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {allRewards.map(reward => {
+                      const canAfford  = customer.points >= reward.points_required
+                      const isSelected = selectedReward?.id === reward.id
+                      const disc       = calcDiscount(reward, subtotal)
+                      return (
+                        <button key={reward.id} disabled={!canAfford} onClick={() => setSelectedReward(isSelected ? null : reward)}
+                          style={{ background: isSelected ? '#1a1a0f' : SURFACE2, border: `1.5px solid ${isSelected ? ACCENT : canAfford ? BORDER : BORDER}`, borderRadius: 14, padding: '12px 14px', cursor: canAfford ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', transition: 'all .15s', opacity: canAfford ? 1 : 0.45 }}
+                          onMouseEnter={e => { if (canAfford && !isSelected) e.currentTarget.style.borderColor = TEXT3 }}
+                          onMouseLeave={e => { if (canAfford && !isSelected) e.currentTarget.style.borderColor = BORDER }}
+                        >
+                          <Gift size={16} color={isSelected ? ACCENT : canAfford ? TEXT2 : TEXT3} style={{ flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: isSelected ? TEXT : canAfford ? TEXT : TEXT3, marginBottom: 2 }}>{reward.name}</p>
+                            <p style={{ fontSize: 11, color: TEXT3 }}>
+                              {reward.points_required} pts
+                              {canAfford && disc > 0 ? ` · -$${disc.toFixed(2)}` : ''}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                          )}
+                          {!canAfford && (
+                            <span style={{ fontSize: 11, color: TEXT3, flexShrink: 0 }}>Faltan {reward.points_required - customer.points} pts</span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Notes */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#a8a29e', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
-                  Notas (opcional)
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Alergias, sin picante, instrucciones especiales..."
-                  rows={2}
-                  style={{ width: '100%', background: '#fff', border: '1.5px solid #e7e5e4', borderRadius: 14, padding: '13px 16px', fontSize: 14, color: '#1c1917', outline: 'none', resize: 'none', fontFamily: 'inherit', transition: 'border-color .15s' }}
-                  onFocus={e => (e.currentTarget.style.borderColor = DARK)}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#e7e5e4')}
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Notas (opcional)</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Alergias, sin picante..." rows={2}
+                  style={{ width: '100%', background: SURFACE2, border: `1.5px solid ${BORDER}`, borderRadius: 13, padding: '12px 15px', fontSize: 14, color: TEXT, resize: 'none', fontFamily: 'inherit', transition: 'border-color .15s' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = TEXT3)} onBlur={e => (e.currentTarget.style.borderColor = BORDER)}
                 />
               </div>
 
               {/* Totals */}
-              <div style={{ background: '#fff', borderRadius: 20, padding: '20px 22px', border: '1px solid #ede8e3' }}>
+              <div style={{ background: SURFACE2, borderRadius: 18, padding: '18px 20px', border: `1px solid ${BORDER}` }}>
                 {[['Subtotal', `$${subtotal.toFixed(2)}`], ['IVA (16%)', `$${tax.toFixed(2)}`]].map(([l, v]) => (
-                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#78716c', marginBottom: 12 }}>
+                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: TEXT2, marginBottom: 10 }}>
                     <span>{l}</span><span style={{ fontWeight: 600 }}>{v}</span>
                   </div>
                 ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 22, color: '#1c1917', paddingTop: 14, borderTop: '1px solid #f0efed', letterSpacing: '-0.025em' }}>
+                {discount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: ACCENT, marginBottom: 10 }}>
+                    <span>Descuento ({selectedReward?.name})</span>
+                    <span style={{ fontWeight: 700 }}>-${discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 20, color: TEXT, paddingTop: 12, borderTop: `1px solid ${BORDER}`, letterSpacing: '-0.025em' }}>
                   <span>Total</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>${total.toFixed(2)}</span>
+                  <span>${total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div style={{ padding: '18px 26px', borderTop: '1px solid #e7e5e4', background: '#fff' }}>
-              <button
-                className="add-btn"
-                onClick={e => { addRipple(e); placeOrder.mutate() }}
-                disabled={cart.length === 0 || placeOrder.isPending}
-                style={{
-                  width: '100%', background: placeOrder.isPending ? '#44403c' : DARK, color: '#fff',
-                  border: 'none', borderRadius: 18, padding: '18px 0', fontWeight: 800, fontSize: 16,
-                  cursor: placeOrder.isPending ? 'wait' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                  opacity: cart.length === 0 ? 0.42 : 1,
-                  transition: 'background .15s, opacity .15s',
-                }}
-                onMouseEnter={e => { if (!placeOrder.isPending && cart.length > 0) e.currentTarget.style.background = ACCENT }}
-                onMouseLeave={e => { if (!placeOrder.isPending) e.currentTarget.style.background = DARK }}
+            <div style={{ padding: '16px 24px', borderTop: `1px solid ${BORDER}` }}>
+              <button className="add-btn" onClick={e => { addRipple(e); placeOrder.mutate() }} disabled={cart.length === 0 || placeOrder.isPending}
+                style={{ width: '100%', background: placeOrder.isPending ? TEXT3 : TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 15, cursor: placeOrder.isPending ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: cart.length === 0 ? 0.4 : 1, transition: 'background .15s, opacity .15s' }}
+                onMouseEnter={e => { if (!placeOrder.isPending && cart.length > 0) e.currentTarget.style.background = '#d4d4d4' }}
+                onMouseLeave={e => { if (!placeOrder.isPending) e.currentTarget.style.background = TEXT }}
               >
-                {placeOrder.isPending
-                  ? 'Preparando pago...'
-                  : <><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" style={{flexShrink:0}}><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg> Pagar con Mercado Pago</>
-                }
+                {placeOrder.isPending ? 'Preparando pago...' : 'Continuar al pago'}
               </button>
-              <p style={{ textAlign: 'center', fontSize: 12, color: '#a8a29e', marginTop: 12 }}>
-                Pago seguro · Tu pedido llega a cocina despues del pago
-              </p>
+              <p style={{ textAlign: 'center', fontSize: 11, color: TEXT3, marginTop: 10 }}>Pago seguro · Tu pedido llega a cocina despues del pago</p>
             </div>
           </div>
         </>
       )}
 
-      {/* ── Footer ── */}
-      <footer style={{ background: DARK, padding: '40px 28px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: '#1f1f1f', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 14, fontStyle: 'italic' }}>D</span>
+      {/* ── Profile drawer ── */}
+      {profileOpen && customer && (
+        <>
+          <div onClick={() => setProfileOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', backdropFilter: 'blur(5px)', zIndex: 200 }} />
+          <div className="profile-in" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 400, background: SURFACE, zIndex: 201, display: 'flex', flexDirection: 'column', boxShadow: '-24px 0 80px rgba(0,0,0,.5)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ fontWeight: 900, fontSize: 19, color: TEXT, letterSpacing: '-0.025em' }}>Mi perfil</h2>
+              <button onClick={() => setProfileOpen(false)} style={{ width: 36, height: 36, borderRadius: 11, background: SURFACE2, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT2 }}><X size={16} /></button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Identity */}
+              <div style={{ background: SURFACE2, borderRadius: 18, padding: '20px', border: `1px solid ${BORDER}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: BORDER, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <User size={22} color={TEXT2} />
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 800, fontSize: 16, color: TEXT }}>{customer.full_name ?? 'Cliente'}</p>
+                    <p style={{ fontSize: 12, color: TIER_COLORS[customer.tier] ?? TEXT2, fontWeight: 600, textTransform: 'capitalize' }}>{TIER_LABELS[customer.tier]}</p>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ background: SURFACE, borderRadius: 14, padding: '14px 16px' }}>
+                    <p style={{ fontSize: 10, color: TEXT3, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Puntos</p>
+                    <p style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em' }}>{customer.points.toLocaleString()}</p>
+                  </div>
+                  <div style={{ background: SURFACE, borderRadius: 14, padding: '14px 16px' }}>
+                    <p style={{ fontSize: 10, color: TEXT3, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Visitas</p>
+                    <p style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em' }}>{customer.total_visits}</p>
+                  </div>
+                </div>
+                {/* Visit progress */}
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <p style={{ fontSize: 12, color: TEXT3 }}>{customer.total_visits % 8} de 8 visitas</p>
+                    <p style={{ fontSize: 12, color: TEXT2, fontWeight: 600 }}>{8 - (customer.total_visits % 8)} para el premio</p>
+                  </div>
+                  <div style={{ height: 4, background: BORDER, borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${((customer.total_visits % 8) / 8) * 100}%`, background: TEXT, borderRadius: 99, transition: 'width .8s cubic-bezier(.22,1,.36,1)' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Rewards */}
+              {allRewards.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Recompensas</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {allRewards.map(r => {
+                      const canAfford = customer.points >= r.points_required
+                      return (
+                        <div key={r.id} style={{ background: SURFACE2, borderRadius: 14, padding: '12px 14px', border: `1px solid ${canAfford ? BORDER : BORDER}`, display: 'flex', alignItems: 'center', gap: 12, opacity: canAfford ? 1 : 0.5 }}>
+                          <Gift size={15} color={canAfford ? TEXT : TEXT3} style={{ flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{r.name}</p>
+                            <p style={{ fontSize: 11, color: TEXT3 }}>{r.points_required} pts requeridos</p>
+                          </div>
+                          {canAfford
+                            ? <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,.08)', borderRadius: 99, padding: '3px 10px' }}>Disponible</span>
+                            : <span style={{ fontSize: 11, color: TEXT3 }}>Faltan {r.points_required - customer.points} pts</span>
+                          }
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Logout */}
+            <div style={{ padding: '16px 24px', borderTop: `1px solid ${BORDER}` }}>
+              <button onClick={handleLogout} style={{ width: '100%', background: 'none', border: `1px solid ${BORDER}`, borderRadius: 14, padding: '13px 0', fontWeight: 700, fontSize: 14, color: TEXT2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'border-color .15s, color .15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = '#f87171'; e.currentTarget.style.color = '#f87171' }} onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT2 }}>
+                <LogOut size={15} /> Cerrar sesion
+              </button>
+            </div>
           </div>
-          <span style={{ color: '#57534e', fontWeight: 700, fontSize: 15 }}>DSD Restaurante</span>
+        </>
+      )}
+
+      {/* Footer */}
+      <footer style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, padding: '32px 28px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 9, background: SURFACE2, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: ACCENT, fontWeight: 900, fontSize: 13, fontStyle: 'italic' }}>D</span>
+          </div>
+          <span style={{ color: TEXT2, fontWeight: 700, fontSize: 14 }}>DSD Restaurante</span>
         </div>
-        <p style={{ color: '#3d3937', fontSize: 12 }}>Powered by DSD AI Solutions &copy; 2025</p>
+        <p style={{ color: TEXT3, fontSize: 11 }}>Powered by DSD AI Solutions &copy; 2025</p>
       </footer>
     </div>
   )
