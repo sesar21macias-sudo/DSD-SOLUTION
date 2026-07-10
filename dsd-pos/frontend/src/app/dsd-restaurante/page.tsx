@@ -263,14 +263,17 @@ export default function DSDRestaurantePage() {
   const [filterAnim,  setFilterAnim]  = useState(false)
 
   // Loyalty gate
-  const [gateStep,     setGateStep]     = useState<'phone'|'loading'|'found'|'enter-pin'|'new'|'set-pin'|'done'>('phone')
+  const [gateStep,     setGateStep]     = useState<'welcome'|'phone'|'loading'|'found'|'enter-pin'|'login-method'|'new'|'set-pin'|'done'>('welcome')
   const [gatePhone,    setGatePhone]    = useState('')
+  const [gateCountry,  setGateCountry]  = useState<'+52'|'+1'>('+52')
+  const [gateLoginMode,setGateLoginMode]= useState<'pin'|'phone'>('pin')
   const [gateName,     setGateName]     = useState('')
   const [gatePin,      setGatePin]      = useState('')
   const [gatePinErr,   setGatePinErr]   = useState<string | null>(null)
   const [gateCustomer, setGateCustomer] = useState<Customer | null>(null)
   const [gateHasPin,   setGateHasPin]   = useState(false)
   const [gateError,    setGateError]    = useState<string | null>(null)
+  const [activeMainTab,setActiveMainTab]= useState<'menu'|'rewards'|'promos'>('menu')
 
   // Logged-in customer session
   const [customerToken,  setCustomerToken]  = useState<string | null>(null)
@@ -353,16 +356,18 @@ export default function DSDRestaurantePage() {
 
 
   // ── Gate handlers ─────────────────────────────────────────────────────────
+  function fullPhone() { return `${gateCountry}${gatePhone}` }
+
   async function handleGateSubmit() {
     if (gatePhone.length < 7) return
     setGateStep('loading'); setGateError(null)
     try {
-      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: gatePhone })
+      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: fullPhone() })
       const d = data.data
       setGateCustomer(d.customer)
       setGateHasPin(d.has_pin)
       if (d.is_new) { setGateStep('new') }
-      else if (d.has_pin) { setGateStep('enter-pin') }
+      else if (d.has_pin && gateLoginMode === 'pin') { setGateStep('enter-pin') }
       else { setGateStep('found') }
     } catch {
       setGateStep('phone')
@@ -373,7 +378,7 @@ export default function DSDRestaurantePage() {
   async function handleGateRegister() {
     setGateStep('loading')
     try {
-      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: gatePhone, name: gateName.trim() || undefined })
+      const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: fullPhone(), name: gateName.trim() || undefined })
       setGateCustomer(data.data.customer)
       setGateStep('set-pin')
     } catch { setGateStep('new') }
@@ -384,7 +389,7 @@ export default function DSDRestaurantePage() {
     setGatePinErr(null)
     setGateStep('loading')
     try {
-      const { data } = await pub.post(`/public/loyalty/set-pin/${TENANT_SLUG}`, { phone: gatePhone, pin: gatePin })
+      const { data } = await pub.post(`/public/loyalty/set-pin/${TENANT_SLUG}`, { phone: fullPhone(), pin: gatePin })
       const token = data.data.token
       await saveSession(token)
       setGateStep('done')
@@ -396,7 +401,7 @@ export default function DSDRestaurantePage() {
     setGatePinErr(null)
     setGateStep('loading')
     try {
-      const { data } = await pub.post(`/public/loyalty/login/${TENANT_SLUG}`, { phone: gatePhone, pin: gatePin })
+      const { data } = await pub.post(`/public/loyalty/login/${TENANT_SLUG}`, { phone: fullPhone(), pin: gatePin })
       const token = data.data.token
       await saveSession(token)
       setGateCustomer(data.data.customer)
@@ -567,27 +572,49 @@ export default function DSDRestaurantePage() {
     setCart(c => qty <= 0 ? c.filter(i => i.id !== id) : c.map(i => i.id === id ? { ...i, qty } : i))
   }
 
-  const totalItems = cart.reduce((s, i) => s + i.qty, 0)
-  const subtotal   = cart.reduce((s, i) => s + i.price * i.qty, 0)
-  const tax        = subtotal * 0.16
-  const baseTotal  = subtotal + tax
-  const discount   = selectedReward ? calcDiscount(selectedReward, subtotal) : 0
-  const total      = Math.max(0, baseTotal - discount)
-  const filtered   = (data?.products ?? []).filter(p => !activeCategory || p.category_id === activeCategory)
+  const totalItems      = cart.reduce((s, i) => s + i.qty, 0)
+  const subtotal        = cart.reduce((s, i) => s + i.price * i.qty, 0)
+  const tax             = subtotal * 0.16
+  const baseTotal       = subtotal + tax
+  const discount        = selectedReward ? calcDiscount(selectedReward, subtotal) : 0
+  const total           = Math.max(0, baseTotal - discount)
+  const filtered        = (data?.products ?? []).filter(p => !activeCategory || p.category_id === activeCategory)
+  const VISITS_PER_PRIZE = 8
+  const cycleVisits     = (customer ?? gateCustomer) ? ((customer ?? gateCustomer)!.total_visits % VISITS_PER_PRIZE) : 0
+  const progressPct     = Math.round((cycleVisits / VISITS_PER_PRIZE) * 100)
 
   useEffect(() => { document.body.style.overflow = (drawer || profileOpen) ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [drawer, profileOpen])
 
+  // ── Phone input with country selector (reusable) ─────────────────────────
+  function PhoneInput({ autoFocus = false }: { autoFocus?: boolean }) {
+    return (
+      <div style={{ position: 'relative', marginBottom: 12 }}>
+        {/* Country selector */}
+        <select value={gateCountry} onChange={e => setGateCountry(e.target.value as '+52'|'+1')}
+          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 80, background: 'transparent', border: 'none', borderRight: `1px solid ${BORDER}`, color: TEXT2, fontSize: 14, fontWeight: 700, cursor: 'pointer', paddingLeft: 12, paddingRight: 4, appearance: 'none', zIndex: 1 }}>
+          <option value="+52">🇲🇽 +52</option>
+          <option value="+1">🇺🇸 +1</option>
+        </select>
+        <input type="tel" inputMode="numeric" value={gatePhone} maxLength={10} autoFocus={autoFocus}
+          onChange={e => setGatePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+          onKeyDown={e => e.key === 'Enter' && gatePhone.length >= 7 && handleGateSubmit()}
+          placeholder="Numero de telefono"
+          style={{ width: '100%', background: SURFACE, border: `1.5px solid ${gatePhone.length >= 7 ? TEXT3 : BORDER}`, borderRadius: 16, padding: '17px 18px 17px 90px', fontSize: 16, color: TEXT, letterSpacing: '0.05em', transition: 'border-color .2s' }}
+          onFocus={e => { e.currentTarget.style.borderColor = TEXT2 }}
+          onBlur={e => { e.currentTarget.style.borderColor = gatePhone.length >= 7 ? TEXT3 : BORDER }}
+        />
+      </div>
+    )
+  }
+
   // ── GATE SCREEN ───────────────────────────────────────────────────────────
   if (gateStep !== 'done') {
-    const VISITS_PER_PRIZE = 8
-    const cycleVisits = gateCustomer ? gateCustomer.total_visits % VISITS_PER_PRIZE : 0
-    const progressPct = Math.round((cycleVisits / VISITS_PER_PRIZE) * 100)
     const toNextPrize = VISITS_PER_PRIZE - cycleVisits
     const firstName   = gateCustomer?.full_name?.split(' ')[0] ?? ''
 
     return (
       <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 20px', fontFamily: 'system-ui,-apple-system,sans-serif', position: 'relative', overflow: 'hidden' }}>
-        <style>{`* { box-sizing:border-box;margin:0;padding:0 } @keyframes gateIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}} @keyframes gateSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes pinPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}} .gate-card{animation:gateIn .52s cubic-bezier(.22,1,.36,1) both}`}</style>
+        <style>{`* { box-sizing:border-box;margin:0;padding:0 } @keyframes gateIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}} @keyframes gateSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes pinPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}} .gate-card{animation:gateIn .52s cubic-bezier(.22,1,.36,1) both} select option{background:#1e1e1e;color:#f0f0f0}`}</style>
 
         {/* Ambient glow */}
         <div style={{ position: 'absolute', top: -140, left: '50%', transform: 'translateX(-50%)', width: 480, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,240,240,.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -601,11 +628,73 @@ export default function DSDRestaurantePage() {
             </div>
           </div>
 
-          {/* Phone */}
+          {/* ── WELCOME ── */}
+          {gateStep === 'welcome' && (
+            <>
+              <h1 style={{ fontSize: 32, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Bienvenido</h1>
+              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 32 }}>Acumula puntos en cada visita y<br />canjealos por premios exclusivos</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                <button onClick={() => { setGateLoginMode('pin'); setGatePhone(''); setGatePin(''); setGateStep('new') }}
+                  style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', transition: 'background .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#d4d4d4')} onMouseLeave={e => (e.currentTarget.style.background = TEXT)}>
+                  Crear cuenta
+                </button>
+                <button onClick={() => setGateStep('login-method')}
+                  style={{ width: '100%', background: 'transparent', color: TEXT, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '17px 0', fontWeight: 700, fontSize: 16, cursor: 'pointer', transition: 'border-color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}>
+                  Iniciar sesion
+                </button>
+              </div>
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                Saltar por ahora
+              </button>
+            </>
+          )}
+
+          {/* ── LOGIN METHOD ── */}
+          {gateStep === 'login-method' && (
+            <>
+              <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Iniciar sesion</h1>
+              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 28 }}>Elige como quieres entrar</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                <button onClick={() => { setGateLoginMode('pin'); setGatePhone(''); setGatePin(''); setGateStep('phone') }}
+                  style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '18px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left', transition: 'border-color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>🔢</div>
+                  <div>
+                    <p style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: 3 }}>Con mi PIN</p>
+                    <p style={{ fontSize: 12, color: TEXT2 }}>Ingresa tu numero y tu PIN de 4 digitos</p>
+                  </div>
+                </button>
+                <button onClick={() => { setGateLoginMode('phone'); setGatePhone(''); setGatePin(''); setGateStep('phone') }}
+                  style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '18px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left', transition: 'border-color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}>
+                  <div style={{ width: 44, height: 44, borderRadius: 14, background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>📱</div>
+                  <div>
+                    <p style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: 3 }}>Con mi numero</p>
+                    <p style={{ fontSize: 12, color: TEXT2 }}>Si olvidaste tu PIN, entra con tu telefono</p>
+                  </div>
+                </button>
+              </div>
+              <button onClick={() => setGateStep('welcome')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                Volver
+              </button>
+            </>
+          )}
+
+          {/* ── PHONE ── */}
           {gateStep === 'phone' && (
             <>
-              <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Bienvenido</h1>
-              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 28 }}>Acumula puntos en cada visita y<br />canjealos por premios</p>
+              <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>
+                {gateLoginMode === 'pin' ? 'Ingresa tu numero' : 'Busca tu cuenta'}
+              </h1>
+              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 24 }}>
+                {gateLoginMode === 'pin' ? 'Luego ingresaras tu PIN' : 'Entraremos con tu numero de telefono'}
+              </p>
 
               {/* Google Sign-In */}
               {GOOGLE_CLIENT_ID && googleReady && (
@@ -619,26 +708,15 @@ export default function DSDRestaurantePage() {
                 </>
               )}
 
-              <div style={{ position: 'relative', marginBottom: 12 }}>
-                <span style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', color: TEXT3, fontSize: 15, fontWeight: 700, userSelect: 'none' }}>+52</span>
-                <div style={{ position: 'absolute', left: 54, top: '50%', transform: 'translateY(-50%)', width: 1, height: 20, background: BORDER }} />
-                <input type="tel" inputMode="numeric" value={gatePhone} maxLength={10} autoFocus
-                  onChange={e => setGatePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  onKeyDown={e => e.key === 'Enter' && gatePhone.length >= 7 && handleGateSubmit()}
-                  placeholder="Numero de telefono"
-                  style={{ width: '100%', background: SURFACE, border: `1.5px solid ${gatePhone.length >= 7 ? TEXT3 : BORDER}`, borderRadius: 16, padding: '17px 18px 17px 70px', fontSize: 17, color: TEXT, letterSpacing: '0.06em', transition: 'border-color .2s' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = TEXT2 }}
-                  onBlur={e => { e.currentTarget.style.borderColor = gatePhone.length >= 7 ? TEXT3 : BORDER }}
-                />
-              </div>
+              <PhoneInput autoFocus />
               {gateError && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gateError}</p>}
               <button onClick={handleGateSubmit} disabled={gatePhone.length < 7}
                 style={{ width: '100%', background: gatePhone.length < 7 ? SURFACE : ACCENT, color: gatePhone.length < 7 ? TEXT3 : '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePhone.length < 7 ? 'not-allowed' : 'pointer', transition: 'background .2s', marginBottom: 14 }}>
                 Continuar
               </button>
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+              <button onClick={() => setGateStep('login-method')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Saltar por ahora
+                Volver
               </button>
             </>
           )}
@@ -683,20 +761,21 @@ export default function DSDRestaurantePage() {
               />
 
               <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Telefono</label>
-              <div style={{ position: 'relative', marginBottom: 16 }}>
-                <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: TEXT3, fontSize: 14, fontWeight: 700 }}>+52</span>
-                <div style={{ position: 'absolute', left: 50, top: '50%', transform: 'translateY(-50%)', width: 1, height: 18, background: BORDER }} />
-                <input type="tel" inputMode="numeric" value={gatePhone} maxLength={10} readOnly
-                  style={{ width: '100%', background: SURFACE2, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '15px 18px 15px 62px', fontSize: 16, color: TEXT2, letterSpacing: '0.06em' }}
-                />
+              <div style={{ position: 'relative', marginBottom: 16, background: SURFACE2, border: `1.5px solid ${BORDER}`, borderRadius: 16, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                <select value={gateCountry} onChange={e => setGateCountry(e.target.value as '+52'|'+1')}
+                  style={{ background: 'transparent', border: 'none', borderRight: `1px solid ${BORDER}`, color: TEXT2, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '0 8px 0 12px', height: 52, appearance: 'none', flexShrink: 0, width: 80 }}>
+                  <option value="+52">🇲🇽 +52</option>
+                  <option value="+1">🇺🇸 +1</option>
+                </select>
+                <span style={{ padding: '15px 12px', fontSize: 16, color: TEXT2, letterSpacing: '0.05em', flex: 1 }}>{gatePhone || 'Tu numero'}</span>
               </div>
 
               <button onClick={handleGateRegister} style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', marginBottom: 12 }}>
                 Crear cuenta gratis
               </button>
-              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+              <button onClick={() => setGateStep('welcome')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Saltar por ahora
+                Volver
               </button>
             </>
           )}
@@ -737,7 +816,7 @@ export default function DSDRestaurantePage() {
                 style={{ width: '100%', background: gatePin.length === 4 ? ACCENT : SURFACE2, color: gatePin.length === 4 ? '#fff' : TEXT3, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePin.length === 4 ? 'pointer' : 'not-allowed', transition: 'background .2s, color .2s', marginBottom: 12 }}>
                 {gatePin.length === 4 ? 'Confirmar PIN' : `${4 - gatePin.length} digito${4 - gatePin.length !== 1 ? 's' : ''} mas`}
               </button>
-              <button onClick={() => { setGateStep('done') }} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
                 Saltar, crear PIN despues
               </button>
@@ -782,7 +861,7 @@ export default function DSDRestaurantePage() {
                 style={{ width: '100%', background: gatePin.length === 4 ? ACCENT : SURFACE2, color: gatePin.length === 4 ? '#fff' : TEXT3, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePin.length === 4 ? 'pointer' : 'not-allowed', transition: 'background .2s, color .2s', marginBottom: 12 }}>
                 {gatePin.length === 4 ? 'Entrar' : `${4 - gatePin.length} digito${4 - gatePin.length !== 1 ? 's' : ''} mas`}
               </button>
-              <button onClick={() => { setGateCustomer(gateCustomer); setGateStep('found') }} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
+              <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
                 Ver menu sin iniciar sesion
               </button>
@@ -1112,8 +1191,153 @@ export default function DSDRestaurantePage() {
         </div>
       </section>
 
+      {/* ── Tab bar ── */}
+      <div style={{ background: SURFACE, borderBottom: `1px solid ${BORDER}`, position: 'sticky', top: 64, zIndex: 90 }}>
+        <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 0 }}>
+          {([
+            { id: 'menu',    label: 'Menu',        icon: '🍽️' },
+            { id: 'rewards', label: 'Premios',     icon: '⭐' },
+            { id: 'promos',  label: 'Promociones', icon: '🎉' },
+          ] as { id: 'menu'|'rewards'|'promos'; label: string; icon: string }[]).map(tab => {
+            const active = activeMainTab === tab.id
+            return (
+              <button key={tab.id} onClick={() => setActiveMainTab(tab.id)}
+                style={{ flex: 1, maxWidth: 160, padding: '14px 8px', background: 'none', border: 'none', borderBottom: `2px solid ${active ? TEXT : 'transparent'}`, color: active ? TEXT : TEXT3, fontWeight: active ? 800 : 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'color .15s, border-color .15s' }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.color = TEXT2 }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.color = TEXT3 }}>
+                <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Rewards tab ── */}
+      {activeMainTab === 'rewards' && (
+        <section style={{ maxWidth: 1060, margin: '0 auto', padding: '48px 24px 120px' }}>
+          {!customer ? (
+            <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+              <div style={{ width: 72, height: 72, borderRadius: '50%', background: SURFACE, border: `1px solid ${BORDER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <Star size={30} color={TEXT3} />
+              </div>
+              <h2 style={{ fontSize: 24, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 10 }}>Tus premios</h2>
+              <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>Inicia sesion para ver tus puntos acumulados<br />y canjear premios exclusivos.</p>
+              <button onClick={() => setGateStep('welcome')}
+                style={{ background: TEXT, color: BG, border: 'none', borderRadius: 14, padding: '14px 32px', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>
+                Iniciar sesion
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Points hero */}
+              <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 24, padding: '32px 28px', marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Tus puntos</p>
+                  <p style={{ fontSize: 56, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1 }}>{customer.points.toLocaleString()}</p>
+                  <p style={{ fontSize: 13, color: TEXT2, marginTop: 8 }}>Nivel <span style={{ color: TIER_COLORS[customer.tier] ?? TEXT2, fontWeight: 700, textTransform: 'capitalize' }}>{TIER_LABELS[customer.tier]}</span> · {customer.total_visits} visitas</p>
+                </div>
+                <div style={{ minWidth: 160 }}>
+                  <p style={{ fontSize: 12, color: TEXT3, marginBottom: 10 }}>{cycleVisits} / {VISITS_PER_PRIZE} visitas para tu premio</p>
+                  <div style={{ height: 6, background: SURFACE2, borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
+                    <div style={{ height: '100%', width: `${progressPct}%`, background: TEXT, borderRadius: 99, transition: 'width 1s cubic-bezier(.22,1,.36,1)' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {Array.from({ length: VISITS_PER_PRIZE }).map((_, i) => (
+                      <div key={i} style={{ flex: 1, height: 28, borderRadius: 6, background: i < cycleVisits ? TEXT : SURFACE2, border: `1px solid ${i < cycleVisits ? TEXT : BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, transition: 'all .3s' }}>
+                        {i === VISITS_PER_PRIZE - 1 ? '🎁' : <span style={{ color: i < cycleVisits ? BG : TEXT3, fontWeight: 700 }}>{i + 1}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rewards grid */}
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 20 }}>Premios disponibles</h2>
+              {allRewards.length === 0 ? (
+                <div style={{ background: SURFACE2, border: `1px dashed ${BORDER}`, borderRadius: 20, padding: '40px 24px', textAlign: 'center' }}>
+                  <Gift size={32} color={TEXT3} style={{ marginBottom: 14 }} />
+                  <p style={{ fontWeight: 700, fontSize: 15, color: TEXT2, marginBottom: 8 }}>Recompensas proximas</p>
+                  <p style={{ fontSize: 13, color: TEXT3, lineHeight: 1.6 }}>Sigue comprando para acumular puntos y canjear premios.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+                  {allRewards.map(reward => {
+                    const canAfford  = customer.points >= reward.points_required
+                    const isSelected = selectedReward?.id === reward.id
+                    const disc       = calcDiscount(reward, subtotal)
+                    return (
+                      <div key={reward.id} onClick={() => { if (canAfford) setSelectedReward(isSelected ? null : reward) }}
+                        style={{ borderRadius: 20, background: isSelected ? '#17140b' : SURFACE, border: `2px solid ${isSelected ? ACCENT : canAfford ? '#2e2e2e' : BORDER}`, cursor: canAfford ? 'pointer' : 'default', opacity: canAfford ? 1 : 0.55, overflow: 'hidden', transition: 'all .22s', transform: isSelected ? 'scale(1.02)' : 'scale(1)' }}>
+                        <div style={{ height: 140, overflow: 'hidden', background: SURFACE2, position: 'relative' }}>
+                          <img src={photoFor(reward.name)} alt={reward.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: canAfford ? 'none' : 'grayscale(60%)' }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} />
+                          <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(13,13,13,.8)', backdropFilter: 'blur(6px)', borderRadius: 99, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Star size={9} fill={TEXT} color={TEXT} />
+                            <span style={{ fontSize: 11, fontWeight: 800, color: TEXT }}>{reward.points_required.toLocaleString()} pts</span>
+                          </div>
+                          {isSelected && (
+                            <div style={{ position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ padding: '14px 14px 16px' }}>
+                          <p style={{ fontWeight: 800, fontSize: 14, color: TEXT, marginBottom: 4 }}>{reward.name}</p>
+                          {reward.description && <p style={{ fontSize: 11, color: TEXT2, marginBottom: 10, lineHeight: 1.4 }}>{reward.description}</p>}
+                          <div style={{ background: isSelected ? ACCENT : canAfford ? TEXT : 'transparent', color: isSelected ? '#fff' : canAfford ? BG : TEXT3, border: canAfford ? 'none' : `1px solid ${BORDER}`, borderRadius: 10, padding: '9px 0', textAlign: 'center', fontSize: 12, fontWeight: 800, transition: 'background .18s' }}>
+                            {isSelected ? 'Seleccionado' : canAfford ? (disc > 0 ? `Canjear -$${disc.toFixed(0)}` : 'Canjear') : `Faltan ${(reward.points_required - customer.points).toLocaleString()} pts`}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {selectedReward && (
+                <div style={{ marginTop: 24, background: '#17140b', border: `1px solid ${ACCENT}`, borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Gift size={15} color={ACCENT} />
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{selectedReward.name} aplicado</p>
+                      {calcDiscount(selectedReward, subtotal) > 0 && <p style={{ fontSize: 11, color: TEXT2 }}>-${calcDiscount(selectedReward, subtotal).toFixed(2)} en tu proximo pedido</p>}
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedReward(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4 }} onMouseEnter={e => (e.currentTarget.style.color = '#f87171')} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {/* ── Promos tab ── */}
+      {activeMainTab === 'promos' && (
+        <section style={{ maxWidth: 1060, margin: '0 auto', padding: '48px 24px 120px' }}>
+          <h2 style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 8 }}>Promociones</h2>
+          <p style={{ color: TEXT2, fontSize: 14, marginBottom: 36 }}>Ofertas y descuentos especiales del restaurante</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+            {[
+              { emoji: '🌮', title: '2x1 en Tacos', desc: 'Todos los martes en tacos de asada y birria', tag: 'Martes', color: '#1a1400' },
+              { emoji: '🥤', title: 'Bebida gratis', desc: 'Con cualquier orden mayor a $150', tag: 'Siempre', color: '#0a1a0a' },
+              { emoji: '🎂', title: 'Descuento cumpleanos', desc: '20% off en tu mes de cumpleanos con cuenta activa', tag: 'Miembros', color: '#1a001a' },
+            ].map(p => (
+              <div key={p.title} style={{ background: p.color, border: `1px solid ${BORDER}`, borderRadius: 20, overflow: 'hidden' }}>
+                <div style={{ padding: '28px 24px 20px' }}>
+                  <span style={{ fontSize: 36, display: 'block', marginBottom: 14 }}>{p.emoji}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: ACCENT, background: 'rgba(232,66,26,.12)', borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.tag}</span>
+                  <h3 style={{ fontSize: 18, fontWeight: 900, color: TEXT, letterSpacing: '-0.02em', marginTop: 10, marginBottom: 6 }}>{p.title}</h3>
+                  <p style={{ fontSize: 13, color: TEXT2, lineHeight: 1.55 }}>{p.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ── Rewards strip (McDonald's style) ── */}
-      {customer && (
+      {activeMainTab === 'menu' && customer && (
         <section style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: '32px 0' }}>
           <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px' }}>
             {/* Header */}
@@ -1253,7 +1477,7 @@ export default function DSDRestaurantePage() {
       )}
 
       {/* Menu */}
-      <section id="menu-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '56px 24px 120px' }}>
+      {activeMainTab === 'menu' && <section id="menu-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '56px 24px 120px' }}>
         <div style={{ marginBottom: 36 }}>
           <h2 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 6 }}>Nuestro menu</h2>
           <p style={{ color: TEXT2, fontSize: 14 }}>Preparado al momento con ingredientes frescos</p>
@@ -1355,7 +1579,7 @@ export default function DSDRestaurantePage() {
             })}
           </div>
         )}
-      </section>
+      </section>}
 
       {/* Floating pill */}
       {totalItems > 0 && !drawer && (
