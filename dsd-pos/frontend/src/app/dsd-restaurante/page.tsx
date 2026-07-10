@@ -82,46 +82,46 @@ interface Customer { id: string; full_name: string | null; points: number; total
 
 // ── Product photos ────────────────────────────────────────────────────────────
 const PRODUCT_PHOTOS: Record<string, string> = {
-  'Taco de Birria':      'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80',
-  'Taco de Asada':       'https://images.unsplash.com/photo-1611250188496-e966043a0629?w=600&q=80',
-  'Taco de Pastor':      'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80',
-  'Taco de Carnitas':    'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=600&q=80',
+  'Taco de Birria':      'https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?w=600&q=80',
+  'Taco de Asada':       'https://images.unsplash.com/photo-1633933360585-e5827dbc6b6c?w=600&q=80',
+  'Taco de Pastor':      'https://images.unsplash.com/photo-1561043433-aaf687c4cf04?w=600&q=80',
+  'Taco de Carnitas':    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80',
   'Taco de Suadero':     'https://images.unsplash.com/photo-1611250188496-e966043a0629?w=600&q=80',
   'Quesadilla Sencilla': 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80',
-  'Quesadilla Asada':    'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80',
-  'Agua Fresca':         'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80',
+  'Quesadilla Asada':    'https://images.unsplash.com/photo-1565299715199-866c917206bb?w=600&q=80',
+  'Agua Fresca':         'https://images.unsplash.com/photo-1472796370491-b27a67a8c95a?w=600&q=80',
   'Refresco':            'https://images.unsplash.com/photo-1527960669566-f882ba1a5a1e?w=600&q=80',
   'Agua Mineral':        'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=600&q=80',
-  'Churros':             'https://images.unsplash.com/photo-1583338917451-face2751d8d5?w=600&q=80',
+  'Churros':             'https://images.unsplash.com/photo-1624953701887-e10a879c1e1d?w=600&q=80',
   'Consomé':             'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80',
   'Salsa Verde':         'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600&q=80',
   'Orden de Tortillas':  'https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&q=80',
 }
 const KEYWORD_PHOTOS: [string, string][] = [
-  ['birria',      'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
-  ['asada',       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
+  ['birria',      'https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?w=600&q=80'],
+  ['asada',       'https://images.unsplash.com/photo-1633933360585-e5827dbc6b6c?w=600&q=80'],
   ['pastor',      'https://images.unsplash.com/photo-1561043433-aaf687c4cf04?w=600&q=80'],
   ['carnitas',    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'],
   ['suadero',     'https://images.unsplash.com/photo-1611250188496-e966043a0629?w=600&q=80'],
-  ['tripa',       'https://images.unsplash.com/photo-1583338917451-face2751d8d5?w=600&q=80'],
-  ['lengua',      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'],
+  ['tripa',       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
+  ['lengua',      'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=600&q=80'],
   ['chorizo',     'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
   ['cochinita',   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'],
-  ['mulita',      'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
+  ['mulita',      'https://images.unsplash.com/photo-1565299715199-866c917206bb?w=600&q=80'],
   ['vampiro',     'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
   ['guisado',     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
   ['taco',        'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
   ['quesadilla',  'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
-  ['gordita',     'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
+  ['gordita',     'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?w=600&q=80'],
   ['tamal',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
   ['enchilada',   'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
   ['burrito',     'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?w=600&q=80'],
   ['torta',       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
   ['guacamole',   'https://images.unsplash.com/photo-1548940740-204726a19be3?w=600&q=80'],
-  ['nopal',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
-  ['frijol',      'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
-  ['arroz',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
-  ['agua',        'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
+  ['nopal',       'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600&q=80'],
+  ['frijol',      'https://images.unsplash.com/photo-1604152135912-04a022e23696?w=600&q=80'],
+  ['arroz',       'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=600&q=80'],
+  ['agua',        'https://images.unsplash.com/photo-1472796370491-b27a67a8c95a?w=600&q=80'],
   ['limonada',    'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
   ['horchata',    'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
   ['jamaica',     'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
@@ -138,7 +138,7 @@ const KEYWORD_PHOTOS: [string, string][] = [
   ['consomé',     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
   ['consome',     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
   ['caldo',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
-  ['orden',       'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
+  ['orden',       'https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&q=80'],
 ]
 const FALLBACK_PHOTO = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&q=80'
 
@@ -209,6 +209,9 @@ const GLOBAL_STYLES = `
   @keyframes tabReveal   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   @keyframes mosaicFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   @keyframes badgePulse  { 0%,100%{box-shadow:0 0 0 0 rgba(240,240,240,.2)} 50%{box-shadow:0 0 0 6px rgba(240,240,240,0)} }
+  @keyframes toastIn     { from{opacity:0;transform:translateY(12px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes toastOut    { from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(-8px) scale(.95)} }
+  .toast-item { animation: toastIn .28s cubic-bezier(.16,1,.3,1) both }
 
   /* ── Utility classes ── */
   .slide-up   { animation: slideUp  .6s cubic-bezier(.16,1,.3,1) both }
@@ -366,6 +369,9 @@ export default function DSDRestaurantePage() {
   const [stripeError,    setStripeError]    = useState<string | null>(null)
   const [countKey,    setCountKey]    = useState(0)
   const [filterAnim,  setFilterAnim]  = useState(false)
+  const [menuSearch,  setMenuSearch]  = useState('')
+  const [quickView,   setQuickView]   = useState<Product | null>(null)
+  const [toasts,      setToasts]      = useState<{ id: number; msg: string }[]>([])
 
   // Loyalty gate
   const [gateStep,     setGateStep]     = useState<'welcome'|'phone'|'loading'|'found'|'enter-pin'|'login-method'|'new'|'set-pin'|'quick-pin'|'done'>('welcome')
@@ -730,6 +736,12 @@ export default function DSDRestaurantePage() {
     },
   })
 
+  function addToast(msg: string) {
+    const id = Date.now()
+    setToasts(t => [...t, { id, msg }])
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2600)
+  }
+
   function addToCart(p: Product, e: React.MouseEvent<HTMLButtonElement>) {
     addRipple(e)
     setCart(c => {
@@ -737,6 +749,7 @@ export default function DSDRestaurantePage() {
       return ex ? c.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i) : [...c, { id: p.id, name: p.name, price: p.price_mxn, qty: 1 }]
     })
     setCountKey(k => k + 1)
+    addToast(`${p.name} agregado`)
   }
 
   function setQty(id: string, qty: number) {
@@ -754,7 +767,11 @@ export default function DSDRestaurantePage() {
         : (subtotal >= selectedPromo.min_order ? Math.round(subtotal * selectedPromo.discount_value / 100 * 100) / 100 : 0))
     : 0
   const total           = Math.max(0, baseTotal - discount - promoDiscount)
-  const filtered        = (data?.products ?? []).filter(p => !activeCategory || p.category_id === activeCategory)
+  const filtered        = (data?.products ?? []).filter(p => {
+    const matchCat = !activeCategory || p.category_id === activeCategory
+    const matchSearch = !menuSearch || p.name.toLowerCase().includes(menuSearch.toLowerCase()) || (p.description ?? '').toLowerCase().includes(menuSearch.toLowerCase())
+    return matchCat && matchSearch
+  })
   useEffect(() => { document.body.style.overflow = (drawer || profileOpen) ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [drawer, profileOpen])
 
   // ── Phone input with country selector (reusable) ─────────────────────────
@@ -841,9 +858,9 @@ export default function DSDRestaurantePage() {
           {gateStep === 'welcome' && (
             <>
               <div className="slide-up-1" style={{ textAlign: 'center', marginBottom: 36 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: TEXT3, textTransform: 'uppercase', marginBottom: 10 }}>DSD Restaurante</p>
-                <h1 style={{ fontSize: 38, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 12 }}>Gana puntos,<br />canjea premios</h1>
-                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.7 }}>Acumula puntos con cada compra y canjealos por descuentos y comida gratis.</p>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: TEXT3, textTransform: 'uppercase', marginBottom: 10 }}>Tacos El Guero</p>
+                <h1 style={{ fontSize: 38, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1.06, marginBottom: 12 }}>El sabor que<br />no se olvida.</h1>
+                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.7 }}>Unete al club de lealtad y gana puntos con cada taco. Canjealos por premios y descuentos exclusivos.</p>
               </div>
 
               <div className="slide-up-2" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
@@ -1725,9 +1742,27 @@ export default function DSDRestaurantePage() {
 
       {/* Menu */}
       {activeMainTab === 'menu' && <section id="menu-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '56px 24px 120px' }}>
-        <div className="section-header" style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 6 }}>Nuestro menu</h2>
-          <p style={{ color: TEXT3, fontSize: 14, fontWeight: 400 }}>Preparado al momento con ingredientes frescos</p>
+        <div className="section-header" style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 6 }}>Nuestro menu</h2>
+            <p style={{ color: TEXT3, fontSize: 14, fontWeight: 400 }}>Preparado al momento con ingredientes frescos</p>
+          </div>
+          {/* Search bar */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT3} strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              type="text" value={menuSearch} onChange={e => setMenuSearch(e.target.value)}
+              placeholder="Buscar platillo..."
+              style={{ paddingLeft: 36, paddingRight: menuSearch ? 32 : 14, paddingTop: 10, paddingBottom: 10, background: SURFACE, border: `1.5px solid ${menuSearch ? TEXT3 : BORDER}`, borderRadius: 12, fontSize: 13, color: TEXT, width: 190, fontFamily: 'Inter,sans-serif', transition: 'border-color .18s, width .22s', outline: 'none' }}
+              onFocus={e => { e.currentTarget.style.borderColor = TEXT2; e.currentTarget.style.width = '220px' }}
+              onBlur={e => { e.currentTarget.style.borderColor = menuSearch ? TEXT3 : BORDER; e.currentTarget.style.width = '190px' }}
+            />
+            {menuSearch && (
+              <button onClick={() => setMenuSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: TEXT3, padding: 2, display: 'flex', alignItems: 'center' }}>
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Category pills */}
@@ -1781,8 +1816,16 @@ export default function DSDRestaurantePage() {
         {/* Empty state */}
         {!isLoading && !isError && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-            <p style={{ fontSize: 22, marginBottom: 12 }}>🍽️</p>
-            <p style={{ color: TEXT2, fontSize: 15 }}>No hay productos en esta categoria.</p>
+            {menuSearch ? (
+              <>
+                <p style={{ fontSize: 28, marginBottom: 12 }}>🔍</p>
+                <p style={{ color: TEXT, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Sin resultados para "{menuSearch}"</p>
+                <p style={{ color: TEXT3, fontSize: 13, marginBottom: 20 }}>Intenta con otro nombre o categoria</p>
+                <button onClick={() => setMenuSearch('')} style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: TEXT2, borderRadius: 10, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Limpiar busqueda</button>
+              </>
+            ) : (
+              <p style={{ color: TEXT2, fontSize: 15 }}>No hay productos en esta categoria.</p>
+            )}
           </div>
         )}
 
@@ -1795,13 +1838,17 @@ export default function DSDRestaurantePage() {
                 <div key={p.id} className="product-card"
                   style={{ background: SURFACE, borderRadius: 20, overflow: 'hidden', border: `1px solid ${BORDER}`, animation: `cardReveal .52s cubic-bezier(.16,1,.3,1) both ${idx * 50}ms` } as React.CSSProperties}
                 >
-                  <div style={{ height: 192, overflow: 'hidden', position: 'relative', background: SURFACE2 }}>
+                  <div style={{ height: 192, overflow: 'hidden', position: 'relative', background: SURFACE2, cursor: 'zoom-in' }} onClick={() => setQuickView(p)}>
                     <img src={photoFor(p.name)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} loading="lazy" />
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background .2s' }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,.18)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0)')} />
                     {inCart && (
                       <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(13,13,13,.85)', backdropFilter: 'blur(6px)', color: TEXT, borderRadius: 99, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
                         {inCart.qty} en carrito
                       </div>
                     )}
+                    <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(13,13,13,.7)', backdropFilter: 'blur(4px)', borderRadius: 8, padding: '4px 8px', fontSize: 10, color: TEXT3, fontWeight: 600, letterSpacing: '0.04em' }}>
+                      Ver mas
+                    </div>
                   </div>
                   <div style={{ padding: '16px 18px 20px' }}>
                     <h3 style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: p.description ? 5 : 14, letterSpacing: '-0.01em' }}>{p.name}</h3>
@@ -1825,6 +1872,50 @@ export default function DSDRestaurantePage() {
           </div>
         )}
       </section>}
+
+      {/* ── Quick-view modal ── */}
+      {quickView && (
+        <>
+          <div onClick={() => setQuickView(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(8px)', zIndex: 300 }} />
+          <div className="scale-up" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '90%', maxWidth: 400, background: SURFACE, borderRadius: 24, overflow: 'hidden', zIndex: 301, boxShadow: '0 40px 100px rgba(0,0,0,.7)' }}>
+            <div style={{ height: 240, overflow: 'hidden', position: 'relative', background: SURFACE2 }}>
+              <img src={photoFor(quickView.name)} alt={quickView.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} />
+              <button onClick={() => setQuickView(null)} style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', background: 'rgba(13,13,13,.8)', backdropFilter: 'blur(6px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ padding: '22px 24px 28px' }}>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 6 }}>{quickView.name}</h2>
+              {quickView.description && <p style={{ fontSize: 13, color: TEXT2, lineHeight: 1.6, marginBottom: 18 }}>{quickView.description}</p>}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: quickView.description ? 0 : 14 }}>
+                <span style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em' }}>${quickView.price_mxn}</span>
+                <button
+                  onClick={e => {
+                    const fakeBtn = e.currentTarget as HTMLButtonElement
+                    const fakeEvent = { currentTarget: fakeBtn } as React.MouseEvent<HTMLButtonElement>
+                    addToCart(quickView, fakeEvent)
+                    setQuickView(null)
+                  }}
+                  style={{ background: TEXT, color: BG, border: 'none', borderRadius: 14, padding: '13px 28px', fontWeight: 800, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background .15s, transform .15s', fontFamily: 'Inter,sans-serif' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#d8d8d8'; e.currentTarget.style.transform = 'scale(1.03)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = TEXT; e.currentTarget.style.transform = 'scale(1)' }}>
+                  <Plus size={15} /> Agregar al carrito
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Toast notifications ── */}
+      <div style={{ position: 'fixed', bottom: totalItems > 0 ? 90 : 24, right: 20, zIndex: 400, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', pointerEvents: 'none' }}>
+        {toasts.map(t => (
+          <div key={t.id} className="toast-item" style={{ background: SURFACE2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 16px', fontSize: 13, fontWeight: 600, color: TEXT, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,.4)', whiteSpace: 'nowrap' }}>
+            <Check size={13} color="#4ade80" strokeWidth={2.5} />
+            {t.msg}
+          </div>
+        ))}
+      </div>
 
       {/* Floating pill */}
       {totalItems > 0 && !drawer && (
