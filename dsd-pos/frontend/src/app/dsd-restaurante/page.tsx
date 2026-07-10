@@ -945,6 +945,135 @@ export default function DSDRestaurantePage() {
         </div>
       </section>
 
+      {/* ── Rewards strip (McDonald's style) ── */}
+      {customer && allRewards.length > 0 && (
+        <section style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: '32px 0' }}>
+          <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>Mis recompensas</p>
+                <h2 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '-0.035em', lineHeight: 1 }}>
+                  {customer.points.toLocaleString()} <span style={{ fontSize: 15, fontWeight: 600, color: TEXT2 }}>puntos</span>
+                </h2>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: SURFACE2, border: `1px solid ${BORDER}`, borderRadius: 99, padding: '7px 14px' }}>
+                <Gift size={13} color={TEXT2} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: TEXT2 }}>{availRewards.length} disponible{availRewards.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+
+            {/* Cards horizontal scroll */}
+            <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              {allRewards.map((reward, idx) => {
+                const canAfford  = customer.points >= reward.points_required
+                const isSelected = selectedReward?.id === reward.id
+                const disc       = calcDiscount(reward, subtotal)
+                const photo      = photoFor(reward.name)
+
+                return (
+                  <div key={reward.id}
+                    onClick={() => { if (canAfford) { setSelectedReward(isSelected ? null : reward) } }}
+                    style={{
+                      flexShrink: 0, width: 200, borderRadius: 22,
+                      background: isSelected ? '#17140b' : BG,
+                      border: `2px solid ${isSelected ? ACCENT : canAfford ? '#2e2e2e' : BORDER}`,
+                      cursor: canAfford ? 'pointer' : 'default',
+                      opacity: canAfford ? 1 : 0.55,
+                      overflow: 'hidden',
+                      transition: 'all .22s cubic-bezier(.22,1,.36,1)',
+                      transform: isSelected ? 'scale(1.03)' : 'scale(1)',
+                      boxShadow: isSelected ? `0 0 0 1px ${ACCENT}` : 'none',
+                      animationDelay: `${idx * 60}ms`,
+                    }}
+                    onMouseEnter={e => { if (canAfford) { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.borderColor = isSelected ? ACCENT : '#3e3e3e' } }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = isSelected ? 'scale(1.03)' : 'scale(1)'; e.currentTarget.style.borderColor = isSelected ? ACCENT : canAfford ? '#2e2e2e' : BORDER }}
+                  >
+                    {/* Image */}
+                    <div style={{ height: 130, overflow: 'hidden', position: 'relative', background: SURFACE2 }}>
+                      <img src={photo} alt={reward.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', filter: canAfford ? 'none' : 'grayscale(50%) brightness(.7)', transition: 'transform .4s cubic-bezier(.22,1,.36,1)' }}
+                        onError={e => { e.currentTarget.src = FALLBACK_PHOTO }}
+                      />
+                      {/* Points badge */}
+                      <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(13,13,13,.82)', backdropFilter: 'blur(8px)', borderRadius: 99, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Star size={10} fill={TEXT} color={TEXT} />
+                        <span style={{ fontSize: 11, fontWeight: 800, color: TEXT }}>{reward.points_required.toLocaleString()} pts</span>
+                      </div>
+                      {/* Selected checkmark */}
+                      {isSelected && (
+                        <div style={{ position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                      )}
+                      {/* Lock overlay */}
+                      {!canAfford && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(13,13,13,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ padding: '14px 14px 16px' }}>
+                      <p style={{ fontWeight: 800, fontSize: 14, color: TEXT, marginBottom: 4, lineHeight: 1.25 }}>{reward.name}</p>
+                      {reward.description && (
+                        <p style={{ fontSize: 11, color: TEXT2, marginBottom: 10, lineHeight: 1.4 }}>{reward.description}</p>
+                      )}
+                      {canAfford ? (
+                        <div style={{
+                          background: isSelected ? ACCENT : TEXT,
+                          color: isSelected ? '#fff' : BG,
+                          borderRadius: 10, padding: '9px 0', textAlign: 'center', fontSize: 13, fontWeight: 800,
+                          transition: 'background .18s',
+                        }}>
+                          {isSelected ? 'Seleccionado' : disc > 0 ? `Canjear -$${disc.toFixed(0)}` : 'Canjear'}
+                        </div>
+                      ) : (
+                        <div style={{ borderRadius: 10, padding: '9px 0', textAlign: 'center', fontSize: 12, color: TEXT3, border: `1px solid ${BORDER}` }}>
+                          Faltan {(reward.points_required - customer.points).toLocaleString()} pts
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Earn more card */}
+              <div style={{ flexShrink: 0, width: 200, borderRadius: 22, background: 'transparent', border: `2px dashed ${BORDER}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '24px 20px', textAlign: 'center' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: SURFACE, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={20} color={TEXT3} />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: TEXT2, marginBottom: 5 }}>Gana mas puntos</p>
+                  <p style={{ fontSize: 11, color: TEXT3, lineHeight: 1.5 }}>1 punto por cada $10 en tu pedido</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Selected reward notice */}
+            {selectedReward && (
+              <div style={{ marginTop: 16, background: '#17140b', border: `1px solid ${ACCENT}`, borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Gift size={15} color={ACCENT} />
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{selectedReward.name} aplicado</p>
+                    {calcDiscount(selectedReward, subtotal) > 0 && (
+                      <p style={{ fontSize: 11, color: TEXT2 }}>-${calcDiscount(selectedReward, subtotal).toFixed(2)} en tu proximo pedido</p>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => setSelectedReward(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4 }} onMouseEnter={e => (e.currentTarget.style.color = '#f87171')} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Menu */}
       <section id="menu-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '56px 24px 120px' }}>
         <div style={{ marginBottom: 36 }}>
