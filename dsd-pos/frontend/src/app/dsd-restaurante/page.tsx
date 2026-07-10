@@ -914,7 +914,7 @@ export default function DSDRestaurantePage() {
           </div>
         </button>
         {/* MP */}
-        <button onClick={() => setPayMethod('mp')}
+        <button onClick={() => { if (paymentData?.init_point) window.location.href = paymentData.init_point }}
           style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 20, padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14, transition: 'border-color .15s' }}
           onMouseEnter={e => (e.currentTarget.style.borderColor = TEXT3)} onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}
         >
@@ -923,8 +923,9 @@ export default function DSDRestaurantePage() {
           </div>
           <div style={{ flex: 1, textAlign: 'left' }}>
             <p style={{ fontWeight: 800, fontSize: 15, color: TEXT, marginBottom: 3 }}>Mercado Pago</p>
-            <p style={{ fontSize: 12, color: TEXT2 }}>Tarjeta, OXXO, cartera MP</p>
+            <p style={{ fontSize: 12, color: TEXT2 }}>Tarjeta, OXXO, cuotas, cartera MP</p>
           </div>
+          <ChevronRight size={18} color={TEXT3} />
         </button>
         {stripeError && <div style={{ background: '#1a0a0a', border: `1px solid #3d1515`, borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#f87171', marginTop: 8 }}>{stripeError}</div>}
       </div>
