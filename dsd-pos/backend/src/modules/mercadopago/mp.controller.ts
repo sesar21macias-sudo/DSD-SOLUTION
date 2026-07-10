@@ -129,22 +129,28 @@ export async function createPreference(req: Request, res: Response): Promise<voi
     })
   }
 
-  const FRONTEND = process.env['FRONTEND_URL'] ?? 'http://localhost:3000'
-  const BACKEND  = process.env['BACKEND_URL']  ?? 'http://localhost:4000'
-  const slug     = tenant.slug
-  const tableId  = order.table_id ?? order_id  // use order_id as fallback for takeout
+  // Resolve production URLs — handle comma-separated FRONTEND_URL (local dev has two values)
+  const rawFrontend = (process.env['FRONTEND_URL'] ?? '').split(',')[0].trim()
+  const FRONTEND = rawFrontend && !rawFrontend.includes('localhost') && !rawFrontend.includes('10.100')
+    ? rawFrontend
+    : 'https://dsd-solution.vercel.app'
+  const rawBackend = (process.env['BACKEND_URL'] ?? '').trim()
+  const BACKEND = rawBackend && !rawBackend.includes('localhost')
+    ? rawBackend
+    : 'https://dsd-solution.onrender.com'
 
-  const isLocalhost = FRONTEND.includes('localhost') || FRONTEND.includes('127.0.0.1')
+  const slug    = tenant.slug
+  const tableId = order.table_id ?? order_id
 
-  const prefClient  = new Preference(mpClient(accessToken))
+  const prefClient   = new Preference(mpClient(accessToken))
   const prefResponse = await prefClient.create({
     body: {
       items,
-      payer:               { name: order.customer_name ?? 'Cliente' },
-      external_reference:  order_id,
+      payer:                { name: order.customer_name ?? 'Cliente' },
+      external_reference:   order_id,
       statement_descriptor: tenant.name ?? 'DSD Restaurante',
-      notification_url:    `${BACKEND}/api/mp/webhook`,
-      ...(isLocalhost ? {} : { auto_return: 'approved' }),
+      notification_url:     `${BACKEND}/api/mp/webhook`,
+      auto_return:          'approved',
       back_urls: {
         success: `${FRONTEND}/pagar/${slug}/${tableId}/exito?order=${order.order_number}`,
         failure: `${FRONTEND}/pagar/${slug}/${tableId}/error`,
@@ -153,7 +159,6 @@ export async function createPreference(req: Request, res: Response): Promise<voi
     },
   })
 
-  // Guardar preference_id + propina en la orden
   await supabase.from('orders').update({
     mp_preference_id: prefResponse.id,
     tip_amount:       tipAmount,
@@ -162,10 +167,9 @@ export async function createPreference(req: Request, res: Response): Promise<voi
     updated_at:       new Date().toISOString(),
   }).eq('id', order_id)
 
-  // En sandbox usar sandbox_init_point, en prod usar init_point
-  const initPoint = process.env['NODE_ENV'] === 'production'
-    ? prefResponse.init_point
-    : prefResponse.sandbox_init_point
+  // Use token type to pick init_point: APP_USR- = production, TEST- = sandbox
+  const isSandboxToken = accessToken.startsWith('TEST-')
+  const initPoint = isSandboxToken ? prefResponse.sandbox_init_point : prefResponse.init_point
 
   const publicKey = tenant?.mp_public_key ?? process.env['MP_PUBLIC_KEY'] ?? ''
 

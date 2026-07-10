@@ -246,10 +246,12 @@ export default function DSDRestaurantePage() {
   const [name,        setName]        = useState('')
   const [notes,       setNotes]       = useState('')
   const [tableId,     setTableId]     = useState<string>('')
-  const [mpError,     setMpError]     = useState<string | null>(null)
-  const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
-  const [paySuccess,  setPaySuccess]  = useState<string | null>(null)
-  const [mpSdkReady,  setMpSdkReady] = useState(false)
+  const [mpError,      setMpError]      = useState<string | null>(null)
+  const [paymentData,  setPaymentData]  = useState<PaymentData | null>(null)
+  const [paySuccess,   setPaySuccess]   = useState<string | null>(null)
+  const [paidAtCounter,setPaidAtCounter]= useState(false)
+  const [payAtCounter, setPayAtCounter] = useState(false)
+  const [mpSdkReady,   setMpSdkReady]  = useState(false)
   const [payMethod,   setPayMethod]   = useState<'select'|'mp'|'stripe'>('select')
   const [stripeSecret,   setStripeSecret]   = useState<string | null>(null)
   const [stripeOrderId,  setStripeOrderId]  = useState<string | null>(null)
@@ -503,7 +505,7 @@ export default function DSDRestaurantePage() {
   })
 
   const placeOrder = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ atCounter }: { atCounter: boolean }) => {
       const { data: orderRes } = await pub.post(`/public/online-order/${TENANT_SLUG}`, {
         customer_name:   name || customer?.full_name || 'Cliente',
         customer_phone:  gatePhone || undefined,
@@ -512,15 +514,18 @@ export default function DSDRestaurantePage() {
         notes:           notes || undefined,
         order_type:      tableId ? 'dine_in' : 'takeout',
         table_id:        tableId || undefined,
-        require_payment: true,
+        require_payment: !atCounter,
         items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
       })
       const orderData = orderRes.data as { order_id: string; order_number: string; total: number; discount?: number }
+
+      if (atCounter) return { atCounter: true, order_number: orderData.order_number, order_id: '', preference_id: '', total: orderData.total, public_key: '', init_point: '' }
 
       const { data: mpRes } = await pub.post(`/mp/preference/${TENANT_SLUG}`, { order_id: orderData.order_id, tip_percent: 0 })
       const mpData = mpRes.data as { preference_id: string; init_point: string; public_key: string }
 
       return {
+        atCounter:     false,
         preference_id: mpData.preference_id,
         order_id:      orderData.order_id,
         order_number:  orderData.order_number,
@@ -531,6 +536,12 @@ export default function DSDRestaurantePage() {
     },
     onSuccess: (d) => {
       setCart([]); setDrawer(false); setName(''); setNotes(''); setTableId(''); setSelectedReward(null)
+      if (d.atCounter) {
+        setPaidAtCounter(true)
+        setPaySuccess(d.order_number)
+        return
+      }
+      setPaidAtCounter(false)
       if (mpSdkReady) {
         setPaymentData({ preference_id: d.preference_id, order_id: d.order_id, order_number: d.order_number, total: d.total, public_key: d.public_key })
       } else { window.location.href = d.init_point }
@@ -950,8 +961,14 @@ export default function DSDRestaurantePage() {
         <div style={{ width: 96, height: 96, borderRadius: '50%', background: SURFACE, border: `2px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={TEXT} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <h1 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 10 }}>Pago exitoso</h1>
-        <p style={{ fontSize: 15, color: TEXT2, lineHeight: 1.6, marginBottom: 28 }}>Tu pedido ya esta en camino a la cocina.</p>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 10 }}>
+          {paidAtCounter ? 'Pedido enviado' : 'Pago exitoso'}
+        </h1>
+        <p style={{ fontSize: 15, color: TEXT2, lineHeight: 1.6, marginBottom: 28 }}>
+          {paidAtCounter
+            ? 'Tu pedido ya esta en cocina. Presenta este numero y paga al recoger.'
+            : 'Tu pedido ya esta en camino a la cocina.'}
+        </p>
         <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 20, padding: '24px 28px', marginBottom: 28 }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: TEXT3, textTransform: 'uppercase', marginBottom: 8 }}>Numero de orden</p>
           <p style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em' }}>{paySuccess}</p>
@@ -1529,6 +1546,30 @@ export default function DSDRestaurantePage() {
                 />
               </div>
 
+              {/* Payment method */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Metodo de pago</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {[
+                    { id: false, icon: '💳', title: 'Pagar ahora', sub: 'MP / Stripe / Tarjeta' },
+                    { id: true,  icon: '🏪', title: 'Pagar en caja', sub: 'Al recoger tu pedido' },
+                  ].map(opt => {
+                    const active = payAtCounter === opt.id
+                    return (
+                      <button key={String(opt.id)} onClick={() => setPayAtCounter(opt.id)}
+                        style={{ padding: '14px 10px', borderRadius: 14, border: `2px solid ${active ? TEXT2 : BORDER}`, background: active ? SURFACE2 : 'transparent', cursor: 'pointer', textAlign: 'center', transition: 'all .15s' }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = TEXT3 }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = BORDER }}
+                      >
+                        <div style={{ fontSize: 22, marginBottom: 5 }}>{opt.icon}</div>
+                        <p style={{ fontSize: 12, fontWeight: 800, color: active ? TEXT : TEXT3, marginBottom: 2 }}>{opt.title}</p>
+                        <p style={{ fontSize: 10, color: TEXT3, lineHeight: 1.3 }}>{opt.sub}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* Totals */}
               <div style={{ background: SURFACE2, borderRadius: 18, padding: '18px 20px', border: `1px solid ${BORDER}` }}>
                 {[['Subtotal', `$${subtotal.toFixed(2)}`], ['IVA (16%)', `$${tax.toFixed(2)}`]].map(([l, v]) => (
@@ -1551,14 +1592,18 @@ export default function DSDRestaurantePage() {
 
             {/* Footer */}
             <div style={{ padding: '16px 24px', borderTop: `1px solid ${BORDER}` }}>
-              <button className="add-btn" onClick={e => { addRipple(e); placeOrder.mutate() }} disabled={cart.length === 0 || placeOrder.isPending}
+              <button className="add-btn" onClick={e => { addRipple(e); placeOrder.mutate({ atCounter: payAtCounter }) }} disabled={cart.length === 0 || placeOrder.isPending}
                 style={{ width: '100%', background: placeOrder.isPending ? TEXT3 : TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 15, cursor: placeOrder.isPending ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: cart.length === 0 ? 0.4 : 1, transition: 'background .15s, opacity .15s' }}
                 onMouseEnter={e => { if (!placeOrder.isPending && cart.length > 0) e.currentTarget.style.background = '#d4d4d4' }}
                 onMouseLeave={e => { if (!placeOrder.isPending) e.currentTarget.style.background = TEXT }}
               >
-                {placeOrder.isPending ? 'Preparando pago...' : 'Continuar al pago'}
+                {placeOrder.isPending
+                  ? (payAtCounter ? 'Enviando pedido...' : 'Preparando pago...')
+                  : (payAtCounter ? `Enviar pedido · $${total.toFixed(2)}` : `Continuar al pago · $${total.toFixed(2)}`)}
               </button>
-              <p style={{ textAlign: 'center', fontSize: 11, color: TEXT3, marginTop: 10 }}>Pago seguro · Tu pedido llega a cocina despues del pago</p>
+              <p style={{ textAlign: 'center', fontSize: 11, color: TEXT3, marginTop: 10 }}>
+                {payAtCounter ? 'Tu pedido va a cocina — paga al recoger' : 'Pago seguro · Tu pedido llega a cocina despues del pago'}
+              </p>
             </div>
           </div>
         </>
