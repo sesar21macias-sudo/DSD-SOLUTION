@@ -539,6 +539,8 @@ export default function DSDRestaurantePage() {
       if (d.atCounter) {
         setPaidAtCounter(true)
         setPaySuccess(d.order_number)
+        // Refrescar perfil para mostrar puntos actualizados
+        if (customerToken) saveSession(customerToken).catch(() => {})
         return
       }
       setPaidAtCounter(false)
@@ -975,7 +977,13 @@ export default function DSDRestaurantePage() {
           <p style={{ marginTop: 12, fontSize: 13, color: TEXT2 }}>Tiempo estimado: 15-20 min</p>
         </div>
         {customer && (
-          <p style={{ fontSize: 13, color: TEXT2, marginBottom: 20 }}>Puntos acumulados: <strong style={{ color: TEXT }}>{customer.points}</strong></p>
+          <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Star size={15} color={TEXT2} fill={TEXT2} />
+              <span style={{ fontSize: 13, color: TEXT2 }}>Tus puntos</span>
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 900, color: TEXT, letterSpacing: '-0.02em' }}>{customer.points.toLocaleString()} pts</span>
+          </div>
         )}
         <button onClick={() => setPaySuccess(null)} style={{ width: '100%', background: TEXT, color: BG, fontWeight: 800, fontSize: 16, padding: '16px 0', borderRadius: 18, border: 'none', cursor: 'pointer' }}>
           Hacer otro pedido

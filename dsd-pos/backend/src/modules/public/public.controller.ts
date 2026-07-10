@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken'
 import { supabase } from '../../config/supabase'
 import { io } from '../../server'
 import { sendError } from '../../utils/sendError'
+import { accrueLoyaltyPoints } from '../loyalty/loyalty.service'
 
 // ── Customer token helpers ────────────────────────────────────────────────────
 function makeCustomerToken(customerId: string, tenantId: string, phone: string): string {
@@ -263,6 +264,15 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
 
   if (!requirePayment) {
     io.to(`tenant:${tenant.id}`).emit('order:new', { ...order, order_items: orderItems, source: 'web' })
+    // Acreditar puntos inmediatamente para pagos en caja
+    if (parsed.data.customer_phone) {
+      accrueLoyaltyPoints({
+        tenantId:      tenant.id,
+        customerPhone: parsed.data.customer_phone.replace(/\D/g, ''),
+        amountSpent:   total,
+        orderId:       order.id,
+      }).catch(err => console.error('[Loyalty] Error acumulando puntos en caja:', err))
+    }
   }
 
   res.status(201).json({ success: true, data: { order_id: order.id, order_number: orderNumber, total, currency, discount: rewardDiscount } })
