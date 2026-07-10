@@ -24,12 +24,37 @@ export async function accrueLoyaltyPoints(params: {
     const pointsEarned = Math.floor(amountSpent * POINTS_PER_CURRENCY_UNIT)
     if (pointsEarned <= 0) return
 
-    const { data: existing } = await supabase
+    // Normalize phone: strip all non-digits (handles +52..., +1..., bare 10-digit)
+    const normalizedPhone = customerPhone.replace(/\D/g, '')
+
+    // Try normalized phone first, then fallback to last 10 digits for legacy data
+    let { data: existing } = await supabase
       .from('loyalty_customers')
-      .select('id, points, total_visits, total_spent')
+      .select('id, points, total_visits, total_spent, phone')
       .eq('tenant_id', tenantId)
-      .eq('phone', customerPhone)
+      .eq('phone', normalizedPhone)
       .maybeSingle()
+
+    // Fallback: match by last 10 digits (legacy records stored without country code)
+    if (!existing && normalizedPhone.length > 10) {
+      const last10 = normalizedPhone.slice(-10)
+      const { data: fallback } = await supabase
+        .from('loyalty_customers')
+        .select('id, points, total_visits, total_spent, phone')
+        .eq('tenant_id', tenantId)
+        .eq('phone', last10)
+        .maybeSingle()
+      if (fallback) {
+        existing = fallback
+        // Update stored phone to normalized format for future consistency
+        await supabase.from('loyalty_customers')
+          .update({ phone: normalizedPhone })
+          .eq('id', fallback.id)
+      }
+    }
+
+    // Use normalized phone going forward
+    const phoneToUse = normalizedPhone
 
     const newTotalSpent = Number(existing?.total_spent ?? 0) + amountSpent
     const newPoints = (existing?.points ?? 0) + pointsEarned
@@ -39,7 +64,7 @@ export async function accrueLoyaltyPoints(params: {
       .from('loyalty_customers')
       .upsert({
         tenant_id: tenantId,
-        phone: customerPhone,
+        phone: phoneToUse,
         points: newPoints,
         total_visits: (existing?.total_visits ?? 0) + 1,
         total_spent: newTotalSpent,

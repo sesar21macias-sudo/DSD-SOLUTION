@@ -379,8 +379,17 @@ export default function DSDRestaurantePage() {
     setGateStep('loading')
     try {
       const { data } = await pub.post(`/public/loyalty/identify/${TENANT_SLUG}`, { phone: fullPhone(), name: gateName.trim() || undefined })
-      setGateCustomer(data.data.customer)
-      setGateStep('set-pin')
+      const d = data.data
+      setGateCustomer(d.customer)
+      setGateHasPin(d.has_pin)
+      if (!d.is_new && d.has_pin) {
+        // Ya tiene cuenta con PIN — iniciar sesion en vez de sobreescribir
+        setGatePin('')
+        setGateStep('enter-pin')
+      } else {
+        // Nuevo o sin PIN — dejar crear PIN
+        setGateStep('set-pin')
+      }
     } catch { setGateStep('new') }
   }
 
@@ -513,7 +522,7 @@ export default function DSDRestaurantePage() {
     mutationFn: async ({ atCounter }: { atCounter: boolean }) => {
       const { data: orderRes } = await pub.post(`/public/online-order/${TENANT_SLUG}`, {
         customer_name:   name || customer?.full_name || 'Cliente',
-        customer_phone:  gatePhone || undefined,
+        customer_phone:  gatePhone ? (gateCountry + gatePhone) : undefined,
         customer_token:  customerToken || undefined,
         reward_id:       selectedReward?.id || undefined,
         notes:           notes || undefined,
