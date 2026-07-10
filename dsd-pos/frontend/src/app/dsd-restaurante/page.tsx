@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import axios from 'axios'
 import { ShoppingCart, Plus, Minus, Trash2, X, ChevronRight, Star, Clock, MapPin, Phone, Gift, User, LogOut } from 'lucide-react'
@@ -49,18 +49,47 @@ const PRODUCT_PHOTOS: Record<string, string> = {
   'Orden de Tortillas':  'https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&q=80',
 }
 const KEYWORD_PHOTOS: [string, string][] = [
-  ['birria',     'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
-  ['asada',      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
-  ['pastor',     'https://images.unsplash.com/photo-1561043433-aaf687c4cf04?w=600&q=80'],
-  ['carnitas',   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'],
-  ['taco',       'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
-  ['quesadilla', 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
-  ['agua',       'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
-  ['refresco',   'https://images.unsplash.com/photo-1527960669566-f882ba1a5a1e?w=600&q=80'],
-  ['churro',     'https://images.unsplash.com/photo-1624953701887-e10a879c1e1d?w=600&q=80'],
-  ['salsa',      'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600&q=80'],
-  ['tortilla',   'https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&q=80'],
-  ['consomé',    'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['birria',      'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
+  ['asada',       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
+  ['pastor',      'https://images.unsplash.com/photo-1561043433-aaf687c4cf04?w=600&q=80'],
+  ['carnitas',    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'],
+  ['suadero',     'https://images.unsplash.com/photo-1611250188496-e966043a0629?w=600&q=80'],
+  ['tripa',       'https://images.unsplash.com/photo-1583338917451-face2751d8d5?w=600&q=80'],
+  ['lengua',      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'],
+  ['chorizo',     'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
+  ['cochinita',   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80'],
+  ['mulita',      'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
+  ['vampiro',     'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
+  ['guisado',     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['taco',        'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
+  ['quesadilla',  'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
+  ['gordita',     'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=600&q=80'],
+  ['tamal',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['enchilada',   'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
+  ['burrito',     'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?w=600&q=80'],
+  ['torta',       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80'],
+  ['guacamole',   'https://images.unsplash.com/photo-1548940740-204726a19be3?w=600&q=80'],
+  ['nopal',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['frijol',      'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['arroz',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['agua',        'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
+  ['limonada',    'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
+  ['horchata',    'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
+  ['jamaica',     'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
+  ['refresco',    'https://images.unsplash.com/photo-1527960669566-f882ba1a5a1e?w=600&q=80'],
+  ['soda',        'https://images.unsplash.com/photo-1527960669566-f882ba1a5a1e?w=600&q=80'],
+  ['bebida',      'https://images.unsplash.com/photo-1527960669566-f882ba1a5a1e?w=600&q=80'],
+  ['jugo',        'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&q=80'],
+  ['cerveza',     'https://images.unsplash.com/photo-1527960669566-f882ba1a5a1e?w=600&q=80'],
+  ['churro',      'https://images.unsplash.com/photo-1624953701887-e10a879c1e1d?w=600&q=80'],
+  ['postre',      'https://images.unsplash.com/photo-1583338917451-face2751d8d5?w=600&q=80'],
+  ['dulce',       'https://images.unsplash.com/photo-1583338917451-face2751d8d5?w=600&q=80'],
+  ['salsa',       'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600&q=80'],
+  ['tortilla',    'https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&q=80'],
+  ['consomé',     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['consome',     'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['caldo',       'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=600&q=80'],
+  ['orden',       'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80'],
 ]
 const FALLBACK_PHOTO = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&q=80'
 
@@ -251,7 +280,6 @@ export default function DSDRestaurantePage() {
   const [googleReady,    setGoogleReady]    = useState(false)
 
   const heroRef  = useRef<HTMLDivElement>(null)
-  const gridRef  = useRef<HTMLDivElement>(null)
   const brickRef = useRef<any>(null)
 
   // Inject global styles
@@ -321,25 +349,6 @@ export default function DSDRestaurantePage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Card intersection observer
-  const observeCards = useCallback(() => {
-    const grid = gridRef.current
-    if (!grid) return
-    const cards = grid.querySelectorAll<HTMLElement>('.card-hidden')
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((entry, i) => {
-        if (entry.isIntersecting) {
-          const el = entry.target as HTMLElement
-          el.style.animationDelay = `${i * 55}ms`
-          el.classList.remove('card-hidden')
-          el.classList.add('card-visible')
-          io.unobserve(el)
-        }
-      })
-    }, { threshold: 0.06 })
-    cards.forEach(c => io.observe(c))
-    return () => io.disconnect()
-  }, [])
 
   // ── Gate handlers ─────────────────────────────────────────────────────────
   async function handleGateSubmit() {
@@ -371,24 +380,27 @@ export default function DSDRestaurantePage() {
   async function handleSetPin() {
     if (gatePin.length !== 4) return
     setGatePinErr(null)
+    setGateStep('loading')
     try {
       const { data } = await pub.post(`/public/loyalty/set-pin/${TENANT_SLUG}`, { phone: gatePhone, pin: gatePin })
       const token = data.data.token
-      saveSession(token)
+      await saveSession(token)
       setGateStep('done')
-    } catch { setGatePinErr('No se pudo guardar el PIN. Intenta de nuevo.') }
+    } catch { setGateStep('set-pin'); setGatePinErr('No se pudo guardar el PIN. Intenta de nuevo.') }
   }
 
   async function handleEnterPin() {
     if (gatePin.length !== 4) return
     setGatePinErr(null)
+    setGateStep('loading')
     try {
       const { data } = await pub.post(`/public/loyalty/login/${TENANT_SLUG}`, { phone: gatePhone, pin: gatePin })
       const token = data.data.token
-      saveSession(token)
+      await saveSession(token)
       setGateCustomer(data.data.customer)
       setGateStep('found')
     } catch (e: any) {
+      setGateStep('enter-pin')
       setGatePinErr(e?.response?.data?.error ?? 'PIN incorrecto')
       setGatePin('')
     }
@@ -472,12 +484,14 @@ export default function DSDRestaurantePage() {
     setTimeout(() => { setActiveCategory(id); setFilterAnim(false) }, 160)
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['dsd-menu'],
     queryFn: async () => {
       const { data } = await pub.get(`/public/menu/${TENANT_SLUG}`)
       return data.data as { tenant: { name: string; currency: string }; categories: Category[]; products: Product[] }
     },
+    retry: 2,
+    retryDelay: 3000,
   })
 
   const { data: tables } = useQuery({
@@ -487,11 +501,6 @@ export default function DSDRestaurantePage() {
       return data.data as Table[]
     },
   })
-
-  useEffect(() => {
-    const t = setTimeout(() => observeCards(), 60)
-    return () => clearTimeout(t)
-  }, [data, activeCategory, observeCards])
 
   const placeOrder = useMutation({
     mutationFn: async () => {
@@ -693,16 +702,28 @@ export default function DSDRestaurantePage() {
                   </div>
                 ))}
               </div>
-              <input type="tel" inputMode="numeric" value={gatePin} maxLength={4} autoFocus
-                onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setGatePin(v); if (v.length === 4) setTimeout(() => handleSetPin(), 200) }}
-                style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
-              />
-              {/* Tap-to-focus hint */}
-              <div onClick={() => document.querySelector<HTMLInputElement>('input[type=tel]')?.focus()}
-                style={{ textAlign: 'center', fontSize: 13, color: TEXT3, marginBottom: 16, cursor: 'pointer' }}>
-                Toca aqui para escribir tu PIN
+              {/* Visible numeric PIN pad */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+                {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((key, i) => {
+                  if (key === '') return <div key={i} />
+                  const isBack = key === '⌫'
+                  return (
+                    <button key={i} type="button"
+                      onClick={() => { if (isBack) setGatePin(p => p.slice(0, -1)); else if (gatePin.length < 4) setGatePin(p => p + key) }}
+                      style={{ width: '100%', padding: '18px 0', borderRadius: 16, background: SURFACE, border: `1.5px solid ${BORDER}`, color: TEXT, fontSize: isBack ? 22 : 20, fontWeight: isBack ? 400 : 700, cursor: 'pointer', transition: 'background .12s' }}
+                      onMouseDown={e => { e.currentTarget.style.background = SURFACE2 }}
+                      onMouseUp={e => { e.currentTarget.style.background = SURFACE }}
+                      onTouchStart={e => { e.currentTarget.style.background = SURFACE2 }}
+                      onTouchEnd={e => { e.currentTarget.style.background = SURFACE }}
+                    >{key}</button>
+                  )
+                })}
               </div>
               {gatePinErr && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gatePinErr}</p>}
+              <button onClick={handleSetPin} disabled={gatePin.length !== 4}
+                style={{ width: '100%', background: gatePin.length === 4 ? ACCENT : SURFACE2, color: gatePin.length === 4 ? '#fff' : TEXT3, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePin.length === 4 ? 'pointer' : 'not-allowed', transition: 'background .2s, color .2s', marginBottom: 12 }}>
+                {gatePin.length === 4 ? 'Confirmar PIN' : `${4 - gatePin.length} digito${4 - gatePin.length !== 1 ? 's' : ''} mas`}
+              </button>
               <button onClick={() => { setGateStep('done') }} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
                 Saltar, crear PIN despues
@@ -726,14 +747,28 @@ export default function DSDRestaurantePage() {
                   </div>
                 ))}
               </div>
-              <input type="tel" inputMode="numeric" value={gatePin} maxLength={4} autoFocus
-                onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setGatePin(v); if (v.length === 4) setTimeout(() => handleEnterPin(), 200) }}
-                style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
-              />
-              <div onClick={() => document.querySelector<HTMLInputElement>('input[type=tel]')?.focus()} style={{ textAlign: 'center', fontSize: 13, color: TEXT3, marginBottom: 16, cursor: 'pointer' }}>
-                Toca aqui para escribir tu PIN
+              {/* Visible numeric PIN pad */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+                {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((key, i) => {
+                  if (key === '') return <div key={i} />
+                  const isBack = key === '⌫'
+                  return (
+                    <button key={i} type="button"
+                      onClick={() => { if (isBack) setGatePin(p => p.slice(0, -1)); else if (gatePin.length < 4) setGatePin(p => p + key) }}
+                      style={{ width: '100%', padding: '18px 0', borderRadius: 16, background: SURFACE, border: `1.5px solid ${BORDER}`, color: TEXT, fontSize: isBack ? 22 : 20, fontWeight: isBack ? 400 : 700, cursor: 'pointer', transition: 'background .12s' }}
+                      onMouseDown={e => { e.currentTarget.style.background = SURFACE2 }}
+                      onMouseUp={e => { e.currentTarget.style.background = SURFACE }}
+                      onTouchStart={e => { e.currentTarget.style.background = SURFACE2 }}
+                      onTouchEnd={e => { e.currentTarget.style.background = SURFACE }}
+                    >{key}</button>
+                  )
+                })}
               </div>
               {gatePinErr && <p style={{ color: '#f87171', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>{gatePinErr}</p>}
+              <button onClick={handleEnterPin} disabled={gatePin.length !== 4}
+                style={{ width: '100%', background: gatePin.length === 4 ? ACCENT : SURFACE2, color: gatePin.length === 4 ? '#fff' : TEXT3, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: gatePin.length === 4 ? 'pointer' : 'not-allowed', transition: 'background .2s, color .2s', marginBottom: 12 }}>
+                {gatePin.length === 4 ? 'Entrar' : `${4 - gatePin.length} digito${4 - gatePin.length !== 1 ? 's' : ''} mas`}
+              </button>
               <button onClick={() => { setGateCustomer(gateCustomer); setGateStep('found') }} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
                 Ver menu sin iniciar sesion
@@ -1052,7 +1087,7 @@ export default function DSDRestaurantePage() {
       </section>
 
       {/* ── Rewards strip (McDonald's style) ── */}
-      {customer && allRewards.length > 0 && (
+      {customer && (
         <section style={{ background: SURFACE, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: '32px 0' }}>
           <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 24px' }}>
             {/* Header */}
@@ -1069,7 +1104,17 @@ export default function DSDRestaurantePage() {
               </div>
             </div>
 
+            {/* Empty rewards state */}
+            {allRewards.length === 0 && (
+              <div style={{ background: SURFACE2, border: `1px dashed ${BORDER}`, borderRadius: 20, padding: '28px 24px', textAlign: 'center' }}>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Gift size={28} color={TEXT3} /></div>
+                <p style={{ fontWeight: 700, fontSize: 14, color: TEXT2, marginBottom: 6 }}>Recompensas proximas</p>
+                <p style={{ fontSize: 12, color: TEXT3, lineHeight: 1.6 }}>Sigue comprando para acumular puntos y canjear premios.</p>
+              </div>
+            )}
+
             {/* Cards horizontal scroll */}
+            {allRewards.length > 0 && (
             <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
               {allRewards.map((reward, idx) => {
                 const canAfford  = customer.points >= reward.points_required
@@ -1158,6 +1203,7 @@ export default function DSDRestaurantePage() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Selected reward notice */}
             {selectedReward && (
@@ -1222,14 +1268,35 @@ export default function DSDRestaurantePage() {
           </div>
         )}
 
+        {/* Error state */}
+        {isError && !isLoading && (
+          <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+            <p style={{ fontSize: 22, marginBottom: 12 }}>⚠️</p>
+            <p style={{ color: TEXT, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>No se pudo cargar el menu</p>
+            <p style={{ color: TEXT2, fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>El servidor puede estar iniciando. Espera unos segundos e intenta de nuevo.</p>
+            <button onClick={() => refetch()}
+              style={{ background: TEXT, color: BG, border: 'none', borderRadius: 14, padding: '13px 32px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && !isError && filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+            <p style={{ fontSize: 22, marginBottom: 12 }}>🍽️</p>
+            <p style={{ color: TEXT2, fontSize: 15 }}>No hay productos en esta categoria.</p>
+          </div>
+        )}
+
         {/* Product grid */}
-        {!isLoading && (
-          <div ref={gridRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, opacity: filterAnim ? 0 : 1, transform: filterAnim ? 'translateY(8px)' : 'translateY(0)', transition: 'opacity .16s, transform .16s' }}>
-            {filtered.map(p => {
+        {!isLoading && !isError && filtered.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16, opacity: filterAnim ? 0 : 1, transform: filterAnim ? 'translateY(8px)' : 'translateY(0)', transition: 'opacity .16s, transform .16s' }}>
+            {filtered.map((p, idx) => {
               const inCart = cart.find(i => i.id === p.id)
               return (
-                <div key={p.id} className="product-card card-hidden"
-                  style={{ background: SURFACE, borderRadius: 20, overflow: 'hidden', border: `1px solid ${BORDER}`, transition: 'box-shadow .25s, transform .25s, border-color .2s' }}
+                <div key={p.id} className="product-card"
+                  style={{ background: SURFACE, borderRadius: 20, overflow: 'hidden', border: `1px solid ${BORDER}`, transition: 'box-shadow .25s, transform .25s, border-color .2s', animation: `cardReveal .48s cubic-bezier(.22,1,.36,1) both ${idx * 55}ms` } as React.CSSProperties}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,.5)'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = TEXT3 }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }}
                 >
