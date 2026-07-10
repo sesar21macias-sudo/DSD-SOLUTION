@@ -13,5 +13,6 @@ router.post('/loyalty/identify/:tenantSlug', public_controller_1.identifyLoyalty
 router.post('/loyalty/set-pin/:tenantSlug', public_controller_1.setCustomerPin);
 router.post('/loyalty/login/:tenantSlug', public_controller_1.loginCustomer);
 router.get('/loyalty/profile/:tenantSlug', public_controller_1.getCustomerProfile);
+router.post('/loyalty/google/:tenantSlug', public_controller_1.googleAuthCustomer);
 exports.default = router;
 //# sourceMappingURL=public.routes.js.map

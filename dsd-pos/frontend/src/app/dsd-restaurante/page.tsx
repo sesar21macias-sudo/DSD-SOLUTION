@@ -7,10 +7,11 @@ import { ShoppingCart, Plus, Minus, Trash2, X, ChevronRight, Star, Clock, MapPin
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
-const API          = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
-const pub          = axios.create({ baseURL: API })
-const TENANT_SLUG  = 'tacos-el-guero'
-const STORAGE_KEY  = `dsd_ct_${TENANT_SLUG}`
+const API               = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
+const pub               = axios.create({ baseURL: API })
+const TENANT_SLUG       = 'tacos-el-guero'
+const STORAGE_KEY       = `dsd_ct_${TENANT_SLUG}`
+const GOOGLE_CLIENT_ID  = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
 
 // ── Palette (black / white / grey — red only for key CTAs) ───────────────────
 const BG       = '#0d0d0d'
@@ -74,6 +75,29 @@ function calcDiscount(reward: Reward, subtotal: number): number {
   if (reward.reward_type === 'discount')   return Math.min(reward.reward_value ?? 0, subtotal * 1.16)
   if (reward.reward_type === 'percentage') return Math.min((subtotal * (reward.reward_value ?? 0)) / 100, subtotal * 1.16)
   return 0
+}
+
+// ── Google Sign-In button component ──────────────────────────────────────────
+function GoogleSignInButton({ onCredential }: { onCredential: (r: { credential: string }) => void }) {
+  const btnRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!btnRef.current || !(window as any).google?.accounts) return
+    ;(window as any).google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback:  onCredential,
+    })
+    ;(window as any).google.accounts.id.renderButton(btnRef.current, {
+      theme:          'filled_black',
+      size:           'large',
+      width:          btnRef.current.offsetWidth || 340,
+      text:           'continue_with',
+      locale:         'es',
+      logo_alignment: 'left',
+      shape:          'rectangular',
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return <div ref={btnRef} style={{ width: '100%', borderRadius: 16, overflow: 'hidden', minHeight: 48 }} />
 }
 
 // ── Global styles ─────────────────────────────────────────────────────────────
@@ -224,6 +248,7 @@ export default function DSDRestaurantePage() {
   const [availRewards,   setAvailRewards]   = useState<Reward[]>([])
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
   const [profileOpen,    setProfileOpen]    = useState(false)
+  const [googleReady,    setGoogleReady]    = useState(false)
 
   const heroRef  = useRef<HTMLDivElement>(null)
   const gridRef  = useRef<HTMLDivElement>(null)
@@ -244,6 +269,27 @@ export default function DSDRestaurantePage() {
     script.src = 'https://sdk.mercadopago.com/js/v2'
     script.onload = () => setMpSdkReady(true)
     document.head.appendChild(script)
+  }, [])
+
+  // Load Google GSI
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return
+    function initGSI() {
+      ;(window as any).google?.accounts.id.initialize({
+        client_id:   GOOGLE_CLIENT_ID,
+        callback:    handleGoogleCredential,
+        auto_select: false,
+        context:     'signin',
+      })
+      setGoogleReady(true)
+    }
+    if ((window as any).google?.accounts) { initGSI(); return }
+    const s = document.createElement('script')
+    s.src = 'https://accounts.google.com/gsi/client'
+    s.async = true
+    s.onload = initGSI
+    document.head.appendChild(s)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Restore saved customer session from localStorage
@@ -345,6 +391,25 @@ export default function DSDRestaurantePage() {
     } catch (e: any) {
       setGatePinErr(e?.response?.data?.error ?? 'PIN incorrecto')
       setGatePin('')
+    }
+  }
+
+  async function handleGoogleCredential(response: { credential: string }) {
+    setGateStep('loading')
+    try {
+      const { data } = await pub.post(`/public/loyalty/google/${TENANT_SLUG}`, { credential: response.credential })
+      const d = data.data
+      setGateCustomer(d.customer)
+      setGateHasPin(d.has_pin)
+      await saveSession(d.token)
+      if (d.has_pin || !d.is_new) {
+        setGateStep('found')
+      } else {
+        setGateStep('set-pin')
+      }
+    } catch {
+      setGateStep('phone')
+      setGateError('Error al iniciar sesion con Google. Intenta de nuevo.')
     }
   }
 
@@ -518,7 +583,20 @@ export default function DSDRestaurantePage() {
           {gateStep === 'phone' && (
             <>
               <h1 style={{ fontSize: 30, fontWeight: 900, color: TEXT, textAlign: 'center', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 10 }}>Bienvenido</h1>
-              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 36 }}>Ingresa tu numero para acumular<br />puntos en cada visita</p>
+              <p style={{ color: TEXT2, fontSize: 14, textAlign: 'center', lineHeight: 1.65, marginBottom: 28 }}>Acumula puntos en cada visita y<br />canjealos por premios</p>
+
+              {/* Google Sign-In */}
+              {GOOGLE_CLIENT_ID && googleReady && (
+                <>
+                  <GoogleSignInButton onCredential={handleGoogleCredential} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
+                    <div style={{ flex: 1, height: 1, background: BORDER }} />
+                    <span style={{ fontSize: 12, color: TEXT3, fontWeight: 600, letterSpacing: '0.06em' }}>O CON TELEFONO</span>
+                    <div style={{ flex: 1, height: 1, background: BORDER }} />
+                  </div>
+                </>
+              )}
+
               <div style={{ position: 'relative', marginBottom: 12 }}>
                 <span style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', color: TEXT3, fontSize: 15, fontWeight: 700, userSelect: 'none' }}>+52</span>
                 <div style={{ position: 'absolute', left: 54, top: '50%', transform: 'translateY(-50%)', width: 1, height: 20, background: BORDER }} />
@@ -551,24 +629,52 @@ export default function DSDRestaurantePage() {
             </div>
           )}
 
-          {/* New customer — name */}
+          {/* New customer — registration form */}
           {gateStep === 'new' && (
             <>
-              <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                <div style={{ fontSize: 50, marginBottom: 14 }}>🎉</div>
-                <h1 style={{ fontSize: 28, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 8 }}>Primera visita</h1>
-                <p style={{ color: TEXT2, fontSize: 14, lineHeight: 1.65 }}>Gana puntos desde hoy.<br />Cada {VISITS_PER_PRIZE} visitas recibes un premio.</p>
+              <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: SURFACE, border: `1px solid ${BORDER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <Star size={24} color={TEXT} fill={TEXT} />
+                </div>
+                <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 8 }}>Crea tu cuenta</h1>
+                <p style={{ color: TEXT2, fontSize: 13, lineHeight: 1.65 }}>Gana puntos en cada visita y canjealos<br />por descuentos y premios.</p>
               </div>
-              <input type="text" value={gateName} autoFocus onChange={e => setGateName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGateRegister()} placeholder="Tu nombre (opcional)"
-                style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '17px 18px', fontSize: 16, color: TEXT, marginBottom: 12, transition: 'border-color .2s' }}
+
+              {/* Perks strip */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 24 }}>
+                {[
+                  { icon: '⭐', label: 'Puntos por compra' },
+                  { icon: '🎁', label: 'Premios gratis' },
+                  { icon: '💸', label: 'Descuentos' },
+                ].map(p => (
+                  <div key={p.label} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '12px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, marginBottom: 6 }}>{p.icon}</div>
+                    <p style={{ fontSize: 10, color: TEXT2, fontWeight: 600, lineHeight: 1.3 }}>{p.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Tu nombre</label>
+              <input type="text" value={gateName} autoFocus onChange={e => setGateName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGateRegister()} placeholder="Nombre completo"
+                style={{ width: '100%', background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '15px 18px', fontSize: 16, color: TEXT, marginBottom: 10, transition: 'border-color .2s' }}
                 onFocus={e => { e.currentTarget.style.borderColor = TEXT2 }} onBlur={e => { e.currentTarget.style.borderColor = BORDER }}
               />
-              <button onClick={handleGateRegister} style={{ width: '100%', background: ACCENT, color: '#fff', border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', marginBottom: 12 }}>
-                Continuar
+
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Telefono</label>
+              <div style={{ position: 'relative', marginBottom: 16 }}>
+                <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: TEXT3, fontSize: 14, fontWeight: 700 }}>+52</span>
+                <div style={{ position: 'absolute', left: 50, top: '50%', transform: 'translateY(-50%)', width: 1, height: 18, background: BORDER }} />
+                <input type="tel" inputMode="numeric" value={gatePhone} maxLength={10} readOnly
+                  style={{ width: '100%', background: SURFACE2, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '15px 18px 15px 62px', fontSize: 16, color: TEXT2, letterSpacing: '0.06em' }}
+                />
+              </div>
+
+              <button onClick={handleGateRegister} style={{ width: '100%', background: TEXT, color: BG, border: 'none', borderRadius: 16, padding: '17px 0', fontWeight: 800, fontSize: 16, cursor: 'pointer', marginBottom: 12 }}>
+                Crear cuenta gratis
               </button>
               <button onClick={() => setGateStep('done')} style={{ width: '100%', background: 'none', border: 'none', color: TEXT3, fontSize: 13, cursor: 'pointer', padding: '10px 0' }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
-                Saltar
+                Saltar por ahora
               </button>
             </>
           )}
@@ -1188,6 +1294,33 @@ export default function DSDRestaurantePage() {
               </button>
             </div>
 
+            {/* ── Loyalty bar (visible when logged in) ── */}
+            {customer && (
+              <div style={{ padding: '14px 20px', background: SURFACE2, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 5 }}>
+                    <span style={{ fontSize: 22, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em' }}>{customer.points.toLocaleString()}</span>
+                    <span style={{ fontSize: 12, color: TEXT2, fontWeight: 600 }}>puntos</span>
+                    <span style={{ marginLeft: 4, fontSize: 11, color: TIER_COLORS[customer.tier] ?? TEXT2, fontWeight: 700, textTransform: 'capitalize', background: 'rgba(255,255,255,.06)', borderRadius: 99, padding: '2px 8px' }}>
+                      {TIER_LABELS[customer.tier]}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, height: 3, background: BORDER, borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.round(((customer.total_visits % 8) / 8) * 100)}%`, background: TEXT, borderRadius: 99, transition: 'width .8s cubic-bezier(.22,1,.36,1)' }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: TEXT3, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {customer.total_visits % 8}/8 visitas
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => { setDrawer(false); setProfileOpen(true) }}
+                  style={{ width: 36, height: 36, borderRadius: 11, background: SURFACE, border: `1px solid ${BORDER}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <User size={15} color={TEXT2} />
+                </button>
+              </div>
+            )}
+
             {/* Scrollable */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -1232,44 +1365,91 @@ export default function DSDRestaurantePage() {
                 </div>
               </div>
 
-              {/* Rewards section */}
+              {/* ── Rewards / Discounts in cart ── */}
               {customer && allRewards.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-                    Recompensas
-                    {customer.points > 0 && <span style={{ marginLeft: 8, color: TEXT2, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>{customer.points} pts disponibles</span>}
-                  </p>
+                <div style={{ background: SURFACE2, borderRadius: 18, padding: '16px', border: `1px solid ${BORDER}` }}>
+                  {/* Section header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Gift size={15} color={TEXT2} />
+                      <p style={{ fontSize: 13, fontWeight: 800, color: TEXT }}>Premios y Descuentos</p>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: availRewards.length > 0 ? '#22c55e' : TEXT3, background: availRewards.length > 0 ? 'rgba(34,197,94,.1)' : 'transparent', borderRadius: 99, padding: '3px 9px' }}>
+                      {availRewards.length > 0 ? `${availRewards.length} disponible${availRewards.length > 1 ? 's' : ''}` : `${customer.points} pts`}
+                    </span>
+                  </div>
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {allRewards.map(reward => {
                       const canAfford  = customer.points >= reward.points_required
                       const isSelected = selectedReward?.id === reward.id
                       const disc       = calcDiscount(reward, subtotal)
+                      const isDiscount = reward.reward_type === 'discount' || reward.reward_type === 'percentage'
+
                       return (
                         <button key={reward.id} disabled={!canAfford} onClick={() => setSelectedReward(isSelected ? null : reward)}
-                          style={{ background: isSelected ? '#1a1a0f' : SURFACE2, border: `1.5px solid ${isSelected ? ACCENT : canAfford ? BORDER : BORDER}`, borderRadius: 14, padding: '12px 14px', cursor: canAfford ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', transition: 'all .15s', opacity: canAfford ? 1 : 0.45 }}
-                          onMouseEnter={e => { if (canAfford && !isSelected) e.currentTarget.style.borderColor = TEXT3 }}
-                          onMouseLeave={e => { if (canAfford && !isSelected) e.currentTarget.style.borderColor = BORDER }}
+                          style={{
+                            background:    isSelected ? '#141209' : SURFACE,
+                            border:        `1.5px solid ${isSelected ? ACCENT : canAfford ? '#303030' : BORDER}`,
+                            borderRadius:  14,
+                            padding:       '12px 14px',
+                            cursor:        canAfford ? 'pointer' : 'not-allowed',
+                            display:       'flex',
+                            alignItems:    'center',
+                            gap:           12,
+                            textAlign:     'left',
+                            transition:    'all .15s',
+                            opacity:       canAfford ? 1 : 0.45,
+                          }}
+                          onMouseEnter={e => { if (canAfford && !isSelected) e.currentTarget.style.borderColor = TEXT2 }}
+                          onMouseLeave={e => { if (canAfford && !isSelected) e.currentTarget.style.borderColor = '#303030' }}
                         >
-                          <Gift size={16} color={isSelected ? ACCENT : canAfford ? TEXT2 : TEXT3} style={{ flexShrink: 0 }} />
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: isSelected ? TEXT : canAfford ? TEXT : TEXT3, marginBottom: 2 }}>{reward.name}</p>
-                            <p style={{ fontSize: 11, color: TEXT3 }}>
-                              {reward.points_required} pts
-                              {canAfford && disc > 0 ? ` · -$${disc.toFixed(2)}` : ''}
+                          {/* Icon */}
+                          <div style={{ width: 36, height: 36, borderRadius: 10, background: isSelected ? 'rgba(232,66,26,.15)' : SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {isDiscount
+                              ? <span style={{ fontSize: 18 }}>💸</span>
+                              : <span style={{ fontSize: 18 }}>🎁</span>
+                            }
+                          </div>
+
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: isSelected ? TEXT : canAfford ? TEXT : TEXT3 }}>{reward.name}</p>
+                              {isDiscount && (
+                                <span style={{ fontSize: 9, fontWeight: 800, color: ACCENT, background: 'rgba(232,66,26,.12)', borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
+                                  Desc.
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ fontSize: 11, color: canAfford ? TEXT2 : TEXT3 }}>
+                              {reward.points_required} pts requeridos
+                              {canAfford && disc > 0 ? ` · ahorras $${disc.toFixed(2)}` : ''}
                             </p>
                           </div>
-                          {isSelected && (
-                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+
+                          {/* Right side */}
+                          {isSelected ? (
+                            <div style={{ width: 22, height: 22, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                             </div>
-                          )}
-                          {!canAfford && (
-                            <span style={{ fontSize: 11, color: TEXT3, flexShrink: 0 }}>Faltan {reward.points_required - customer.points} pts</span>
+                          ) : canAfford ? (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', flexShrink: 0 }}>Canjear</span>
+                          ) : (
+                            <span style={{ fontSize: 10, color: TEXT3, flexShrink: 0, textAlign: 'right' }}>
+                              -{(reward.points_required - customer.points)} pts
+                            </span>
                           )}
                         </button>
                       )
                     })}
                   </div>
+
+                  {!customer && (
+                    <p style={{ fontSize: 12, color: TEXT3, textAlign: 'center', marginTop: 10 }}>
+                      Inicia sesion para ver tus recompensas disponibles
+                    </p>
+                  )}
                 </div>
               )}
 

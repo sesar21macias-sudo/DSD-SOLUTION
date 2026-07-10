@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import {
   getPublicMenu, createPublicOrder, getTableInfo, createOnlineOrder, getPublicTables,
-  identifyLoyaltyCustomer, setCustomerPin, loginCustomer, getCustomerProfile,
+  identifyLoyaltyCustomer, setCustomerPin, loginCustomer, getCustomerProfile, googleAuthCustomer,
 } from './public.controller'
 
 const router = Router()
@@ -17,5 +17,6 @@ router.post('/loyalty/identify/:tenantSlug', identifyLoyaltyCustomer)
 router.post('/loyalty/set-pin/:tenantSlug',  setCustomerPin)
 router.post('/loyalty/login/:tenantSlug',    loginCustomer)
 router.get('/loyalty/profile/:tenantSlug',   getCustomerProfile)
+router.post('/loyalty/google/:tenantSlug',   googleAuthCustomer)
 
 export default router

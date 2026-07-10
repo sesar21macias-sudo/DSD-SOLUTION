@@ -375,3 +375,70 @@ export async function getCustomerProfile(req: Request, res: Response): Promise<v
   const available_rewards = (rewards ?? []).filter(r => customer.points >= r.points_required)
   res.json({ success: true, data: { customer, all_rewards: rewards ?? [], available_rewards, transactions: transactions ?? [] } })
 }
+
+// ── POST /api/public/loyalty/google/:tenantSlug ───────────────────────────────
+export async function googleAuthCustomer(req: Request, res: Response): Promise<void> {
+  const tenantSlug = req.params['tenantSlug'] as string
+
+  const schema = z.object({ credential: z.string().min(10) })
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ success: false, error: 'Token de Google requerido' }); return }
+
+  // Verify Google ID token via tokeninfo endpoint (no extra package needed)
+  let googleEmail: string, googleName: string, googleId: string
+  try {
+    const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${parsed.data.credential}`)
+    if (!r.ok) { res.status(401).json({ success: false, error: 'Token de Google invalido' }); return }
+    const g = await r.json() as { email?: string; name?: string; sub?: string; email_verified?: string }
+    if (!g.email || !g.sub || g.email_verified !== 'true') {
+      res.status(400).json({ success: false, error: 'Email de Google no verificado' }); return
+    }
+    googleEmail = g.email
+    googleName  = g.name ?? g.email.split('@')[0]
+    googleId    = g.sub
+  } catch {
+    res.status(500).json({ success: false, error: 'Error verificando token de Google' }); return
+  }
+
+  const tenant = await getTenant(tenantSlug)
+  if (!tenant) { res.status(404).json({ success: false, error: 'Negocio no encontrado' }); return }
+
+  // Find by google_id or email
+  const { data: existing } = await supabase
+    .from('loyalty_customers')
+    .select('id, full_name, points, total_visits, tier, pin, google_id')
+    .eq('tenant_id', tenant.id)
+    .or(`google_id.eq.${googleId},email.eq.${googleEmail}`)
+    .maybeSingle()
+
+  let customer: { id: string; full_name: string | null; points: number; total_visits: number; tier: string; pin: string | null } | null = null
+  const is_new = !existing
+
+  if (existing) {
+    customer = existing
+    if (!existing.google_id) {
+      await supabase.from('loyalty_customers').update({ google_id: googleId, email: googleEmail }).eq('id', existing.id)
+    }
+  } else {
+    const { data: created } = await supabase
+      .from('loyalty_customers')
+      .insert({ tenant_id: tenant.id, full_name: googleName, email: googleEmail, google_id: googleId, points: 0, total_visits: 0, tier: 'bronze' })
+      .select('id, full_name, points, total_visits, tier, pin')
+      .single()
+    customer = created
+  }
+
+  if (!customer) { res.status(500).json({ success: false, error: 'Error al crear cuenta' }); return }
+
+  const token = makeCustomerToken(customer.id, tenant.id, googleEmail)
+
+  res.json({
+    success: true,
+    data: {
+      token,
+      is_new,
+      has_pin: !!customer.pin,
+      customer: { id: customer.id, full_name: customer.full_name, points: customer.points, total_visits: customer.total_visits, tier: customer.tier },
+    },
+  })
+}
