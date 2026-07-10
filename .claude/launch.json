@@ -6,6 +6,31 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-p", "3456", "bluedental"],
       "port": 3456
+    },
+    {
+      "name": "macias-ise-advisory",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3457", "macias-ise-advisory"],
+      "port": 3457
+    },
+    {
+      "name": "dsd-pos-backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "dsd-pos/backend"],
+      "port": 4000
+    },
+    {
+      "name": "dsd-pos-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "dsd-pos/frontend"],
+      "port": 3000
+    },
+    {
+      "name": "agente-whatsapp",
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/c", "agente-whatsapp\\dev.cmd"],
+      "port": 3010,
+      "autoPort": false
     }
   ]
 }
