@@ -138,54 +138,104 @@ function GoogleSignInButton({ onCredential }: { onCredential: (r: { credential: 
 
 // ── Global styles ─────────────────────────────────────────────────────────────
 const GLOBAL_STYLES = `
-  * { box-sizing: border-box; margin: 0; padding: 0 }
-
-  @keyframes slideUp   { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-  * { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent }
+  *,*::before,*::after { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent }
   body,input,textarea,select,button { font-family:'Inter',system-ui,-apple-system,sans-serif }
 
-  @keyframes slideUp    { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes fadeIn     { from{opacity:0} to{opacity:1} }
-  @keyframes scaleUp    { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
-  @keyframes drawerIn   { from{transform:translateX(100%)} to{transform:translateX(0)} }
-  @keyframes profileIn  { from{transform:translateX(100%)} to{transform:translateX(0)} }
-  @keyframes pillFloat  { 0%{opacity:0;transform:translateX(-50%) translateY(14px)} 60%{transform:translateX(-50%) translateY(-3px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
-  @keyframes pinPop     { 0%{transform:scale(.5);opacity:0} 65%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
-  @keyframes spin       { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-  @keyframes shimmer    { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
-  @keyframes ripple     { from{transform:scale(0);opacity:.3} to{transform:scale(4);opacity:0} }
-  @keyframes countBounce{ 0%{transform:scale(1)} 35%{transform:scale(1.45)} 100%{transform:scale(1)} }
-  @keyframes cardIn     { from{opacity:0;transform:translateY(18px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
-  @keyframes pillsIn    { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
-  @keyframes checkPop   { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+  /* ── Keyframes ── */
+  @keyframes slideUp     { from{opacity:0;transform:translateY(26px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideDown   { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn      { from{opacity:0} to{opacity:1} }
+  @keyframes scaleUp     { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
+  @keyframes drawerIn    { from{transform:translateX(100%)} to{transform:translateX(0)} }
+  @keyframes profileIn   { from{transform:translateX(100%)} to{transform:translateX(0)} }
+  @keyframes pillFloat   { 0%{opacity:0;transform:translateX(-50%) translateY(14px)} 60%{transform:translateX(-50%) translateY(-3px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
+  @keyframes pinPop      { 0%{transform:scale(.5);opacity:0} 65%{transform:scale(1.18)} 100%{transform:scale(1);opacity:1} }
+  @keyframes gateSpin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  @keyframes shimmer     { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+  @keyframes ripple      { from{transform:scale(0);opacity:.3} to{transform:scale(4);opacity:0} }
+  @keyframes countBounce { 0%{transform:scale(1)} 35%{transform:scale(1.5)} 100%{transform:scale(1)} }
+  @keyframes cardReveal  { from{opacity:0;transform:translateY(22px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes pillsIn     { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes checkPop    { 0%{transform:scale(0)} 60%{transform:scale(1.22)} 100%{transform:scale(1)} }
+  @keyframes heroH1      { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes heroP       { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes heroCta     { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes heroMosaic  { from{opacity:0;transform:translateX(24px) scale(.96)} to{opacity:1;transform:translateX(0) scale(1)} }
+  @keyframes navSlide    { from{opacity:0;transform:translateY(-100%)} to{opacity:1;transform:translateY(0)} }
+  @keyframes tabReveal   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes mosaicFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes badgePulse  { 0%,100%{box-shadow:0 0 0 0 rgba(240,240,240,.2)} 50%{box-shadow:0 0 0 6px rgba(240,240,240,0)} }
 
-  .slide-up   { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both }
-  .slide-up-1 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .06s }
-  .slide-up-2 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .12s }
-  .slide-up-3 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .18s }
-  .slide-up-4 { animation: slideUp  .58s cubic-bezier(.16,1,.3,1) both .24s }
+  /* ── Utility classes ── */
+  .slide-up   { animation: slideUp  .6s cubic-bezier(.16,1,.3,1) both }
+  .slide-up-1 { animation: slideUp  .6s cubic-bezier(.16,1,.3,1) both .07s }
+  .slide-up-2 { animation: slideUp  .6s cubic-bezier(.16,1,.3,1) both .14s }
+  .slide-up-3 { animation: slideUp  .6s cubic-bezier(.16,1,.3,1) both .21s }
+  .slide-up-4 { animation: slideUp  .6s cubic-bezier(.16,1,.3,1) both .28s }
   .fade-in    { animation: fadeIn   .45s ease both }
-  .scale-up   { animation: scaleUp  .4s  cubic-bezier(.16,1,.3,1) both }
+  .scale-up   { animation: scaleUp  .42s cubic-bezier(.16,1,.3,1) both }
   .drawer-in  { animation: drawerIn .38s cubic-bezier(.16,1,.3,1) both }
   .profile-in { animation: profileIn .38s cubic-bezier(.16,1,.3,1) both }
   .pill-in    { animation: pillFloat .48s cubic-bezier(.16,1,.3,1) both }
-  .cat-pill   { animation: pillsIn  .26s ease both }
-  .card-in    { animation: cardIn   .48s cubic-bezier(.16,1,.3,1) both }
-  .count-pop  { animation: countBounce .28s cubic-bezier(.34,1.56,.64,1) }
+  .cat-pill   { animation: pillsIn  .3s cubic-bezier(.16,1,.3,1) both }
+  .card-in    { animation: cardReveal .5s cubic-bezier(.16,1,.3,1) both }
+  .count-pop  { animation: countBounce .3s cubic-bezier(.34,1.56,.64,1) }
   .check-anim { animation: checkPop .45s cubic-bezier(.34,1.56,.64,1) both }
+
+  /* ── Hero animations ── */
+  .hero-h1     { animation: heroH1    .72s cubic-bezier(.16,1,.3,1) both }
+  .hero-p      { animation: heroP     .72s cubic-bezier(.16,1,.3,1) both .1s }
+  .hero-ctas   { animation: heroCta   .65s cubic-bezier(.16,1,.3,1) both .2s }
+  .hero-info   { animation: fadeIn    .8s ease both .3s }
+  .hero-mosaic { animation: heroMosaic .8s cubic-bezier(.16,1,.3,1) both .05s }
+  .hero-mosaic > div { transition: transform .4s cubic-bezier(.16,1,.3,1) }
+  .hero-mosaic > div:hover { transform: scale(1.05) translateY(-4px) !important }
+
+  /* ── Nav ── */
+  nav { animation: navSlide .5s cubic-bezier(.16,1,.3,1) both }
+
+  /* ── Product cards ── */
   .add-btn    { position:relative;overflow:hidden }
-  .add-btn .ripple-el { position:absolute;border-radius:50%;background:rgba(255,255,255,.2);pointer-events:none;animation:ripple .55s ease-out forwards }
-  .product-card img  { transition:transform .5s cubic-bezier(.16,1,.3,1) }
-  .product-card:hover img { transform:scale(1.06) }
-  .skeleton   { background:linear-gradient(90deg,#181818 25%,#222 50%,#181818 75%);background-size:600px 100%;animation:shimmer 1.4s infinite }
+  .add-btn .ripple-el { position:absolute;border-radius:50%;background:rgba(255,255,255,.18);pointer-events:none;animation:ripple .58s ease-out forwards }
+  .product-card { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1), border-color .2s }
+  .product-card:hover { transform: translateY(-4px) !important; box-shadow: 0 16px 40px rgba(0,0,0,.5) !important; border-color: #333 !important }
+  .product-card img  { transition: transform .5s cubic-bezier(.16,1,.3,1) }
+  .product-card:hover img { transform: scale(1.07) }
+
+  /* ── Skeleton ── */
+  .skeleton { background:linear-gradient(90deg,#181818 25%,#222 50%,#181818 75%);background-size:600px 100%;animation:shimmer 1.5s infinite }
+
+  /* ── Scrollbar ── */
   ::-webkit-scrollbar { width:3px;height:3px }
   ::-webkit-scrollbar-track { background:transparent }
   ::-webkit-scrollbar-thumb { background:#2a2a2a;border-radius:99px }
   input:focus,textarea:focus,select:focus { outline:none }
   select option { background:#1c1c1c;color:#ededed }
+
+  /* ── Tab bar reveal ── */
+  .tab-bar-item { animation: tabReveal .4s cubic-bezier(.16,1,.3,1) both }
+  .tab-bar-item:nth-child(1) { animation-delay:.05s }
+  .tab-bar-item:nth-child(2) { animation-delay:.1s }
+  .tab-bar-item:nth-child(3) { animation-delay:.15s }
+
+  /* ── Section headers ── */
+  .section-header { animation: slideUp .55s cubic-bezier(.16,1,.3,1) both }
+
+  /* ── Mosaic float ── */
+  .mosaic-float-1 { animation: mosaicFloat 5s ease-in-out infinite }
+  .mosaic-float-2 { animation: mosaicFloat 5s ease-in-out infinite .8s }
+  .mosaic-float-3 { animation: mosaicFloat 5s ease-in-out infinite 1.6s }
+  .mosaic-float-4 { animation: mosaicFloat 5s ease-in-out infinite 2.4s }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .hero-mosaic { width: clamp(130px, 38vw, 180px) !important }
+  }
+  @media (max-width: 420px) {
+    .hero-mosaic { display: none !important }
+  }
 `
 
 function addRipple(e: React.MouseEvent<HTMLButtonElement>) {
@@ -1100,17 +1150,17 @@ export default function DSDRestaurantePage() {
 
   // ── MAIN LAYOUT ───────────────────────────────────────────────────────────
   return (
-    <div style={{ background: BG, minHeight: '100vh', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+    <div style={{ background: BG, minHeight: '100vh', fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
 
       {/* Nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(13,13,13,0.92)', backdropFilter: 'blur(18px)', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ color: ACCENT, fontWeight: 900, fontSize: 16, fontStyle: 'italic' }}>D</span>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <UtensilsCrossed size={18} color={BG} strokeWidth={2.5} />
           </div>
           <div>
-            <p style={{ fontWeight: 900, fontSize: 15, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1.1 }}>DSD Restaurante</p>
-            <p style={{ fontSize: 10, color: TEXT3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Ordena en linea</p>
+            <p style={{ fontWeight: 900, fontSize: 15, color: TEXT, letterSpacing: '-0.03em', lineHeight: 1.1 }}>DSD Restaurante</p>
+            <p style={{ fontSize: 10, color: TEXT3, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Ordena en linea</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1141,60 +1191,69 @@ export default function DSDRestaurantePage() {
       </nav>
 
       {/* Hero */}
-      <section ref={heroRef} style={{ background: `linear-gradient(135deg, ${SURFACE} 0%, #0d0d0d 60%, #111 100%)`, padding: '80px 28px 88px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 55% at 70% 40%, rgba(240,240,240,.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1060, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr auto', gap: 56, alignItems: 'center' }}>
+      <section ref={heroRef} style={{ background: BG, padding: 'clamp(56px,8vw,96px) 28px clamp(64px,8vw,96px)', position: 'relative', overflow: 'hidden', borderBottom: `1px solid ${BORDER}` }}>
+        {/* Subtle grid texture */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: `linear-gradient(${BORDER} 1px, transparent 1px), linear-gradient(90deg, ${BORDER} 1px, transparent 1px)`, backgroundSize: '48px 48px', opacity: 0.4, pointerEvents: 'none' }} />
+        {/* Soft radial glow */}
+        <div style={{ position: 'absolute', top: '30%', right: '10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        <div style={{ maxWidth: 1060, margin: '0 auto', position: 'relative', display: 'grid', gridTemplateColumns: '1fr auto', gap: 'clamp(32px,5vw,72px)', alignItems: 'center' }}>
           <div>
-            <h1 className="hero-h1" style={{ fontSize: 'clamp(40px,6vw,76px)', fontWeight: 900, color: TEXT, lineHeight: 1.04, letterSpacing: '-0.04em', marginBottom: 20 }}>
+            {/* Eyebrow */}
+            <div className="hero-h1" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 99, padding: '6px 14px', marginBottom: 24 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: TEXT3, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Abierto ahora</span>
+            </div>
+
+            <h1 className="hero-h1" style={{ fontSize: 'clamp(38px,5.5vw,74px)', fontWeight: 900, color: TEXT, lineHeight: 1.03, letterSpacing: '-0.04em', marginBottom: 20 }}>
               Sabor autentico,<br />
-              <span style={{ color: ACCENT }}>entregado</span> a ti
+              <span style={{ color: TEXT2 }}>desde la cocina</span>
             </h1>
-            <p className="hero-p" style={{ fontSize: 16, color: TEXT2, lineHeight: 1.75, maxWidth: 480, marginBottom: 36 }}>
-              Tacos, quesadillas y mas. Todo preparado al momento con ingredientes frescos.
+            <p className="hero-p" style={{ fontSize: 15, color: TEXT3, lineHeight: 1.8, maxWidth: 440, marginBottom: 36, fontWeight: 400 }}>
+              Tacos, quesadillas y mas. Todo preparado al momento con ingredientes frescos y recetas de siempre.
             </p>
-            <div className="hero-ctas" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div className="hero-ctas" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <button className="add-btn" onClick={e => { addRipple(e); document.getElementById('menu-section')?.scrollIntoView({ behavior: 'smooth' }) }}
-                style={{ background: TEXT, color: BG, fontWeight: 800, fontSize: 15, padding: '14px 30px', borderRadius: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'background .15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#d4d4d4')} onMouseLeave={e => (e.currentTarget.style.background = TEXT)}
-              >
-                Ordenar ahora <ChevronRight size={16} />
+                style={{ background: TEXT, color: BG, fontWeight: 800, fontSize: 14, padding: '13px 26px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, letterSpacing: '-0.01em', transition: 'transform .15s, background .15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#d8d8d8'; e.currentTarget.style.transform = 'scale(1.02)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = TEXT; e.currentTarget.style.transform = 'scale(1)' }}>
+                Ver menu <ChevronRight size={15} />
               </button>
-              {customer && availRewards.length > 0 && (
-                <button onClick={() => setDrawer(true)}
-                  style={{ background: 'transparent', color: ACCENT, border: `1.5px solid ${ACCENT}`, fontWeight: 700, fontSize: 15, padding: '14px 24px', borderRadius: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,66,26,.08)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                >
-                  <Gift size={15} /> {availRewards.length} recompensa{availRewards.length > 1 ? 's' : ''}
+              {customer && (
+                <button onClick={() => setActiveMainTab('rewards')}
+                  style={{ background: 'transparent', color: TEXT2, border: `1px solid ${BORDER}`, fontWeight: 600, fontSize: 14, padding: '13px 22px', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, letterSpacing: '-0.01em', transition: 'border-color .15s, transform .15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = TEXT3; e.currentTarget.style.transform = 'scale(1.02)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.transform = 'scale(1)' }}>
+                  <Gift size={14} /> {customer.points.toLocaleString()} pts
                 </button>
               )}
             </div>
           </div>
-          {/* Mosaic */}
-          <div className="hero-mosaic" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: 300, flexShrink: 0 }}>
+
+          {/* Mosaic — floating tiles */}
+          <div className="hero-mosaic" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: 'clamp(200px,26vw,300px)', flexShrink: 0 }}>
             {([
-              { name: 'Taco de Birria',       borderRadius: '20px 4px 20px 4px', mt: '0' },
-              { name: 'Taco de Pastor',        borderRadius: '4px 20px 4px 20px', mt: '-10px' },
-              { name: 'Agua Fresca',           borderRadius: '4px 20px 4px 20px', mt: '10px' },
-              { name: 'Quesadilla Sencilla',   borderRadius: '20px 4px 20px 4px', mt: '0' },
-            ] as { name: string; borderRadius: string; mt: string }[]).map((item, i) => (
-              <div key={i} style={{ aspectRatio: '1', borderRadius: item.borderRadius, overflow: 'hidden', marginTop: item.mt, transition: 'transform .3s' }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.04)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = '')}
-              >
-                <img src={photoFor(item.name)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: .75 }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} loading="eager" />
+              { name: 'Taco de Birria',     br: '18px 4px 18px 4px', cls: 'mosaic-float-1' },
+              { name: 'Taco de Pastor',     br: '4px 18px 4px 18px', cls: 'mosaic-float-2' },
+              { name: 'Agua Fresca',        br: '4px 18px 4px 18px', cls: 'mosaic-float-3' },
+              { name: 'Quesadilla Sencilla',br: '18px 4px 18px 4px', cls: 'mosaic-float-4' },
+            ]).map((item, i) => (
+              <div key={i} className={item.cls} style={{ aspectRatio: '1', borderRadius: item.br, overflow: 'hidden', border: `1px solid ${BORDER}` }}>
+                <img src={photoFor(item.name)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: .8 }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} loading="eager" />
               </div>
             ))}
           </div>
         </div>
+
         {/* Info strip */}
-        <div className="hero-info" style={{ maxWidth: 1060, margin: '48px auto 0', display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+        <div className="hero-info" style={{ maxWidth: 1060, margin: '44px auto 0', display: 'flex', gap: 24, flexWrap: 'wrap', position: 'relative' }}>
           {[
             { icon: <MapPin size={12} />,  text: 'Av. Reforma 245, Col. Centro' },
             { icon: <Clock size={12} />,   text: 'Lun-Dom 8am - 10pm' },
             { icon: <Phone size={12} />,   text: '(55) 1234-5678' },
-            { icon: <Star size={12} fill={TEXT3} color={TEXT3} />, text: '4.9 de 5 en resenas' },
+            { icon: <Star size={12} fill={TEXT3} color={TEXT3} />, text: '4.9 estrella' },
           ].map(({ icon, text }) => (
-            <span key={text} style={{ display: 'flex', alignItems: 'center', gap: 7, color: TEXT3, fontSize: 12, fontWeight: 500 }}>
+            <span key={text} style={{ display: 'flex', alignItems: 'center', gap: 6, color: TEXT3, fontSize: 11, fontWeight: 500 }}>
               {icon}{text}
             </span>
           ))}
@@ -1211,8 +1270,8 @@ export default function DSDRestaurantePage() {
           ] as { id: 'menu'|'rewards'|'promos'; label: string; icon: ReactNode }[]).map(tab => {
             const active = activeMainTab === tab.id
             return (
-              <button key={tab.id} onClick={() => setActiveMainTab(tab.id)}
-                style={{ flex: 1, maxWidth: 160, padding: '14px 8px', background: 'none', border: 'none', borderBottom: `2px solid ${active ? TEXT : 'transparent'}`, color: active ? TEXT : TEXT3, fontWeight: active ? 800 : 500, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'color .15s, border-color .15s', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}
+              <button key={tab.id} className="tab-bar-item" onClick={() => setActiveMainTab(tab.id)}
+                style={{ flex: 1, maxWidth: 160, padding: '14px 8px', background: 'none', border: 'none', borderBottom: `2px solid ${active ? TEXT : 'transparent'}`, color: active ? TEXT : TEXT3, fontWeight: active ? 800 : 500, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'color .15s, border-color .15s', letterSpacing: '-0.01em' }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.color = TEXT2 }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.color = TEXT3 }}>
                 {tab.icon}
@@ -1514,9 +1573,9 @@ export default function DSDRestaurantePage() {
 
       {/* Menu */}
       {activeMainTab === 'menu' && <section id="menu-section" style={{ maxWidth: 1060, margin: '0 auto', padding: '56px 24px 120px' }}>
-        <div style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 6 }}>Nuestro menu</h2>
-          <p style={{ color: TEXT2, fontSize: 14 }}>Preparado al momento con ingredientes frescos</p>
+        <div className="section-header" style={{ marginBottom: 36 }}>
+          <h2 style={{ fontSize: 34, fontWeight: 900, color: TEXT, letterSpacing: '-0.04em', marginBottom: 6 }}>Nuestro menu</h2>
+          <p style={{ color: TEXT3, fontSize: 14, fontWeight: 400 }}>Preparado al momento con ingredientes frescos</p>
         </div>
 
         {/* Category pills */}
@@ -1582,9 +1641,7 @@ export default function DSDRestaurantePage() {
               const inCart = cart.find(i => i.id === p.id)
               return (
                 <div key={p.id} className="product-card"
-                  style={{ background: SURFACE, borderRadius: 20, overflow: 'hidden', border: `1px solid ${BORDER}`, transition: 'box-shadow .25s, transform .25s, border-color .2s', animation: `cardReveal .48s cubic-bezier(.22,1,.36,1) both ${idx * 55}ms` } as React.CSSProperties}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,.5)'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = TEXT3 }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = BORDER }}
+                  style={{ background: SURFACE, borderRadius: 20, overflow: 'hidden', border: `1px solid ${BORDER}`, animation: `cardReveal .52s cubic-bezier(.16,1,.3,1) both ${idx * 50}ms` } as React.CSSProperties}
                 >
                   <div style={{ height: 192, overflow: 'hidden', position: 'relative', background: SURFACE2 }}>
                     <img src={photoFor(p.name)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.src = FALLBACK_PHOTO }} loading="lazy" />
