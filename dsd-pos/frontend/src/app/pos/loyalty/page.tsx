@@ -13,7 +13,14 @@ interface Customer {
   total_visits: number; total_spent: number; tier: string
   loyalty_transactions?: LoyaltyTransaction[]
 }
-interface Reward { id: string; name: string; description: string | null; points_required: number; reward_type: string; is_active: boolean }
+interface Reward { id: string; name: string; description: string | null; points_required: number; reward_type: string; reward_value: number | null; is_active: boolean }
+
+function rewardValueLabel(r: Reward): string {
+  if (r.reward_type === 'discount'   && r.reward_value) return `$${r.reward_value} desc.`
+  if (r.reward_type === 'percentage' && r.reward_value) return `${r.reward_value}% desc.`
+  if (r.reward_type === 'free_item')                    return 'Item gratis'
+  return r.reward_type
+}
 
 const TIER_CFG: Record<string, { label: string; fg: string; bg: string }> = {
   bronze:   { label: 'Bronce',  fg: '#92400e', bg: '#fef3c7' },
@@ -36,7 +43,7 @@ export default function LoyaltyPage() {
   const [search, setSearch] = useState('')
   const [activePhone, setActivePhone] = useState<string | null>(null)
   const [showRewardModal, setShowRewardModal] = useState(false)
-  const [rewardForm, setRewardForm] = useState({ name: '', points_required: '', reward_type: 'discount' })
+  const [rewardForm, setRewardForm] = useState({ name: '', description: '', points_required: '', reward_type: 'discount', reward_value: '' })
 
   const { data: customers } = useQuery<Customer[]>({
     queryKey: ['loyalty-customers', search],
@@ -56,14 +63,16 @@ export default function LoyaltyPage() {
 
   const createReward = useMutation({
     mutationFn: () => api.post('/loyalty/rewards', {
-      name: rewardForm.name,
-      points_required: parseInt(rewardForm.points_required, 10),
-      reward_type: rewardForm.reward_type,
+      name:             rewardForm.name,
+      description:      rewardForm.description || undefined,
+      points_required:  parseInt(rewardForm.points_required, 10),
+      reward_type:      rewardForm.reward_type,
+      reward_value:     rewardForm.reward_value ? parseFloat(rewardForm.reward_value) : undefined,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['loyalty-rewards'] })
       toast.success('Recompensa creada'); setShowRewardModal(false)
-      setRewardForm({ name: '', points_required: '', reward_type: 'discount' })
+      setRewardForm({ name: '', description: '', points_required: '', reward_type: 'discount', reward_value: '' })
     },
     onError: (e: unknown) => toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Error'),
   })
@@ -168,24 +177,32 @@ export default function LoyaltyPage() {
             <div>
               <p className="text-sm font-bold mb-2" style={{ color: '#111827' }}>Recompensas disponibles</p>
               <div className="space-y-2">
-                {rewards?.filter(r => r.is_active).map(r => (
-                  <div key={r.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
-                    style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
-                    <div className="flex items-center gap-3">
-                      <Gift size={16} style={{ color: '#6b7280' }}/>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: '#111827' }}>{r.name}</p>
-                        <p className="text-xs" style={{ color: '#9ca3af' }}>{r.points_required} puntos</p>
+                {rewards?.filter(r => r.is_active).map(r => {
+                  const canAfford = activeCustomer.points >= r.points_required
+                  return (
+                    <div key={r.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
+                      style={{ background: canAfford ? '#f0fdf4' : '#ffffff', border: `1px solid ${canAfford ? '#86efac' : '#e5e7eb'}` }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: canAfford ? '#dcfce7' : '#f9fafb' }}>
+                          <Gift size={14} style={{ color: canAfford ? '#16a34a' : '#9ca3af' }}/>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: '#111827' }}>{r.name}</p>
+                          <p className="text-xs" style={{ color: '#9ca3af' }}>
+                            {r.points_required} pts · {rewardValueLabel(r)}
+                          </p>
+                        </div>
                       </div>
+                      <button onClick={() => redeem.mutate(r.id)}
+                        disabled={!canAfford || redeem.isPending}
+                        className="text-xs px-3 py-1.5 rounded-lg font-semibold text-white transition disabled:opacity-30"
+                        style={{ background: canAfford ? '#16a34a' : '#111827' }}>
+                        {canAfford ? 'Canjear' : `Faltan ${r.points_required - activeCustomer.points} pts`}
+                      </button>
                     </div>
-                    <button onClick={() => redeem.mutate(r.id)}
-                      disabled={activeCustomer.points < r.points_required || redeem.isPending}
-                      className="text-xs px-3 py-1.5 rounded-lg font-semibold text-white transition disabled:opacity-30"
-                      style={{ background: '#111827' }}>
-                      Canjear
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
                 {(!rewards || rewards.filter(r => r.is_active).length === 0) && (
                   <p className="text-sm" style={{ color: '#9ca3af' }}>No hay recompensas configuradas todavía</p>
                 )}
@@ -228,10 +245,16 @@ export default function LoyaltyPage() {
                 <div key={r.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
                   style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
                   <div className="flex items-center gap-3">
-                    <Gift size={16} style={{ color: '#6b7280' }}/>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: '#f0f2f5' }}>
+                      <Gift size={14} style={{ color: '#374151' }}/>
+                    </div>
                     <div>
                       <p className="text-sm font-semibold" style={{ color: '#111827' }}>{r.name}</p>
-                      <p className="text-xs" style={{ color: '#9ca3af' }}>{r.points_required} puntos · {r.reward_type}</p>
+                      <p className="text-xs" style={{ color: '#9ca3af' }}>
+                        {r.points_required} pts · {rewardValueLabel(r)}
+                        {r.description && ` · ${r.description}`}
+                      </p>
                     </div>
                   </div>
                   {canManage && (
@@ -267,30 +290,52 @@ export default function LoyaltyPage() {
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>Nombre</label>
+                <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>Nombre *</label>
                 <input value={rewardForm.name} onChange={e => setRewardForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Agua fresca gratis" style={inputStyle}
+                  placeholder="Ej. Taco gratis, $20 de descuento" style={inputStyle}
                   onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
                   onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>Puntos requeridos</label>
+                <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>Descripcion</label>
+                <input value={rewardForm.description} onChange={e => setRewardForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Descripcion opcional" style={inputStyle}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>Tipo *</label>
+                  <select value={rewardForm.reward_type} onChange={e => setRewardForm(f => ({ ...f, reward_type: e.target.value }))}
+                    style={inputStyle}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
+                    <option value="discount">Descuento $</option>
+                    <option value="percentage">Porcentaje %</option>
+                    <option value="free_item">Item gratis</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>
+                    {rewardForm.reward_type === 'discount' ? 'Valor ($)' : rewardForm.reward_type === 'percentage' ? 'Porcentaje (%)' : 'Valor'}
+                  </label>
+                  <input type="number" value={rewardForm.reward_value}
+                    onChange={e => setRewardForm(f => ({ ...f, reward_value: e.target.value }))}
+                    placeholder={rewardForm.reward_type === 'percentage' ? '15' : '20'}
+                    disabled={rewardForm.reward_type === 'free_item'}
+                    style={{ ...inputStyle, opacity: rewardForm.reward_type === 'free_item' ? 0.4 : 1 }}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>Puntos requeridos *</label>
                 <input type="number" value={rewardForm.points_required}
                   onChange={e => setRewardForm(f => ({ ...f, points_required: e.target.value }))}
-                  placeholder="50" style={inputStyle}
+                  placeholder="Ej. 50 puntos = $5 gastados" style={inputStyle}
                   onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
                   onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: '#6b7280' }}>Tipo</label>
-                <select value={rewardForm.reward_type} onChange={e => setRewardForm(f => ({ ...f, reward_type: e.target.value }))}
-                  style={inputStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-                  <option value="discount">Descuento</option>
-                  <option value="free_item">Producto gratis</option>
-                  <option value="percentage">Porcentaje</option>
-                </select>
+                <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>1 punto = $10 en compras</p>
               </div>
               <button onClick={() => createReward.mutate()}
                 disabled={!rewardForm.name || !rewardForm.points_required || createReward.isPending}
