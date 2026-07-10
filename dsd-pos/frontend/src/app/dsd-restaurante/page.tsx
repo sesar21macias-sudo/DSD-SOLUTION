@@ -29,12 +29,53 @@ interface Product  { id: string; name: string; description?: string; price_mxn: 
 interface CartItem { id: string; name: string; price: number; qty: number }
 interface Table    { id: string; name: string; status: string }
 interface Reward   { id: string; name: string; description?: string; points_required: number; reward_type: 'discount' | 'free_item' | 'percentage'; reward_value?: number }
-interface Promo    { id: string; title: string; description: string; tag: string; discount_type: 'flat' | 'percent'; discount_value: number; min_order: number; icon: string }
+interface Promo {
+  id: string
+  title: string
+  description: string
+  tag: string
+  discount_type: 'flat' | 'percent'
+  discount_value: number
+  min_order: number
+  icon: string
+  category_keyword?: string   // Filter menu to this category when selected
+  counter_only?: boolean      // Must be shown at counter — no online discount
+}
 
 const PROMOS: Promo[] = [
-  { id: 'tuesday-taco', title: '2x1 en Tacos', description: 'Todos los martes en tacos de asada y birria. Presenta al pedir.', tag: 'Martes', discount_type: 'percent', discount_value: 50, min_order: 60, icon: 'T' },
-  { id: 'free-drink',   title: 'Bebida gratis', description: 'Con cualquier orden mayor a $150. Se aplica la bebida de menor precio.', tag: 'Siempre', discount_type: 'flat', discount_value: 30, min_order: 150, icon: 'B' },
-  { id: 'birthday',     title: 'Desc. cumpleanos', description: '20% off en tu mes de cumpleanos con cuenta de lealtad activa.', tag: 'Miembros', discount_type: 'percent', discount_value: 20, min_order: 0, icon: 'C' },
+  {
+    id: 'tuesday-taco',
+    title: '2x1 en Tacos',
+    description: 'Todos los martes en tacos de asada y birria. Agrega tacos a tu orden y el descuento se aplica automaticamente.',
+    tag: 'Martes',
+    discount_type: 'percent',
+    discount_value: 50,
+    min_order: 60,
+    icon: 'T',
+    category_keyword: 'taco',
+  },
+  {
+    id: 'free-drink',
+    title: 'Bebida gratis',
+    description: 'Con cualquier orden mayor a $150. Agrega una bebida y se descuenta automaticamente.',
+    tag: 'Siempre',
+    discount_type: 'flat',
+    discount_value: 30,
+    min_order: 150,
+    icon: 'B',
+    category_keyword: 'bebida',
+  },
+  {
+    id: 'birthday',
+    title: 'Desc. cumpleanos',
+    description: '20% off en tu mes de cumpleanos. Solo valido en mostrador — presenta tu cuenta de lealtad al pagar.',
+    tag: 'Miembros',
+    discount_type: 'percent',
+    discount_value: 20,
+    min_order: 0,
+    icon: 'C',
+    counter_only: true,
+  },
 ]
 interface Customer { id: string; full_name: string | null; points: number; total_visits: number; total_spent?: number; tier: string }
 
@@ -564,6 +605,21 @@ export default function DSDRestaurantePage() {
     setTimeout(() => { setActiveCategory(id); setFilterAnim(false) }, 160)
   }
 
+  function selectPromo(promo: Promo) {
+    setSelectedPromo(promo)
+    if (promo.category_keyword) {
+      // Find matching category by name keyword
+      const match = data?.categories.find(c =>
+        c.name.toLowerCase().includes(promo.category_keyword!.toLowerCase())
+      )
+      setActiveMainTab('menu')
+      switchCategory(match?.id ?? null)
+      setTimeout(() => {
+        document.getElementById('menu-section')?.scrollIntoView({ behavior: 'smooth' })
+      }, 200)
+    }
+  }
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['dsd-menu'],
     queryFn: async () => {
@@ -650,7 +706,7 @@ export default function DSDRestaurantePage() {
   const tax             = subtotal * 0.16
   const baseTotal       = subtotal + tax
   const discount        = selectedReward ? calcDiscount(selectedReward, subtotal) : 0
-  const promoDiscount   = selectedPromo
+  const promoDiscount   = (selectedPromo && !selectedPromo.counter_only)
     ? (selectedPromo.discount_type === 'flat'
         ? (subtotal >= selectedPromo.min_order ? Math.min(selectedPromo.discount_value, subtotal) : 0)
         : (subtotal >= selectedPromo.min_order ? Math.round(subtotal * selectedPromo.discount_value / 100 * 100) / 100 : 0))
@@ -1376,19 +1432,21 @@ export default function DSDRestaurantePage() {
           </div>
 
           {selectedPromo && (
-            <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 14, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Tag size={15} color={TEXT2} />
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{selectedPromo.title} aplicada</p>
+            <div className="slide-up" style={{ background: selectedPromo.counter_only ? SURFACE2 : SURFACE, border: `1.5px solid ${selectedPromo.counter_only ? BORDER : TEXT}`, borderRadius: 14, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                {selectedPromo.counter_only ? <MapPin size={15} color={TEXT3} /> : <Tag size={15} color={TEXT} />}
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{selectedPromo.title}</p>
                   <p style={{ fontSize: 11, color: TEXT3 }}>
-                    {selectedPromo.discount_type === 'flat'
-                      ? `$${selectedPromo.discount_value} de descuento con $${selectedPromo.min_order}+ en tu orden`
-                      : `${selectedPromo.discount_value}% off con $${selectedPromo.min_order}+ en tu orden`}
+                    {selectedPromo.counter_only
+                      ? 'Presenta esta pantalla al pagar en mostrador'
+                      : selectedPromo.discount_type === 'flat'
+                        ? `$${selectedPromo.discount_value} de descuento con $${selectedPromo.min_order}+ en orden`
+                        : `${selectedPromo.discount_value}% off con $${selectedPromo.min_order}+ en orden`}
                   </p>
                 </div>
               </div>
-              <button onClick={() => setSelectedPromo(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4 }}
+              <button onClick={() => setSelectedPromo(null)} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 4, flexShrink: 0 }}
                 onMouseEnter={e => (e.currentTarget.style.color = TEXT2)} onMouseLeave={e => (e.currentTarget.style.color = TEXT3)}>
                 <X size={16} />
               </button>
@@ -1399,32 +1457,66 @@ export default function DSDRestaurantePage() {
             {PROMOS.map(promo => {
               const isSelected = selectedPromo?.id === promo.id
               const eligible = subtotal >= promo.min_order || cart.length === 0
+              const isCounter = !!promo.counter_only
+              const hasCategory = !!promo.category_keyword
+
               return (
-                <button key={promo.id}
-                  onClick={() => setSelectedPromo(isSelected ? null : promo)}
-                  style={{ background: isSelected ? SURFACE2 : SURFACE, border: `1.5px solid ${isSelected ? TEXT : BORDER}`, borderRadius: 18, overflow: 'hidden', textAlign: 'left', cursor: 'pointer', transition: 'border-color .2s, transform .15s, background .2s', transform: isSelected ? 'scale(1.01)' : 'scale(1)', padding: 0 }}
+                <div key={promo.id} className="card-in"
+                  style={{ background: isSelected ? SURFACE2 : SURFACE, border: `1.5px solid ${isSelected ? TEXT : BORDER}`, borderRadius: 18, overflow: 'hidden', transition: 'border-color .2s, transform .2s, background .2s', transform: isSelected ? 'scale(1.01)' : 'scale(1)' }}
                   onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = TEXT3; e.currentTarget.style.transform = 'scale(1.01)' } }}
                   onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.transform = 'scale(1)' } }}>
                   <div style={{ padding: '22px 22px 20px' }}>
+
+                    {/* Header row */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
                       <div style={{ width: 40, height: 40, borderRadius: 12, background: isSelected ? TEXT : SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background .2s' }}>
-                        <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? BG : TEXT2, fontFamily: 'Inter, sans-serif' }}>{promo.icon}</span>
+                        <span style={{ fontSize: 16, fontWeight: 900, color: isSelected ? BG : TEXT2 }}>{promo.icon}</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: TEXT3, background: SURFACE2, borderRadius: 6, padding: '3px 8px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{promo.tag}</span>
-                        {isSelected && <Check size={16} color={TEXT} />}
+                        {isCounter && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: TEXT3, background: SURFACE2, border: `1px solid ${BORDER}`, borderRadius: 6, padding: '3px 8px', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <MapPin size={9} /> Mostrador
+                          </span>
+                        )}
+                        {isSelected && !isCounter && <Check size={16} color={TEXT} />}
                       </div>
                     </div>
-                    <h3 style={{ fontSize: 17, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 5 }}>{promo.title}</h3>
-                    <p style={{ fontSize: 12, color: TEXT3, lineHeight: 1.55, marginBottom: 14 }}>{promo.description}</p>
-                    <div style={{ display: 'inline-block', background: isSelected ? TEXT : SURFACE2, color: isSelected ? BG : TEXT3, borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 700, transition: 'all .2s', letterSpacing: '-0.01em' }}>
-                      {isSelected ? 'Seleccionada - Quitar' : promo.discount_type === 'flat' ? `-$${promo.discount_value}` : `-${promo.discount_value}%`}
-                    </div>
-                    {!eligible && cart.length > 0 && (
-                      <p style={{ fontSize: 10, color: TEXT3, marginTop: 8 }}>Minimo ${ promo.min_order} en orden</p>
+
+                    <h3 style={{ fontSize: 17, fontWeight: 900, color: TEXT, letterSpacing: '-0.03em', marginBottom: 6 }}>{promo.title}</h3>
+                    <p style={{ fontSize: 12, color: TEXT3, lineHeight: 1.6, marginBottom: 16 }}>{promo.description}</p>
+
+                    {/* Counter-only notice */}
+                    {isCounter ? (
+                      <div style={{ background: SURFACE2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <MapPin size={14} color={TEXT3} style={{ marginTop: 1, flexShrink: 0 }} />
+                        <div>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: TEXT2, marginBottom: 2 }}>Solo en mostrador</p>
+                          <p style={{ fontSize: 11, color: TEXT3, lineHeight: 1.5 }}>Muestra esta pantalla al pagar en caja. No aplica en ordenes en linea.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Selectable CTA */
+                      <button
+                        onClick={() => isSelected ? setSelectedPromo(null) : selectPromo(promo)}
+                        style={{ width: '100%', background: isSelected ? TEXT : SURFACE2, color: isSelected ? BG : TEXT2, border: `1px solid ${isSelected ? TEXT : BORDER}`, borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all .2s', letterSpacing: '-0.01em' }}
+                        onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.background = SURFACE; e.currentTarget.style.borderColor = TEXT3 } }}
+                        onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background = SURFACE2; e.currentTarget.style.borderColor = BORDER } }}>
+                        {isSelected ? (
+                          <><Check size={13} /> Aplicada — Quitar</>
+                        ) : hasCategory ? (
+                          <><Tag size={13} /> Aplicar y ver {promo.category_keyword === 'taco' ? 'tacos' : 'bebidas'}</>
+                        ) : (
+                          <><Tag size={13} /> Aplicar {promo.discount_type === 'flat' ? `-$${promo.discount_value}` : `-${promo.discount_value}%`}</>
+                        )}
+                      </button>
+                    )}
+
+                    {!eligible && !isCounter && cart.length > 0 && (
+                      <p style={{ fontSize: 10, color: TEXT3, marginTop: 8 }}>Minimo ${promo.min_order} en orden para aplicar</p>
                     )}
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>
@@ -1913,6 +2005,14 @@ export default function DSDRestaurantePage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: TEXT2, marginBottom: 10 }}>
                     <span>Promo ({selectedPromo?.title})</span>
                     <span style={{ fontWeight: 600, color: '#4ade80' }}>-${promoDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedPromo?.counter_only && (
+                  <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 12px', marginBottom: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <MapPin size={13} color={TEXT3} style={{ marginTop: 1, flexShrink: 0 }} />
+                    <p style={{ fontSize: 11, color: TEXT3, lineHeight: 1.5 }}>
+                      <span style={{ fontWeight: 700, color: TEXT2 }}>{selectedPromo.title}</span> — presenta en mostrador al pagar. No aplica descuento en linea.
+                    </p>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 20, color: TEXT, paddingTop: 12, borderTop: `1px solid ${BORDER}`, letterSpacing: '-0.025em' }}>
