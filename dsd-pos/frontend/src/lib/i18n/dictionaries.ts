@@ -26,6 +26,7 @@ export const dictionaries = {
     'nav.reports': 'Reportes',
     'nav.users': 'Usuarios',
     'nav.shift': 'Turno / Caja',
+    'nav.settings': 'Configuracion',
     'nav.logout': 'Salir',
 
     'pos.searchPlaceholder': 'Buscar producto...',
@@ -81,6 +82,7 @@ export const dictionaries = {
     'nav.reports': 'Reports',
     'nav.users': 'Users',
     'nav.shift': 'Shift / Cash',
+    'nav.settings': 'Settings',
     'nav.logout': 'Log out',
 
     'pos.searchPlaceholder': 'Search product...',

@@ -20,6 +20,7 @@ import whatsappRoutes from './modules/whatsapp/whatsapp.routes'
 import loyaltyRoutes from './modules/loyalty/loyalty.routes'
 import deliveryRoutes from './modules/delivery/delivery.routes'
 import reservationsRoutes from './modules/reservations/reservations.routes'
+import settingsRoutes from './modules/settings/settings.routes'
 import { errorHandler, notFound } from './middleware/errorHandler'
 
 const app = express()
@@ -75,6 +76,7 @@ app.use('/api/whatsapp', whatsappRoutes)
 app.use('/api/loyalty', loyaltyRoutes)
 app.use('/api/delivery', deliveryRoutes)
 app.use('/api/reservations', reservationsRoutes)
+app.use('/api/settings', settingsRoutes)
 
 // Socket.io — real-time kitchen display. Solo lo usan las páginas autenticadas
 // del dashboard (/pos/*); el flujo público de pago no depende de sockets.

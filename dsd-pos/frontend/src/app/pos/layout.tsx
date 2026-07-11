@@ -9,7 +9,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useT } from '@/lib/i18n/useT'
 import {
   ShoppingCart, UtensilsCrossed, ClipboardList,
-  LogOut, ChefHat, LayoutGrid, BarChart2, Users, Timer, Package, Star, Truck, CalendarClock
+  LogOut, ChefHat, LayoutGrid, BarChart2, Users, Timer, Package, Star, Truck, CalendarClock, Settings
 } from 'lucide-react'
 
 const navItems = [
@@ -25,6 +25,7 @@ const navItems = [
   { href: '/pos/reports',     labelKey: 'nav.reports'      as const, icon: BarChart2 },
   { href: '/pos/users',       labelKey: 'nav.users'        as const, icon: Users },
   { href: '/pos/shift',       labelKey: 'nav.shift'        as const, icon: Timer },
+  { href: '/pos/settings',   labelKey: 'nav.settings'     as const, icon: Settings },
 ]
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
