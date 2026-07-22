@@ -6,7 +6,8 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "vars": {
     // Modelo del agente: haiku = ~5x mas barato que opus, suficiente para planeacion
-    "AGENT_MODEL": "claude-haiku-4-5"
+    "AGENT_MODEL": "claude-haiku-4-5",
+    "CACHE_BUST": "2e07b6e"
   },
   "assets": {
     "directory": ".open-next/assets",
