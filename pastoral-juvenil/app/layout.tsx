@@ -1,3 +1,4 @@
+// Pastoral Juvenil - v0.2.0
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Schibsted_Grotesk } from "next/font/google";
 import { MotionProvider } from "@/components/ui/MotionProvider";
