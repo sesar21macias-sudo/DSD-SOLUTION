@@ -1,69 +1,121 @@
 .section {
-  padding: 40px 0 80px;
+  padding: 64px 0 96px;
+  background: linear-gradient(180deg, transparent 0%, rgba(31, 78, 121, 0.03) 100%);
 }
 
 .heading {
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
-  color: var(--indigo);
-  margin-bottom: 28px;
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  color: #0f172a;
+  margin-bottom: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .bento {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 18px;
 }
 
 .tile {
-  padding: 26px 28px;
+  padding: 32px 36px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1.5px solid rgba(31, 78, 121, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(31, 78, 121, 0.06);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.tile:nth-child(1) { animation-delay: 0.1s; }
+.tile:nth-child(2) { animation-delay: 0.2s; }
+.tile:nth-child(3) { animation-delay: 0.3s; }
+.tile:nth-child(4) { animation-delay: 0.4s; }
+
+.tile:hover {
+  border-color: rgba(31, 78, 121, 0.25);
+  box-shadow: 0 8px 32px rgba(31, 78, 121, 0.12);
+  transform: translateY(-4px);
 }
 
 .tileTitle {
-  font-family: var(--font-display), "Space Grotesk", sans-serif;
-  font-size: 1.15rem;
-  color: var(--indigo);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.2rem;
+  color: #1f4e79;
+  font-weight: 800;
 }
 
 .tileDetalle {
-  font-size: 0.92rem;
-  color: var(--ink-soft);
-  line-height: 1.5;
+  font-size: 0.96rem;
+  color: #475569;
+  line-height: 1.6;
+  font-weight: 500;
 }
 
 .featured {
   grid-column: 1 / -1;
-  background: var(--logo-rojo);
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
   color: #fff;
-  box-shadow: var(--shadow-md);
-  padding: 36px 32px;
+  box-shadow: 0 12px 40px rgba(220, 38, 38, 0.25);
+  padding: 44px 48px;
   border: none;
   position: relative;
   overflow: hidden;
 }
 
+.featured::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 95% 10%, rgba(255, 255, 255, 0.15), transparent 60%);
+  pointer-events: none;
+}
+
 .featured .tileTitle {
   color: #fff;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
 }
 
 .featured .tileDetalle {
-  color: rgba(255, 255, 255, 0.88);
-  max-width: 52ch;
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 56ch;
 }
 
 .flameWrap {
   position: absolute;
-  right: 24px;
+  right: 32px;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 0.9;
+  opacity: 0.95;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(-50%) translateY(0px); }
+  50% { transform: translateY(-50%) translateY(-8px); }
 }
 
 @media (min-width: 760px) {
   .bento {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .featured {
+    grid-column: 1 / -1;
   }
 }

@@ -1,54 +1,91 @@
 .section {
-  padding: 40px 0;
+  padding: 64px 0;
 }
 
 .heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 32px;
+  gap: 20px;
+  margin-bottom: 40px;
 }
 
 .heading h2 {
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
-  color: var(--indigo);
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .count {
-  font-size: 0.85rem;
-  color: var(--ink-soft);
+  font-size: 0.9rem;
+  color: #1f4e79;
+  font-weight: 700;
+  background: rgba(31, 78, 121, 0.1);
+  padding: 6px 14px;
+  border-radius: 50px;
+  border: 1px solid rgba(31, 78, 121, 0.2);
 }
 
 .grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  gap: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .item {
-  background: var(--panel);
-  padding: 28px 32px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 32px 36px;
   display: flex;
-  gap: 20px;
+  gap: 24px;
   align-items: flex-start;
+  border: 1.5px solid rgba(31, 78, 121, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(31, 78, 121, 0.06);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.item:nth-child(1) { animation-delay: 0.1s; }
+.item:nth-child(2) { animation-delay: 0.2s; }
+.item:nth-child(3) { animation-delay: 0.3s; }
+.item:nth-child(4) { animation-delay: 0.4s; }
+
+.item:hover {
+  border-color: rgba(31, 78, 121, 0.25);
+  box-shadow: 0 8px 32px rgba(31, 78, 121, 0.12);
+  transform: translateY(-4px);
 }
 
 .index {
-  font-family: var(--font-display), "Space Grotesk", sans-serif;
-  font-size: 1.6rem;
-  color: var(--oro);
-  min-width: 2.2ch;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.8rem;
+  color: #1f4e79;
+  font-weight: 800;
+  min-width: 2.8ch;
 }
 
 .item p {
-  color: var(--ink);
-  line-height: 1.55;
-  font-size: 1rem;
+  color: #1f2937;
+  line-height: 1.65;
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (min-width: 760px) {
