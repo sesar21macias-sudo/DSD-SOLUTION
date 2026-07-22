@@ -6,6 +6,7 @@ import { ObjetivosEspecificos } from "@/components/bienvenida/ObjetivosEspecific
 import { ListaAsesores } from "@/components/bienvenida/ListaAsesores";
 import { ResponsabilidadesFijas } from "@/components/bienvenida/ResponsabilidadesFijas";
 
+// Force Cloudflare redeploy - Modern UI v2
 export default function BienvenidaPage() {
   return (
     <>
