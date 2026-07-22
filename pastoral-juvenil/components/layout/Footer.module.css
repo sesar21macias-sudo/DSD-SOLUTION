@@ -1,0 +1,37 @@
+.footer {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding: 28px 0 36px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.rightGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.adminLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  transition: color 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+
+.adminLink:hover {
+  color: var(--indigo);
+  border-color: var(--indigo);
+}

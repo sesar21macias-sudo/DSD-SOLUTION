@@ -1,0 +1,60 @@
+.form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1.5px solid rgba(30, 78, 121, 0.15);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(30, 78, 121, 0.05);
+  transition: all 0.2s ease;
+}
+
+.form:focus-within {
+  border-color: rgba(30, 78, 121, 0.3);
+  box-shadow: 0 6px 24px rgba(30, 78, 121, 0.1);
+}
+
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: #1f2937;
+  outline: none;
+  font-family: inherit;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+}
+
+.send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1f4e79 0%, #2d5a8a 100%);
+  color: #fff;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(30, 78, 121, 0.2);
+}
+
+.send:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(30, 78, 121, 0.3);
+}
+
+.send:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

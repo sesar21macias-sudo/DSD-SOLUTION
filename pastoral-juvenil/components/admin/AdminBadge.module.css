@@ -1,0 +1,34 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--indigo);
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.icon {
+  color: var(--oro);
+}
+
+.logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--bg);
+  transition: color 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+
+.logout:hover {
+  color: var(--terracota);
+}

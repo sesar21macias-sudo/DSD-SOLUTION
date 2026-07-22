@@ -1,0 +1,779 @@
+
+ ⛅️ wrangler 4.110.0 (update available 4.111.0)
+───────────────────────────────────────────────
+Successfully created tail, expires at 2026-07-16T23:19:34Z
+Connected to pastoral-juvenil, waiting for logs...
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 11:19:38 AM
+  (error) POST /api/agent Error: Gemini 404: {
+  "error": {
+    "code": 404,
+    "message": "This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.",
+    "status": "NOT_FOUND"
+  }
+}
+
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 11:20:48 AM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=128&q=75 - Ok @ 7/16/2026, 11:20:48 AM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 11:20:49 AM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/login - Ok @ 7/16/2026, 11:23:09 AM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 11:23:10 AM
+  (error) POST /api/agent Error: Gemini 404: {
+  "error": {
+    "code": 404,
+    "message": "This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.",
+    "status": "NOT_FOUND"
+  }
+}
+
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 11:24:07 AM
+  (error) POST /api/agent Error: Gemini 404: {
+  "error": {
+    "code": 404,
+    "message": "This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.",
+    "status": "NOT_FOUND"
+  }
+}
+
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 11:27:32 AM
+  (error) POST /api/agent Error: Gemini 503: {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 11:32:07 AM
+  (warn) Gemini gemini-flash-latest no disponible; probando respaldo
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=alabanzas - Ok @ 7/16/2026, 11:32:27 AM
+DELETE https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events/f7q8kuv0836jp9u7f3c0o92vv8 - Ok @ 7/16/2026, 11:32:42 AM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/logout - Ok @ 7/16/2026, 11:32:44 AM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=alabanzas - Ok @ 7/16/2026, 11:32:45 AM
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 3 of 5) in 4s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 3 of 5) in 4s...[0m
+
+
+Reconnected to pastoral-juvenil.
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:31:06 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:31:07 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:31:07 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:31:07 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:31:07 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:31:07 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:31:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:31:07 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:31:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:31:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:31:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:31:12 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=tXyZJ52UQVBCVsD3 - Ok @ 7/16/2026, 5:31:12 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:31:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=tvtMM58kS20ktN1o - Ok @ 7/16/2026, 5:31:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:31:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:31:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:31:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:31:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:31:17 PM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 5:31:30 PM
+  (warn) Gemini gemini-flash-latest no disponible; probando respaldo
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=M7efU0cqdCFP2m1m - Ok @ 7/16/2026, 5:31:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=-a26yZkbz2X6WBJp - Ok @ 7/16/2026, 5:32:07 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:32:07 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=coordinacion-general - Ok @ 7/16/2026, 5:32:07 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=LTlpHHDOLwm4nDTD - Ok @ 7/16/2026, 5:32:09 PM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 5:31:50 PM
+  (warn) Gemini gemini-flash-latest no disponible; probando respaldo
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:46:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:49:26 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:49:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=128&q=75 - Ok @ 7/16/2026, 5:49:45 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:49:45 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:49:46 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:51:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:51:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:51:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:51:08 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:51:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=128&q=75 - Ok @ 7/16/2026, 5:51:09 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:51:09 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:51:09 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:51:08 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:51:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:51:15 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:51:15 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:51:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:51:23 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:51:23 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:51:24 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:51:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:51:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=tXyZJ52UQVBCVsD3 - Ok @ 7/16/2026, 5:51:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:51:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=tvtMM58kS20ktN1o - Ok @ 7/16/2026, 5:51:36 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:51:37 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:51:37 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:51:37 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:51:37 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:51:37 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=ekok_4o7fuJlxMbk - Ok @ 7/16/2026, 5:51:39 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:51:39 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=coordinacion-general - Ok @ 7/16/2026, 5:51:39 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=LTlpHHDOLwm4nDTD - Ok @ 7/16/2026, 5:51:40 PM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 5:52:41 PM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 5:54:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:55:46 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:55:47 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:55:47 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:55:47 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:55:47 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:55:47 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:55:47 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:55:47 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:55:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:55:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:55:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:55:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:56:04 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:56:03 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:56:04 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:56:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:56:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:56:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:56:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:56:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:56:05 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:56:05 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:56:05 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:56:11 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:11 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:13 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:13 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=C1XWaMXo8-LNMej- - Ok @ 7/16/2026, 5:56:16 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/calendario?_rsc=SnpxtA5VARt4ylac - Ok @ 7/16/2026, 5:56:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=SnpxtA5VARt4ylac - Ok @ 7/16/2026, 5:56:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/tareas?_rsc=SnpxtA5VARt4ylac - Ok @ 7/16/2026, 5:56:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:56:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:56:17 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/calendario?_rsc=BldJXCK-Saobz8At - Ok @ 7/16/2026, 5:56:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=BldJXCK-Saobz8At - Ok @ 7/16/2026, 5:56:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/tareas?_rsc=BldJXCK-Saobz8At - Ok @ 7/16/2026, 5:56:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/calendario?_rsc=EVRSHZ2b0qQ-1hIF - Ok @ 7/16/2026, 5:56:20 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:56:20 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=alabanzas - Ok @ 7/16/2026, 5:56:20 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/tareas?_rsc=RlJIKkIhdVy5hHNa - Ok @ 7/16/2026, 5:56:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=8WmC8p5kl0zHy3ML - Ok @ 7/16/2026, 5:56:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:56:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:56:29 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:56:30 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:56:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:56:40 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:56:42 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:56:42 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:56:42 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:56:42 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:56:42 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:56:42 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:56:42 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:56:43 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:56:43 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:56:43 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:56:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:56:48 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:50 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:51 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:56:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:56:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=jcS45yjCHk6idFUh - Ok @ 7/16/2026, 5:57:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:57:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/tareas?_rsc=s6snUpKlT3qYCTDf - Ok @ 7/16/2026, 5:57:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/calendario?_rsc=s6snUpKlT3qYCTDf - Ok @ 7/16/2026, 5:57:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:57:09 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/tareas?_rsc=NYd07OhI-uj3s6VM - Ok @ 7/16/2026, 5:57:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/calendario?_rsc=NYd07OhI-uj3s6VM - Ok @ 7/16/2026, 5:57:09 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:57:16 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:57:16 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:57:20 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=tXyZJ52UQVBCVsD3 - Ok @ 7/16/2026, 5:57:20 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:57:25 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:26 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:26 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:57:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:57:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=H0wNYUWUW69fg9ok - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/tareas?_rsc=i8BlB1K-uPtJ2MuZ - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/calendario?_rsc=i8BlB1K-uPtJ2MuZ - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:57:30 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/tareas?_rsc=9L33gRWOw33D4lb0 - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/calendario?_rsc=9L33gRWOw33D4lb0 - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/apple-touch-icon-120x120-precomposed.png - Ok @ 7/16/2026, 5:57:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/apple-touch-icon-120x120.png - Ok @ 7/16/2026, 5:57:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/apple-touch-icon-precomposed.png - Ok @ 7/16/2026, 5:57:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/apple-touch-icon.png - Ok @ 7/16/2026, 5:57:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/calendario?_rsc=buTXQBtDDItq5Axn - Ok @ 7/16/2026, 5:57:32 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:57:32 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=mercadotecnia - Ok @ 7/16/2026, 5:57:32 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/tareas?_rsc=rmNKlQxnhQRn7ZVu - Ok @ 7/16/2026, 5:57:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/calendario?_rsc=UPYoZjw94gDUyOXN - Ok @ 7/16/2026, 5:57:35 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:57:35 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=mercadotecnia - Ok @ 7/16/2026, 5:57:35 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 5:58:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 5:58:14 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:58:14 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:58:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 5:58:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 5:58:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 5:58:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:58:14 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 5:58:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 5:58:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 5:58:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:58:25 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:58:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:58:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:58:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=jcS45yjCHk6idFUh - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/tareas?_rsc=s6snUpKlT3qYCTDf - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=s6snUpKlT3qYCTDf - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/calendario?_rsc=s6snUpKlT3qYCTDf - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:58:29 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/tareas?_rsc=NYd07OhI-uj3s6VM - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=NYd07OhI-uj3s6VM - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/calendario?_rsc=NYd07OhI-uj3s6VM - Ok @ 7/16/2026, 5:58:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/calendario?_rsc=ljuf4mNG1zOWLfL0 - Ok @ 7/16/2026, 5:58:36 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:58:36 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=tesoreria - Ok @ 7/16/2026, 5:58:36 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/tareas?_rsc=3qrsDyMThRNA6uHP - Ok @ 7/16/2026, 5:58:43 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=-stevebRRyCLk67x - Ok @ 7/16/2026, 5:58:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:58:50 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:58:50 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=tvtMM58kS20ktN1o - Ok @ 7/16/2026, 5:58:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:58:52 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:58:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:58:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:58:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:58:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:58:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=ekok_4o7fuJlxMbk - Ok @ 7/16/2026, 5:58:55 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:58:55 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=coordinacion-general - Ok @ 7/16/2026, 5:58:55 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=LTlpHHDOLwm4nDTD - Ok @ 7/16/2026, 5:58:58 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:59:00 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:59:00 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:01 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:01 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:01 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:02 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:04 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=jcS45yjCHk6idFUh - Ok @ 7/16/2026, 5:59:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:59:15 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 5:59:15 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=vSBV4i5EbQcZ-sJR - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=74PnKCph9zfpilGu - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=NHa6rsFeKrxDs4Ge - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=tXGakb1YKz2nsfxS - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:17 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/art-attack/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=W70AqSjkXUVBhW_h - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=eUPuYQWvYsgKLMdi - Ok @ 7/16/2026, 5:59:18 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=tvtMM58kS20ktN1o - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 5:59:19 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/calendario?_rsc=ljuf4mNG1zOWLfL0 - Ok @ 7/16/2026, 5:59:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:59:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=tesoreria - Ok @ 7/16/2026, 5:59:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/tareas?_rsc=3qrsDyMThRNA6uHP - Ok @ 7/16/2026, 5:59:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/calendario?_rsc=UfSE5T38fRD7h0LJ - Ok @ 7/16/2026, 5:59:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 5:59:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=tesoreria - Ok @ 7/16/2026, 5:59:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=dOtKzibsMemscRGh - Ok @ 7/16/2026, 5:59:31 PM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 6:00:49 PM
+  (warn) Gemini gemini-flash-latest no disponible; probando respaldo
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 6:01:35 PM
+POST https://pastoral-juvenil.sesar21macias.workers.dev/api/agent - Ok @ 7/16/2026, 6:02:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 6:04:47 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 6:04:49 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 6:04:49 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 6:04:49 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 6:04:52 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:04:52 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=tvtMM58kS20ktN1o - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=115UE90to2PdFCtF - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 6:04:54 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=MRT4BTqkOYpVgBYI - Ok @ 7/16/2026, 6:04:54 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/calendario?_rsc=ekok_4o7fuJlxMbk - Ok @ 7/16/2026, 6:04:55 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:04:55 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=coordinacion-general - Ok @ 7/16/2026, 6:04:55 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=mlE0PATH_DEpPZg7 - Ok @ 7/16/2026, 6:04:56 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=OTWuL_K80imcxtTA - Ok @ 7/16/2026, 6:04:58 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/tareas?_rsc=M7efU0cqdCFP2m1m - Ok @ 7/16/2026, 6:04:59 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 6:24:24 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 6:24:24 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 6:24:25 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:24:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 6:24:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 6:24:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 6:24:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 6:24:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 6:24:25 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 6:24:26 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 6:24:26 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:24:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:24:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:24:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:24:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 6:24:27 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:24:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:24:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:24:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:24:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:24:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:24:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:24:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:24:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:24:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 6:24:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 6:24:30 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=HLOABUt6PyN-_8bJ - Ok @ 7/16/2026, 6:24:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:24:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=1aiXWOllA6Lgc0Ab - Ok @ 7/16/2026, 6:24:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/tareas?_rsc=1aiXWOllA6Lgc0Ab - Ok @ 7/16/2026, 6:24:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/calendario?_rsc=1aiXWOllA6Lgc0Ab - Ok @ 7/16/2026, 6:24:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 6:24:34 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=GbAadL7Vuc5mPGhF - Ok @ 7/16/2026, 6:24:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/tareas?_rsc=GbAadL7Vuc5mPGhF - Ok @ 7/16/2026, 6:24:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/calendario?_rsc=GbAadL7Vuc5mPGhF - Ok @ 7/16/2026, 6:24:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 6:24:39 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 6:24:40 PM
+  (warn) env.IMAGES binding is not defined
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+Reconnected to pastoral-juvenil.
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ - Ok @ 7/16/2026, 9:30:27 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=256&q=75 - Ok @ 7/16/2026, 9:30:28 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 9:30:28 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 9:30:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=yIp22O3xgPPxC28X - Ok @ 7/16/2026, 9:30:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 9:30:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=8nTjltbQWvg6NcbE - Ok @ 7/16/2026, 9:30:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=5CB68i4pnAekjehf - Ok @ 7/16/2026, 9:30:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=PpArIbZ7b7bNR0Ay - Ok @ 7/16/2026, 9:30:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=7h4NYy5eoyMcNlUN - Ok @ 7/16/2026, 9:30:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=VXn0jKQQ7DvFcXIA - Ok @ 7/16/2026, 9:30:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/coordinacion-general/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/pastores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 9:30:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 9:30:31 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/espiritualidad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/mercadotecnia/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:34 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:41 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:41 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/16/2026, 9:30:42 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/predicadores/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/16/2026, 9:30:42 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/agente?_rsc=fBROlIU88jDovu6J - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=lVKaG1jr_MGXTCLM - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/calendario?_rsc=lVKaG1jr_MGXTCLM - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/tareas?_rsc=lVKaG1jr_MGXTCLM - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/16/2026, 9:30:44 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=Xw7PLJmlLnG_BnHR - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/calendario?_rsc=Xw7PLJmlLnG_BnHR - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/tareas?_rsc=Xw7PLJmlLnG_BnHR - Ok @ 7/16/2026, 9:30:44 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/caridad/calendario?_rsc=9fYTJuWc9li8rphx - Ok @ 7/16/2026, 9:30:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/16/2026, 9:30:48 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/calendar/events?ministry=caridad - Ok @ 7/16/2026, 9:30:48 PM
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 3 of 5) in 4s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 3 of 5) in 4s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+HEAD https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/tesoreria/agente?_rsc=fsxcHRmKjx0fS1QX - Ok @ 7/17/2026, 5:00:22 PM
+HEAD https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/17/2026, 5:03:23 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=YdEnC66FD39OlhBQ - Ok @ 7/17/2026, 5:03:28 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=48&q=75 - Ok @ 7/17/2026, 5:03:29 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/tareas?_rsc=SnpxtA5VARt4ylac - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/calendario?_rsc=SnpxtA5VARt4ylac - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/tareas?_rsc=BldJXCK-Saobz8At - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/calendario?_rsc=BldJXCK-Saobz8At - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=BldJXCK-Saobz8At - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=SnpxtA5VARt4ylac - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=SnpxtA5VARt4ylac - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=2zAPndZH8PNISBft - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=tDFMMD0LmgjvbNGw - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=d7T1CXoejXUqKHHV - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=tDFMMD0LmgjvbNGw - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=1FNg1J9dHSYd_AUO - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=zsFtCs474o-C6wAU - Ok @ 7/17/2026, 5:03:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=SnpxtA5VARt4ylac - Ok @ 7/17/2026, 5:03:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=BldJXCK-Saobz8At - Ok @ 7/17/2026, 5:03:31 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/robots.txt - Ok @ 7/17/2026, 5:03:33 PM
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 2 of 5) in 2s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 3 of 5) in 4s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 4 of 5) in 8s...[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 5 of 5) in 16s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios - Ok @ 7/18/2026, 12:47:29 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/18/2026, 12:47:30 PM
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTail connection lost. Reconnecting (attempt 1 of 5) in 1s...[0m
+
+
+Reconnected to pastoral-juvenil.
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente - Ok @ 7/18/2026, 1:59:32 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/_next/image?url=%2Flogo.png&w=96&q=75 - Ok @ 7/18/2026, 1:59:32 PM
+  (warn) env.IMAGES binding is not defined
+GET https://pastoral-juvenil.sesar21macias.workers.dev/api/auth/session - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/calendario?_rsc=SnpxtA5VARt4ylac - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/tareas?_rsc=SnpxtA5VARt4ylac - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=SnpxtA5VARt4ylac - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/tareas?_rsc=BldJXCK-Saobz8At - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/admin?_rsc=BldJXCK-Saobz8At - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=SnpxtA5VARt4ylac - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/calendario?_rsc=BldJXCK-Saobz8At - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=SnpxtA5VARt4ylac - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios/alabanzas/agente?_rsc=BldJXCK-Saobz8At - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=tDFMMD0LmgjvbNGw - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=d7T1CXoejXUqKHHV - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=tDFMMD0LmgjvbNGw - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=zsFtCs474o-C6wAU - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/?_rsc=2zAPndZH8PNISBft - Ok @ 7/18/2026, 1:59:33 PM
+GET https://pastoral-juvenil.sesar21macias.workers.dev/ministerios?_rsc=1FNg1J9dHSYd_AUO - Ok @ 7/18/2026, 1:59:33 PM

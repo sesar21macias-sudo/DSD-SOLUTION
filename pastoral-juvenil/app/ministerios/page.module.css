@@ -1,0 +1,30 @@
+.section {
+  padding: 56px 0 96px;
+}
+
+.heading {
+  margin-bottom: 40px;
+  max-width: 60ch;
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--terracota);
+  display: block;
+  margin-bottom: 10px;
+}
+
+.title {
+  font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+  color: var(--indigo);
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+}

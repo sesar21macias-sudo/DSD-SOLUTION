@@ -1,0 +1,69 @@
+.section {
+  padding: 40px 0 80px;
+}
+
+.heading {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  color: var(--indigo);
+  margin-bottom: 28px;
+}
+
+.bento {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.tile {
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tileTitle {
+  font-family: var(--font-display), "Space Grotesk", sans-serif;
+  font-size: 1.15rem;
+  color: var(--indigo);
+}
+
+.tileDetalle {
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.featured {
+  grid-column: 1 / -1;
+  background: var(--logo-rojo);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  padding: 36px 32px;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.featured .tileTitle {
+  color: #fff;
+  font-size: 1.4rem;
+}
+
+.featured .tileDetalle {
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 52ch;
+}
+
+.flameWrap {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.9;
+}
+
+@media (min-width: 760px) {
+  .bento {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

@@ -1,0 +1,33 @@
+.wrap {
+  max-width: 640px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.listPanel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.listPanel > div + div {
+  border-top: 1px solid var(--line);
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.progress {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}

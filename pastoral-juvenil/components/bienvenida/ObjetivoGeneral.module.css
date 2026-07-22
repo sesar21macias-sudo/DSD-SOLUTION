@@ -1,0 +1,47 @@
+.section {
+  padding: 40px 0;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  padding: 48px;
+  background: var(--logo-azul);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 88% 12%, rgba(255, 212, 0, 0.14), transparent 52%);
+  pointer-events: none;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--logo-amarillo);
+}
+
+.text {
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  max-width: 46ch;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+@media (min-width: 860px) {
+  .panel {
+    grid-template-columns: 220px 1fr;
+    align-items: center;
+    padding: 64px;
+  }
+}

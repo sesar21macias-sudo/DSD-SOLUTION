@@ -1,0 +1,62 @@
+.header {
+  padding: 32px 0 24px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.5) 0%, transparent 100%);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-bottom: 18px;
+  transition: all 0.2s ease;
+}
+
+.back:hover {
+  color: #1f4e79;
+  transform: translateX(-2px);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(30, 78, 121, 0.1);
+}
+
+.titleBlock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1f4e79 0%, #2d5a8a 100%);
+  padding: 2px;
+}
+
+.title {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  color: #1f2937;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.roster {
+  display: flex;
+  gap: 24px;
+  font-size: 0.84rem;
+  color: #64748b;
+}
+
+.rosterValue {
+  color: #1f4e79;
+  font-weight: 600;
+}

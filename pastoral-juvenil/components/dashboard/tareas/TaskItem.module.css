@@ -1,0 +1,45 @@
+.item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--panel-raised);
+}
+
+.checkboxChecked {
+  background: var(--terracota);
+  border-color: var(--terracota);
+  color: var(--panel);
+}
+
+.texto {
+  flex: 1;
+  font-size: 0.94rem;
+}
+
+.textoHecha {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+}
+
+.remove {
+  color: var(--ink-soft);
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.remove:hover {
+  color: var(--terracota);
+}
