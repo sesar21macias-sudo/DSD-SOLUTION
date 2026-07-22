@@ -35,7 +35,7 @@ export function Hero() {
 
         <motion.span variants={item} className={styles.eyebrow}>
           <FlameIcon size={14} />
-          Equipo 2026-2027
+          Equipo 2026-2027 · Versión Moderna
         </motion.span>
 
         <motion.h1 variants={item} className={styles.title}>
