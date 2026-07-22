@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pastoral-juvenil-pj",
+  "name": "pastoral-juvenil",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-01-02",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
