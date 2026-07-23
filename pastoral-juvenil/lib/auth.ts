@@ -31,7 +31,9 @@ async function hmac(payload: string): Promise<string> {
 
 export function checkCredentials(usuario: string, contrasena: string): boolean {
   const cred = getCredentials();
-  return usuario === cred.usuario && contrasena === cred.contrasena;
+  // Acepta cualquier usuario con el PIN correcto
+  const validUser = cred.usuario === "" ? usuario.length > 0 : usuario === cred.usuario;
+  return validUser && contrasena === cred.contrasena;
 }
 
 /** Token firmado: "<expira-epoch-ms>.<firma hmac>" */
