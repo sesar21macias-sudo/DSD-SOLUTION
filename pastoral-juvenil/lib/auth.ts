@@ -4,9 +4,11 @@ export const SESSION_COOKIE = "pj_admin";
 const SESSION_DAYS = 7;
 
 function getCredentials() {
+  // HARDCODED: Acepta cualquier usuario + PIN 1234
+  // No depende de variables de entorno de Cloudflare
   return {
-    usuario: process.env.ADMIN_USER ?? "",
-    contrasena: process.env.ADMIN_PASS ?? "1234",
+    usuario: "", // Vacío = acepta cualquier usuario
+    contrasena: "1234", // PIN fijo
   };
 }
 
