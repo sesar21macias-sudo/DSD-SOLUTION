@@ -1,4 +1,4 @@
-// Pastoral Juvenil - v0.4.0 (Irvinasio + Modern UI + Sistema Maestro)
+// Pastoral Juvenil - v0.4.1 (Cache invalidation + Irvinasio + Modern UI + Sistema Maestro)
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Schibsted_Grotesk } from "next/font/google";
 import { MotionProvider } from "@/components/ui/MotionProvider";
