@@ -1,13 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pj-nsrv3",
+  "name": "pastoral-juvenil",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-01-02",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "vars": {
     // Modelo del agente: haiku = ~5x mas barato que opus, suficiente para planeacion
     "AGENT_MODEL": "claude-haiku-4-5",
-    "CACHE_BUST": "22bb466-v4"
+    "CACHE_BUST": "clean-rebuild-july-22"
   },
   "assets": {
     "directory": ".open-next/assets",
