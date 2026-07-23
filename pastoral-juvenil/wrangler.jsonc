@@ -1,8 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pjuvenil",
+  "name": "pastoral-juvenil",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2025-01-02",
+  "compatibility_date": "2025-07-23",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "vars": {
     // Modelo del agente: haiku = ~5x mas barato que opus, suficiente para planeacion
