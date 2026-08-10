@@ -24,7 +24,7 @@ export async function createPaymentIntent(req: Request, res: Response): Promise<
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, order_number, total, currency, status, tenant_id, table_id, tenants(name)')
+    .select('id, order_number, total, currency, status, tenant_id, table_id, tenants(name, stripe_account_id, stripe_onboarded)')
     .eq('id', order_id)
     .single()
 
@@ -33,6 +33,13 @@ export async function createPaymentIntent(req: Request, res: Response): Promise<
 
   const stripe = stripeClient()
   const amountCents = Math.round(Number(order.total) * 100)
+  const tenant = (order as any).tenants as { name: string; stripe_account_id?: string; stripe_onboarded?: boolean }
+
+  // Si el negocio ya conecto y termino el onboarding de su propia cuenta de
+  // Stripe, el cobro se crea EN esa cuenta — el dinero le cae directo a el,
+  // no a la cuenta de la plataforma. Si no, cae a la plataforma (modo demo).
+  const useConnected = tenant?.stripe_account_id && tenant?.stripe_onboarded
+  const requestOptions = useConnected ? { stripeAccount: tenant.stripe_account_id } : undefined
 
   const paymentIntent = await stripe.paymentIntents.create({
     amount:   amountCents,
@@ -40,7 +47,7 @@ export async function createPaymentIntent(req: Request, res: Response): Promise<
     metadata: { order_id, order_number: order.order_number },
     automatic_payment_methods: { enabled: true },
     description: `Orden ${order.order_number}`,
-  })
+  }, requestOptions)
 
   res.json({
     success: true,
@@ -65,8 +72,18 @@ export async function confirmStripePayment(req: Request, res: Response): Promise
 
   const { payment_intent_id, order_id } = parsed.data
 
+  const { data: orderTenant } = await supabase
+    .from('orders')
+    .select('tenants(stripe_account_id, stripe_onboarded)')
+    .eq('id', order_id)
+    .single()
+  const tenantForIntent = (orderTenant as any)?.tenants as { stripe_account_id?: string; stripe_onboarded?: boolean } | undefined
+  const connectOptions = tenantForIntent?.stripe_account_id && tenantForIntent?.stripe_onboarded
+    ? { stripeAccount: tenantForIntent.stripe_account_id }
+    : undefined
+
   const stripe = stripeClient()
-  const intent = await stripe.paymentIntents.retrieve(payment_intent_id)
+  const intent = await stripe.paymentIntents.retrieve(payment_intent_id, undefined, connectOptions)
 
   if (intent.status !== 'succeeded') {
     res.status(400).json({ success: false, error: `Pago no completado: ${intent.status}` }); return

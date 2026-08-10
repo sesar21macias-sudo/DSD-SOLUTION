@@ -21,7 +21,17 @@ import loyaltyRoutes from './modules/loyalty/loyalty.routes'
 import deliveryRoutes from './modules/delivery/delivery.routes'
 import reservationsRoutes from './modules/reservations/reservations.routes'
 import settingsRoutes from './modules/settings/settings.routes'
+import stripeConnectRoutes from './modules/stripe-connect/stripe-connect.routes'
 import { errorHandler, notFound } from './middleware/errorHandler'
+
+// Sin esto, un error async no atrapado en cualquier endpoint tumba todo el
+// servidor (Node mata el proceso por default).
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason)
+})
 
 const app = express()
 const httpServer = createServer(app)
@@ -77,6 +87,7 @@ app.use('/api/loyalty', loyaltyRoutes)
 app.use('/api/delivery', deliveryRoutes)
 app.use('/api/reservations', reservationsRoutes)
 app.use('/api/settings', settingsRoutes)
+app.use('/api/stripe-connect', stripeConnectRoutes)
 
 // Socket.io — real-time kitchen display. Solo lo usan las páginas autenticadas
 // del dashboard (/pos/*); el flujo público de pago no depende de sockets.
