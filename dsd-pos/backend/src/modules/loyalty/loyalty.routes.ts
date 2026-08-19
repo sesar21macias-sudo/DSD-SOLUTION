@@ -10,8 +10,10 @@ const router = Router()
 
 router.use(authenticate)
 
-router.get('/customers', listCustomers)
-router.get('/customers/:phone', getCustomerByPhone)
+// Telefonos y gasto de clientes son datos personales — no cualquier rol
+// autenticado (mesero, cocina) debe poder verlos.
+router.get('/customers', authorize('tenant_admin', 'manager', 'cashier'), listCustomers)
+router.get('/customers/:phone', authorize('tenant_admin', 'manager', 'cashier'), getCustomerByPhone)
 
 router.get('/rewards', listRewards)
 router.post('/rewards', authorize('tenant_admin', 'manager'), createReward)

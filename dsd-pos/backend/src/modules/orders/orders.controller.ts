@@ -239,6 +239,18 @@ export async function addOrderItem(req: AuthRequest, res: Response): Promise<voi
 }
 
 export async function removeOrderItem(req: AuthRequest, res: Response): Promise<void> {
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, status')
+    .eq('id', req.params['id'])
+    .eq('tenant_id', req.user!.tenantId)
+    .single()
+
+  if (!order) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }
+  if (['paid', 'cancelled'].includes(order.status)) {
+    res.status(400).json({ success: false, error: 'No se pueden quitar items de esta orden' }); return
+  }
+
   const { error, count } = await supabase
     .from('order_items')
     .delete({ count: 'exact' })
@@ -248,6 +260,19 @@ export async function removeOrderItem(req: AuthRequest, res: Response): Promise<
 
   if (error) { sendError(res, 500, error); return }
   if (!count) { res.status(404).json({ success: false, error: 'Item no encontrado' }); return }
+
+  // Sin esto el item se borra pero la orden se queda con el total viejo — el
+  // cliente termina pagando por un producto que ya no esta en su cuenta.
+  const { data: remainingItems } = await supabase
+    .from('order_items')
+    .select('subtotal')
+    .eq('order_id', req.params['id'])
+  const newSubtotal = (remainingItems ?? []).reduce((sum, i) => sum + Number(i.subtotal), 0)
+  await supabase.from('orders').update({
+    subtotal: newSubtotal,
+    tax: newSubtotal * 0.16,
+    total: newSubtotal * 1.16,
+  }).eq('id', req.params['id'])
 
   await logAudit({
     tenantId: req.user!.tenantId,
