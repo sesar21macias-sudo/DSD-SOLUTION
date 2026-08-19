@@ -21,31 +21,43 @@ interface Product { id: string; name: string; description?: string; price_mxn: n
 interface Tenant { id: string; name: string; slug: string; currency: string; logo_url?: string; slogan?: string }
 interface CartItem { product_id: string; name: string; price: number; quantity: number; photo?: string }
 
-// Fotos por palabra clave del platillo — mucho mas relevante que rotar un set
-// generico, y evita que dos productos consecutivos se vean con la misma imagen.
-const KEYWORD_PHOTOS: [string, string][] = [
-  ['sushi',    'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&w=500&q=80'],
-  ['roll',     'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&w=500&q=80'],
-  ['california', 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?auto=format&w=500&q=80'],
-  ['caterpillar', 'https://images.unsplash.com/photo-1617196034183-421b4917c92d?auto=format&w=500&q=80'],
-  ['philly',   'https://images.unsplash.com/photo-1611141671808-0b2988aef7bb?auto=format&w=500&q=80'],
-  ['kamikaze', 'https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?auto=format&w=500&q=80'],
-  ['bombazo',  'https://images.unsplash.com/photo-1617196034700-ac52ecda63dd?auto=format&w=500&q=80'],
-  ['ninja',    'https://images.unsplash.com/photo-1617196034796-73ca2f0fd6a5?auto=format&w=500&q=80'],
-  ['yakisoba', 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&w=500&q=80'],
-  ['yakimeshi','https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&w=500&q=80'],
-  ['teriyaki', 'https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?auto=format&w=500&q=80'],
-  ['orange',   'https://images.unsplash.com/photo-1626082927389-6cd097cee6a6?auto=format&w=500&q=80'],
-  ['thai',     'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&w=500&q=80'],
-  ['chicken',  'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&w=500&q=80'],
-  ['pollo',    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&w=500&q=80'],
-  ['res',      'https://images.unsplash.com/photo-1607116667981-27b1f6f52c17?auto=format&w=500&q=80'],
-  ['camaron',  'https://images.unsplash.com/photo-1625943913099-8f8c0b3a3f27?auto=format&w=500&q=80'],
-  ['gyoza',    'https://images.unsplash.com/photo-1626200926749-458702adca69?auto=format&w=500&q=80'],
-  ['primavera','https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&w=500&q=80'],
-  ['agua',     'https://images.unsplash.com/photo-1560023907-5f339617ea30?auto=format&w=500&q=80'],
-  ['refresco', 'https://images.unsplash.com/photo-1554866585-cd94860890b7?auto=format&w=500&q=80'],
-]
+// Foto exacta por nombre de producto — con un menu fijo esto da mejor resultado
+// que emparejar por una sola palabra clave (dos "Pollo" de categorias distintas
+// terminaban con la misma foto). Cada entrada viene de un fotografo distinto
+// para que ademas se vean realmente diferentes entre si.
+const EXACT_PHOTOS: Record<string, string> = {
+  'yakisoba pollo':          'https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&w=500&q=80',
+  'yakisoba res':            'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&w=500&q=80',
+  'yakisoba costilla':       'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&w=500&q=80',
+  'yakisoba camaron':        'https://images.unsplash.com/photo-1594007654729-407eedc4be65?auto=format&w=500&q=80',
+  'yakisoba sin proteina':   'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&w=500&q=80',
+  'yakimeshi pollo':         'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&w=500&q=80',
+  'yakimeshi res':           'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&w=500&q=80',
+  'yakimeshi costilla':      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&w=500&q=80',
+  'yakimeshi camaron':       'https://images.unsplash.com/photo-1546069901-d5bfd2cbfb1f?auto=format&w=500&q=80',
+  'yakimeshi yakiwings':     'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&w=500&q=80',
+  'yakimeshi sin proteina':  'https://images.unsplash.com/photo-1512152272829-e3139592d56f?auto=format&w=500&q=80',
+  'orange bowl':             'https://images.unsplash.com/photo-1548943487-a2e4e43b4853?auto=format&w=500&q=80',
+  'teriyaki pollo':          'https://images.unsplash.com/photo-1580217593608-61931cefc821?auto=format&w=500&q=80',
+  'teriyaki res':            'https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?auto=format&w=500&q=80',
+  'teriyaki costilla':       'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&w=500&q=80',
+  'teriyaki camaron':        'https://images.unsplash.com/photo-1625944230945-1b7dd3b949ab?auto=format&w=500&q=80',
+  'teriyaki sin proteina':   'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&w=500&q=80',
+  'chicken thai bowl':       'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&w=500&q=80',
+  'california':              'https://images.unsplash.com/photo-1611143669185-af224c5e3252?auto=format&w=500&q=80',
+  'caterpillar':             'https://images.unsplash.com/photo-1617196034183-421b4917c92d?auto=format&w=500&q=80',
+  'philly roll':             'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&w=500&q=80',
+  'kamikaze':                'https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?auto=format&w=500&q=80',
+  'bombazo':                 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&w=500&q=80',
+  'ninja ball pollo':        'https://images.unsplash.com/photo-1519996529931-28324d5a630e?auto=format&w=500&q=80',
+  'ninja ball res':          'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&w=500&q=80',
+  'ninja ball camaron':      'https://images.unsplash.com/photo-1541014741259-de529411b96a?auto=format&w=500&q=80',
+  'gyozas':                  'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&w=500&q=80',
+  'rollos primavera (3pz)':  'https://images.unsplash.com/photo-1569058242252-623df46b5025?auto=format&w=500&q=80',
+  'rollos primavera (c/u)':  'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&w=500&q=80',
+  'agua embotellada ciel':   'https://images.unsplash.com/photo-1560023907-5f339617ea30?auto=format&w=500&q=80',
+  'refresco lata':           'https://images.unsplash.com/photo-1554866585-cd94860890b7?auto=format&w=500&q=80',
+}
 const FALLBACK_PHOTOS = [
   'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&w=500&q=80',
   'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?auto=format&w=500&q=80',
@@ -55,11 +67,10 @@ const FALLBACK_PHOTOS = [
 ]
 function photoFor(p: { id: string; name: string; image_url?: string }): string {
   if (p.image_url) return p.image_url
-  const lower = p.name.toLowerCase()
-  const match = KEYWORD_PHOTOS.find(([kw]) => lower.includes(kw))
-  if (match) return match[1]
-  // Sin match de palabra clave: hash deterministico del id para variar sin repetir
-  // el mismo patron que el orden de la categoria (evita que index 0,1,2.. se repita).
+  const exact = EXACT_PHOTOS[p.name.toLowerCase().trim()]
+  if (exact) return exact
+  // Producto nuevo sin match exacto: hash deterministico del id para variar
+  // sin depender del orden de la categoria.
   let hash = 0
   for (const ch of p.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
   return FALLBACK_PHOTOS[hash % FALLBACK_PHOTOS.length]
