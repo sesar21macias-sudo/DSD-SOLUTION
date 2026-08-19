@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useSocket } from '@/hooks/useSocket'
 import { ClipboardList, RefreshCw, LayoutGrid, ShoppingBag, Bike, Globe } from 'lucide-react'
 
 interface Order {
@@ -35,6 +36,16 @@ export default function OrdersPage() {
     queryKey: ['all-orders'],
     queryFn: async () => { const { data } = await api.get('/orders'); return data.data },
     refetchInterval: 5000,
+  })
+
+  // Notificacion en vivo cuando llega un pedido nuevo desde la app del cliente
+  // (mesa o para llevar) — sin esto, el cajero solo se entera al refrescar.
+  useSocket({
+    'order:new': (data: unknown) => {
+      const order = data as { order_number: string; customer_name?: string }
+      toast.success(`Nuevo pedido ${order.order_number}${order.customer_name ? ` — ${order.customer_name}` : ''}`, { icon: '🔔', duration: 5000 })
+      qc.invalidateQueries({ queryKey: ['all-orders'] })
+    },
   })
 
   const markPaid = useMutation({
@@ -144,6 +155,9 @@ export default function OrdersPage() {
                         <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#f0f2f5', color: '#6b7280' }}>
                           {order.type === 'dine_in' ? `Mesa ${order.tables?.number ?? '—'}` : typeLabel[order.type] ?? order.type}
                         </span>
+                        {order.customer_name && (
+                          <span className="text-xs font-medium" style={{ color: '#374151' }}>{order.customer_name}</span>
+                        )}
                       </div>
                       <p className="text-xs mt-1 truncate" style={{ color: '#9ca3af' }}>
                         {order.order_items.map(i => `${i.quantity}× ${i.menu_products?.name ?? i.notes ?? 'Producto'}`).join(' · ')}

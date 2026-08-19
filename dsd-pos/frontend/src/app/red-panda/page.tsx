@@ -21,6 +21,31 @@ interface Product { id: string; name: string; description?: string; price_mxn: n
 interface Tenant { id: string; name: string; slug: string; currency: string; logo_url?: string; slogan?: string }
 interface CartItem { product_id: string; name: string; price: number; quantity: number; photo?: string }
 
+// Fotos por palabra clave del platillo — mucho mas relevante que rotar un set
+// generico, y evita que dos productos consecutivos se vean con la misma imagen.
+const KEYWORD_PHOTOS: [string, string][] = [
+  ['sushi',    'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&w=500&q=80'],
+  ['roll',     'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&w=500&q=80'],
+  ['california', 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?auto=format&w=500&q=80'],
+  ['caterpillar', 'https://images.unsplash.com/photo-1617196034183-421b4917c92d?auto=format&w=500&q=80'],
+  ['philly',   'https://images.unsplash.com/photo-1611141671808-0b2988aef7bb?auto=format&w=500&q=80'],
+  ['kamikaze', 'https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?auto=format&w=500&q=80'],
+  ['bombazo',  'https://images.unsplash.com/photo-1617196034700-ac52ecda63dd?auto=format&w=500&q=80'],
+  ['ninja',    'https://images.unsplash.com/photo-1617196034796-73ca2f0fd6a5?auto=format&w=500&q=80'],
+  ['yakisoba', 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&w=500&q=80'],
+  ['yakimeshi','https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&w=500&q=80'],
+  ['teriyaki', 'https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?auto=format&w=500&q=80'],
+  ['orange',   'https://images.unsplash.com/photo-1626082927389-6cd097cee6a6?auto=format&w=500&q=80'],
+  ['thai',     'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&w=500&q=80'],
+  ['chicken',  'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&w=500&q=80'],
+  ['pollo',    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&w=500&q=80'],
+  ['res',      'https://images.unsplash.com/photo-1607116667981-27b1f6f52c17?auto=format&w=500&q=80'],
+  ['camaron',  'https://images.unsplash.com/photo-1625943913099-8f8c0b3a3f27?auto=format&w=500&q=80'],
+  ['gyoza',    'https://images.unsplash.com/photo-1626200926749-458702adca69?auto=format&w=500&q=80'],
+  ['primavera','https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&w=500&q=80'],
+  ['agua',     'https://images.unsplash.com/photo-1560023907-5f339617ea30?auto=format&w=500&q=80'],
+  ['refresco', 'https://images.unsplash.com/photo-1554866585-cd94860890b7?auto=format&w=500&q=80'],
+]
 const FALLBACK_PHOTOS = [
   'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&w=500&q=80',
   'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?auto=format&w=500&q=80',
@@ -28,6 +53,17 @@ const FALLBACK_PHOTOS = [
   'https://images.unsplash.com/photo-1516684732162-798a0062be99?auto=format&w=500&q=80',
   'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&w=500&q=80',
 ]
+function photoFor(p: { id: string; name: string; image_url?: string }): string {
+  if (p.image_url) return p.image_url
+  const lower = p.name.toLowerCase()
+  const match = KEYWORD_PHOTOS.find(([kw]) => lower.includes(kw))
+  if (match) return match[1]
+  // Sin match de palabra clave: hash deterministico del id para variar sin repetir
+  // el mismo patron que el orden de la categoria (evita que index 0,1,2.. se repita).
+  let hash = 0
+  for (const ch of p.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
+  return FALLBACK_PHOTOS[hash % FALLBACK_PHOTOS.length]
+}
 
 export default function RedPandaOrderPage() {
   const [cart, setCart] = useState<CartItem[]>([])
@@ -35,10 +71,12 @@ export default function RedPandaOrderPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
   const [customerName, setCustomerName] = useState('')
+  const [orderNotes, setOrderNotes] = useState('')
   const [orderType, setOrderType] = useState<'dine_in' | 'takeout'>('takeout')
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null)
   const [payingCard, setPayingCard] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [bump, setBump] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['pub-menu', SLUG],
@@ -53,13 +91,14 @@ export default function RedPandaOrderPage() {
       const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
       const { data } = await pub.post(`/public/online-order/${SLUG}`, {
         customer_name: customerName.trim() || 'Cliente', order_type: orderType, items,
+        notes: orderNotes.trim() || undefined,
       })
       return data.data
     },
     onSuccess: (res) => {
       setOrderNumber(res.order_number ?? res.order_id?.slice(0, 6).toUpperCase() ?? '')
       setPlacedOrderId(res.order_id)
-      setShowSuccess(true); setCart([]); setShowCart(false)
+      setShowSuccess(true); setCart([]); setShowCart(false); setOrderNotes('')
     },
     onError: () => alert('No se pudo enviar la orden. Intenta de nuevo.'),
   })
@@ -84,6 +123,8 @@ export default function RedPandaOrderPage() {
     })
     setToast(`${p.name} agregado`)
     window.setTimeout(() => setToast(null), 1600)
+    setBump(true)
+    window.setTimeout(() => setBump(false), 280)
   }
   function updateQty(id: string, qty: number) {
     setCart(c => qty <= 0 ? c.filter(i => i.product_id !== id) : c.map(i => i.product_id === id ? { ...i, quantity: qty } : i))
@@ -138,6 +179,8 @@ export default function RedPandaOrderPage() {
         .rp-card:hover img{transform:scale(1.08)}
         .rp-card img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .45s ease}
         .rp-cta{transition:filter .15s,transform .15s}
+        @keyframes rp-bump{0%{transform:scale(1)}40%{transform:scale(1.15)}100%{transform:scale(1)}}
+        .rp-bump{animation:rp-bump .28s ease}
         .rp-cta:hover{filter:brightness(1.15)}
         .rp-cta:active{transform:scale(0.96)}
         .rp-icon-btn{transition:filter .15s,transform .15s}
@@ -156,7 +199,7 @@ export default function RedPandaOrderPage() {
           {tenant?.logo_url && <img src={tenant.logo_url} alt="" style={{ height: 38, width: 38, borderRadius: '50%', objectFit: 'cover', background: WHITE }} />}
           RED<span style={{ color: RED }}>P</span>ANDA
         </div>
-        <button onClick={() => setShowCart(true)} className="rp-cta" style={{ background: RED, color: WHITE, border: 'none', padding: '10px 20px', fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={() => setShowCart(true)} className={`rp-cta${bump ? ' rp-bump' : ''}`} style={{ background: RED, color: WHITE, border: 'none', padding: '10px 20px', fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ShoppingBag size={15} /> {totalItems > 0 ? `Carrito (${totalItems})` : 'Ordenar'}
         </button>
       </nav>
@@ -180,7 +223,7 @@ export default function RedPandaOrderPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, maxWidth: 440 }}>
               {heroBowls.map((p, i) => (
                 <div key={p.id} className="rp-bowl" style={{ aspectRatio: '1', borderRadius: '50%', overflow: 'hidden', border: `4px solid rgba(245,245,245,0.25)` }}>
-                  <img src={p.image_url || FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={photoFor(p)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ))}
             </div>
@@ -227,8 +270,8 @@ export default function RedPandaOrderPage() {
         {featured.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gridTemplateRows: '260px 260px', gap: 14, marginBottom: 56 }}>
             {featured.map((p, i) => (
-              <div key={p.id} onClick={() => addToCart(p, p.image_url || FALLBACK_PHOTOS[i])} className="rp-card" style={{ gridRow: i === 0 ? 'span 2' : undefined, boxShadow: i === 0 ? '0 20px 40px rgba(0,0,0,0.35)' : undefined }}>
-                <img src={p.image_url || FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length]} alt={p.name} />
+              <div key={p.id} onClick={() => addToCart(p, photoFor(p))} className="rp-card" style={{ gridRow: i === 0 ? 'span 2' : undefined, boxShadow: i === 0 ? '0 20px 40px rgba(0,0,0,0.35)' : undefined }}>
+                <img src={photoFor(p)} alt={p.name} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(17,17,17,0.88) 0%, rgba(17,17,17,0) 55%)' }} />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 20px' }}>
                   <div className="rp-display" style={{ fontSize: i === 0 ? 24 : 19, color: WHITE }}>{p.name}</div>
@@ -249,14 +292,14 @@ export default function RedPandaOrderPage() {
                 {items.map((p, i) => (
                   <div key={p.id} className="rp-product-card" style={{ background: BLACK, borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ height: 140, overflow: 'hidden' }}>
-                      <img src={p.image_url || FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={photoFor(p)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                     <div style={{ padding: '14px 16px' }}>
                       <div className="rp-display" style={{ color: WHITE, fontSize: 16, letterSpacing: '0.01em' }}>{p.name}</div>
                       {p.description && <div style={{ color: 'rgba(245,245,245,0.5)', fontSize: 12, marginTop: 4, lineHeight: 1.4 }}>{p.description}</div>}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
                         <span className="rp-display" style={{ color: LIME, fontSize: 20 }}>${p.price_mxn}</span>
-                        <button onClick={() => addToCart(p, p.image_url || FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length])} className="rp-icon-btn"
+                        <button onClick={() => addToCart(p, photoFor(p))} className="rp-icon-btn"
                           aria-label={`Agregar ${p.name} al carrito`}
                           style={{ background: RED, border: 'none', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: WHITE }}>
                           <Plus size={15} />
@@ -322,7 +365,9 @@ export default function RedPandaOrderPage() {
                   ))}
                 </div>
                 <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Tu nombre"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 12, fontSize: 14 }} />
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 10, fontSize: 14 }} />
+                <textarea value={orderNotes} onChange={e => setOrderNotes(e.target.value)} placeholder="Notas (alergias, sin cebolla, etc.)" rows={2}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 12, fontSize: 13, fontFamily: 'inherit', resize: 'none' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginBottom: 14, borderTop: '1px dashed #ddd', fontWeight: 700, fontSize: 17 }}>
                   <span className="rp-display" style={{ fontSize: 15 }}>Total</span><span style={{ color: RED }}>${total.toFixed(2)}</span>
                 </div>

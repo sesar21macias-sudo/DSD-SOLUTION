@@ -34,7 +34,10 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
   const [showSuccess, setShowSuccess] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
   const [customerName, setCustomerName] = useState('')
+  const [orderNotes, setOrderNotes] = useState('')
   const [orderType, setOrderType] = useState<'dine_in' | 'takeout'>('takeout')
+  const [toast, setToast] = useState<string | null>(null)
+  const [bump, setBump] = useState(false)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['pub-menu', slug],
@@ -56,12 +59,13 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
       const { data } = await pub.post(`/public/online-order/${slug}`, {
         customer_name: customerName.trim() || 'Cliente', order_type: orderType, items,
+        notes: orderNotes.trim() || undefined,
       })
       return data.data
     },
     onSuccess: (res) => {
       setOrderNumber(res.order_number ?? res.order_id?.slice(0, 6).toUpperCase() ?? '')
-      setShowSuccess(true); setCart([]); setShowCart(false)
+      setShowSuccess(true); setCart([]); setShowCart(false); setOrderNotes('')
     },
     onError: () => alert('No se pudo enviar la orden. Intenta de nuevo.'),
   })
@@ -72,6 +76,10 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
       if (existing) return c.map(i => i.product_id === p.id ? { ...i, quantity: i.quantity + 1 } : i)
       return [...c, { product_id: p.id, name: p.name, price: p.price_mxn, quantity: 1, photo: p.image_url }]
     })
+    setToast(`${p.name} agregado`)
+    window.setTimeout(() => setToast(null), 1600)
+    setBump(true)
+    window.setTimeout(() => setBump(false), 280)
   }
   function updateQty(id: string, qty: number) {
     setCart(c => qty <= 0 ? c.filter(i => i.product_id !== id) : c.map(i => i.product_id === id ? { ...i, quantity: qty } : i))
@@ -139,10 +147,16 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
 
       <div style={{ position: 'sticky', top: 0, zIndex: 20, background: bg, borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ color: text, fontWeight: 700, fontSize: 14 }}>{tenant.name}</span>
-        <button onClick={() => setShowCart(true)} style={{ background: totalItems > 0 ? accent : surface, color: totalItems > 0 ? '#fff' : text2, border: 'none', borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+        <button onClick={() => setShowCart(true)} style={{ background: totalItems > 0 ? accent : surface, color: totalItems > 0 ? '#fff' : text2, border: 'none', borderRadius: 10, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'transform .15s', transform: bump ? 'scale(1.15)' : 'scale(1)' }}>
           <ShoppingBag size={14} /> {totalItems > 0 ? totalItems : ''}
         </button>
       </div>
+
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 70, background: surface, color: text, padding: '11px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <CheckCircle2 size={15} color={accent} /> {toast}
+        </div>
+      )}
 
       <div style={{ padding: '16px', maxWidth: 640, margin: '0 auto' }}>
         {categories.map(cat => {
@@ -202,7 +216,9 @@ export default function MenuPage({ params }: { params: Promise<{ slug: string }>
                   ))}
                 </div>
                 <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Tu nombre"
-                  style={{ width: '100%', padding: 11, borderRadius: 10, background: surface, border: '1px solid rgba(255,255,255,0.08)', color: text, marginBottom: 12, fontSize: 14 }} />
+                  style={{ width: '100%', padding: 11, borderRadius: 10, background: surface, border: '1px solid rgba(255,255,255,0.08)', color: text, marginBottom: 10, fontSize: 14 }} />
+                <textarea value={orderNotes} onChange={e => setOrderNotes(e.target.value)} placeholder="Notas (alergias, sin cebolla, etc.)" rows={2}
+                  style={{ width: '100%', padding: 11, borderRadius: 10, background: surface, border: '1px solid rgba(255,255,255,0.08)', color: text, marginBottom: 12, fontSize: 13, fontFamily: 'inherit', resize: 'none' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontWeight: 800, fontSize: 16, color: text }}>
                   <span>Total</span><span>${total.toFixed(2)}</span>
                 </div>
