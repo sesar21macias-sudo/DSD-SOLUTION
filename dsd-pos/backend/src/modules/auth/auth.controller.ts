@@ -9,8 +9,8 @@ import { sendError } from '../../utils/sendError'
 import { logAudit } from '../../utils/auditLog'
 
 const loginSchema = z.object({
-  email: z.string().email('Email invÃ¡lido'),
-  password: z.string().min(6, 'ContraseÃ±a mÃ­nimo 6 caracteres'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Contraseña mínimo 6 caracteres'),
 })
 
 const signupSchema = z.object({
@@ -48,7 +48,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     .single()
 
   if (error || !user) {
-    const response: ApiResponse = { success: false, error: 'Credenciales invÃ¡lidas' }
+    const response: ApiResponse = { success: false, error: 'Credenciales inválidas' }
     res.status(401).json(response)
     return
   }
@@ -61,7 +61,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) {
-    const response: ApiResponse = { success: false, error: 'Credenciales invÃ¡lidas' }
+    const response: ApiResponse = { success: false, error: 'Credenciales inválidas' }
     res.status(401).json(response)
     return
   }

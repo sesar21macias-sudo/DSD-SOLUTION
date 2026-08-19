@@ -99,7 +99,7 @@ export async function createOrder(req: AuthRequest, res: Response): Promise<void
     const p = products.find(p => p.id === i.product_id)
     return !p || !p.is_active
   })
-  if (inactiveOrMissing) { res.status(400).json({ success: false, error: 'Uno o mÃ¡s productos no estÃ¡n disponibles' }); return }
+  if (inactiveOrMissing) { res.status(400).json({ success: false, error: 'Uno o más productos no están disponibles' }); return }
 
   const currency = orderData.currency
   const orderItems = items.map(item => {
@@ -161,7 +161,7 @@ export async function updateOrderStatus(req: AuthRequest, res: Response): Promis
   const validStatuses: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'paid', 'cancelled']
 
   if (!validStatuses.includes(status)) {
-    res.status(400).json({ success: false, error: 'Estado invÃ¡lido' }); return
+    res.status(400).json({ success: false, error: 'Estado inválido' }); return
   }
 
   const { data, error } = await supabase
