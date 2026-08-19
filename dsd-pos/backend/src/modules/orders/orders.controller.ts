@@ -41,7 +41,8 @@ export async function getOrders(req: AuthRequest, res: Response): Promise<void> 
     .select(`
       *,
       order_items(*, menu_products(name, image_url)),
-      tables(number, name)
+      tables(number, name),
+      payments(method, status)
     `)
     .eq('tenant_id', req.user!.tenantId)
     .order('created_at', { ascending: false })
@@ -176,6 +177,46 @@ export async function updateOrderStatus(req: AuthRequest, res: Response): Promis
 
   io.to(`tenant:${req.user!.tenantId}`).emit('order:updated', data)
   res.json({ success: true, data })
+}
+
+// Cobrar en caja una orden "pagar en caja" (pending_payment): registra el
+// pago y recien ahi la manda a cocina. Antes de cobrarla nunca debe llegar
+// a la cocina — asi se evita preparar comida que nadie paso a pagar.
+export async function chargeAtCounter(req: AuthRequest, res: Response): Promise<void> {
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, total, currency, status, customer_phone')
+    .eq('id', req.params['id'])
+    .eq('tenant_id', req.user!.tenantId)
+    .single()
+
+  if (!order) { res.status(404).json({ success: false, error: 'Orden no encontrada' }); return }
+  if (order.status !== 'pending_payment') {
+    res.status(400).json({ success: false, error: 'Esta orden no esta esperando cobro en caja' }); return
+  }
+
+  const { error: payError } = await supabase.from('payments').insert({
+    tenant_id: req.user!.tenantId,
+    order_id: order.id,
+    amount: order.total,
+    currency: order.currency,
+    method: 'cash',
+    status: 'completed',
+    processed_by: req.user!.userId,
+  })
+  if (payError) { sendError(res, 500, payError, 'No se pudo registrar el cobro'); return }
+
+  const { data: updated, error } = await supabase
+    .from('orders')
+    .update({ status: 'pending', updated_at: new Date().toISOString() })
+    .eq('id', req.params['id'])
+    .select('*, order_items(*, menu_products(name, image_url)), tables(number, name)')
+    .single()
+
+  if (error || !updated) { sendError(res, 500, error, 'No se pudo enviar la orden a cocina'); return }
+
+  io.to(`tenant:${req.user!.tenantId}`).emit('order:new', { ...updated, source: 'counter' })
+  res.json({ success: true, data: updated })
 }
 
 export async function addOrderItem(req: AuthRequest, res: Response): Promise<void> {

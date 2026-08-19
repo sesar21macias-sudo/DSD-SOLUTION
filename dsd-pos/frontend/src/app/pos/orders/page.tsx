@@ -11,9 +11,11 @@ interface Order {
   customer_name?: string; total: number; currency: string; created_at: string
   tables?: { number: number }
   order_items: { quantity: number; notes?: string | null; menu_products: { name: string } | null }[]
+  payments?: { method: string; status: string }[]
 }
 
 const STATUS_CFG: Record<string, { label: string; fg: string; bg: string; border: string }> = {
+  pending_payment: { label: 'Por cobrar en caja', fg: '#9a3412', bg: '#fff7ed', border: '#fdba74' },
   pending:   { label: 'Pendiente',   fg: '#92400e', bg: '#fffbeb', border: '#fde68a' },
   confirmed: { label: 'Confirmada',  fg: '#1e40af', bg: '#eff6ff', border: '#bfdbfe' },
   preparing: { label: 'Preparando', fg: '#9a3412', bg: '#fff7ed', border: '#fed7aa' },
@@ -22,6 +24,8 @@ const STATUS_CFG: Record<string, { label: string; fg: string; bg: string; border
   paid:      { label: 'Pagada',     fg: '#374151', bg: '#f9fafb', border: '#e5e7eb' },
   cancelled: { label: 'Cancelada',  fg: '#991b1b', bg: '#fef2f2', border: '#fecaca' },
 }
+
+const PAYMENT_LABEL: Record<string, string> = { card: '💳 Tarjeta', cash: '💵 Efectivo', transfer: '🏦 Transferencia', online: '💳 En linea' }
 
 type FilterType   = 'all' | 'dine_in' | 'takeout' | 'delivery' | 'online'
 type FilterStatus = 'all' | 'active' | 'paid' | 'cancelled'
@@ -47,6 +51,11 @@ export default function OrdersPage() {
   const cancelOrder = useMutation({
     mutationFn: (id: string) => api.patch(`/orders/${id}/cancel`, { reason: 'Cancelada desde panel' }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['all-orders'] }); toast.success('Orden cancelada') },
+  })
+  const chargeAtCounter = useMutation({
+    mutationFn: (id: string) => api.post(`/orders/${id}/charge-counter`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['all-orders'] }); toast.success('Cobrado — enviado a cocina') },
+    onError: (e: any) => toast.error(e?.response?.data?.error ?? 'No se pudo cobrar'),
   })
 
   const filtered = orders?.filter(o => {
@@ -150,6 +159,14 @@ export default function OrdersPage() {
                         {order.customer_name && (
                           <span className="text-xs font-medium" style={{ color: '#374151' }}>{order.customer_name}</span>
                         )}
+                        {(() => {
+                          const paid = order.payments?.find(p => p.status === 'completed')
+                          return paid ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}>
+                              {PAYMENT_LABEL[paid.method] ?? paid.method}
+                            </span>
+                          ) : null
+                        })()}
                       </div>
                       <p className="text-xs mt-1 truncate" style={{ color: '#9ca3af' }}>
                         {order.order_items.map(i => `${i.quantity}× ${i.menu_products?.name ?? i.notes ?? 'Producto'}`).join(' · ')}
@@ -164,7 +181,19 @@ export default function OrdersPage() {
                       </p>
                     </div>
                   </div>
-                  {!['paid','cancelled'].includes(order.status) && (
+                  {order.status === 'pending_payment' && (
+                    <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: '#fff7ed', border: '1px solid #fdba74' }}>
+                      <span className="text-xs font-medium flex-1" style={{ color: '#9a3412' }}>
+                        Cliente muestra su ticket con QR — cobra y se manda a cocina
+                      </span>
+                      <button onClick={() => chargeAtCounter.mutate(order.id)} disabled={chargeAtCounter.isPending}
+                        className="text-white text-xs font-bold px-4 py-2 rounded-lg transition disabled:opacity-40"
+                        style={{ background: '#16a34a' }}>
+                        {chargeAtCounter.isPending ? 'Cobrando...' : 'Cobrar y enviar a cocina'}
+                      </button>
+                    </div>
+                  )}
+                  {!['paid','cancelled','pending_payment'].includes(order.status) && (
                     <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid #f0f2f5' }}>
                       {order.status === 'delivered' && (
                         <button onClick={() => markPaid.mutate(order.id)} disabled={markPaid.isPending}

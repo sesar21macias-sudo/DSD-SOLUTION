@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   getOrders, getOrder, createOrder, updateOrderStatus,
   addOrderItem, removeOrderItem, cancelOrder, mergeOrders, applyDiscount,
+  chargeAtCounter,
 } from './orders.controller'
 import { authenticate, authorize } from '../../middleware/auth'
 
@@ -16,6 +17,7 @@ router.patch('/:id/status', authorize('tenant_admin', 'manager', 'cashier', 'kit
 router.post('/:id/items', authorize('tenant_admin', 'manager', 'cashier', 'waiter'), addOrderItem)
 router.delete('/:id/items/:itemId', authorize('tenant_admin', 'manager', 'cashier', 'waiter'), removeOrderItem)
 router.patch('/:id/cancel', authorize('tenant_admin', 'manager', 'cashier'), cancelOrder)
+router.post('/:id/charge-counter', authorize('tenant_admin', 'manager', 'cashier'), chargeAtCounter)
 router.post('/:id/merge', authorize('tenant_admin', 'manager', 'cashier'), mergeOrders)
 router.post('/:id/discount', authorize('tenant_admin', 'manager', 'cashier'), applyDiscount)
 

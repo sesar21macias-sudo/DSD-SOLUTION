@@ -116,6 +116,10 @@ export default function RedPandaOrderPage() {
       const { data } = await pub.post(`/public/online-order/${SLUG}`, {
         customer_name: customerName.trim() || 'Cliente', order_type: orderType, items,
         notes: orderNotes.trim() || undefined,
+        // Ambos metodos requieren cobro antes de llegar a cocina: tarjeta se
+        // cobra ahora mismo via Mercado Pago, caja se cobra cuando el cajero
+        // presiona "Cobrar" con el ticket en mano.
+        require_payment: true,
       })
       return data.data
     },
