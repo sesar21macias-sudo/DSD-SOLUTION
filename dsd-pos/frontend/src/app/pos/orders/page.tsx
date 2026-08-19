@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { useSocket } from '@/hooks/useSocket'
 import { ClipboardList, RefreshCw, LayoutGrid, ShoppingBag, Bike, Globe } from 'lucide-react'
 
 interface Order {
@@ -38,15 +37,8 @@ export default function OrdersPage() {
     refetchInterval: 5000,
   })
 
-  // Notificacion en vivo cuando llega un pedido nuevo desde la app del cliente
-  // (mesa o para llevar) — sin esto, el cajero solo se entera al refrescar.
-  useSocket({
-    'order:new': (data: unknown) => {
-      const order = data as { order_number: string; customer_name?: string }
-      toast.success(`Nuevo pedido ${order.order_number}${order.customer_name ? ` — ${order.customer_name}` : ''}`, { icon: '🔔', duration: 5000 })
-      qc.invalidateQueries({ queryKey: ['all-orders'] })
-    },
-  })
+  // La notificacion de pedido nuevo ahora vive en el layout (pos/layout.tsx)
+  // para que suene sin importar en que pantalla del POS este el cajero.
 
   const markPaid = useMutation({
     mutationFn: (id: string) => api.patch(`/orders/${id}/status`, { status: 'paid' }),

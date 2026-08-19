@@ -83,6 +83,11 @@ export default function TablesPage() {
     queryKey: ['tables'],
     queryFn: async () => { const { data } = await api.get('/menu/tables'); return data.data },
   })
+  const { data: tenantSettings } = useQuery<{ slug: string }>({
+    queryKey: ['tenant-settings'],
+    queryFn: async () => { const { data } = await api.get('/settings'); return data.data },
+    staleTime: Infinity,
+  })
   const { data: activeOrders } = useQuery<Order[]>({
     queryKey: ['tables-orders'],
     queryFn: async () => {
@@ -555,7 +560,7 @@ export default function TablesPage() {
               <p className="text-sm" style={{ color: '#9ca3af' }}>{showQR.name} · Escanea para ordenar</p>
             </div>
             <div className="flex justify-center p-3 rounded-2xl" style={{ background: '#f9fafb' }}>
-              <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/order/tacos-el-guero/${showQR.id}`}
+              <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/order/${tenantSettings?.slug ?? ''}/${showQR.id}`}
                 size={200} level="H" includeMargin/>
             </div>
             <p className="text-xs" style={{ color: '#9ca3af' }}>El cliente escanea y ordena desde su celular</p>

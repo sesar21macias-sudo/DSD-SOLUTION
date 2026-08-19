@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
+import { useSocket } from '@/hooks/useSocket'
 import { DSDLogo } from '@/components/DSDLogo'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useT } from '@/lib/i18n/useT'
@@ -49,6 +52,19 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated && !user) router.replace('/login')
   }, [hydrated, user, router])
+
+  // Notificacion de pedido nuevo global — antes solo sonaba en /pos/orders y
+  // /pos/kitchen, asi que si el cajero estaba en cualquier otra pantalla
+  // (mesas, punto de venta, etc.) nunca se enteraba de que llego un pedido.
+  const qc = useQueryClient()
+  useSocket({
+    'order:new': (data: unknown) => {
+      const order = data as { order_number: string; customer_name?: string }
+      toast.success(`Nuevo pedido ${order.order_number}${order.customer_name ? ` — ${order.customer_name}` : ''}`, { icon: '🔔', duration: 6000 })
+      qc.invalidateQueries({ queryKey: ['all-orders'] })
+      qc.invalidateQueries({ queryKey: ['kitchen-orders'] })
+    },
+  })
 
   if (!hydrated || !user) return null
 
