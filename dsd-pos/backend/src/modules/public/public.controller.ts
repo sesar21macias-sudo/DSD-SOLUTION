@@ -96,6 +96,64 @@ export async function getPublicMenu(req: Request, res: Response): Promise<void> 
   res.json({ success: true, data: { tenant, categories, products } })
 }
 
+// ── GET /api/public/recommendations/:tenantSlug ───────────────────────────────
+// "Tambien te puede gustar": productos que mas se piden junto con los items
+// que el cliente ya trae en el carrito, calculado en vivo a partir de ordenes
+// reales (frequently-bought-together por co-ocurrencia en la misma orden).
+export async function getRecommendations(req: Request, res: Response): Promise<void> {
+  const { tenantSlug } = req.params
+  const cartIds = String(req.query['cart'] ?? '').split(',').filter(Boolean)
+
+  const { data: tenant } = await supabase.from('tenants').select('id').eq('slug', tenantSlug).eq('is_active', true).single()
+  if (!tenant) { res.status(404).json({ success: false, error: 'Negocio no encontrado' }); return }
+
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('order_id, product_id')
+    .eq('tenant_id', tenant.id)
+    .limit(2000)
+
+  const byOrder = new Map<string, Set<string>>()
+  for (const item of items ?? []) {
+    if (!byOrder.has(item.order_id)) byOrder.set(item.order_id, new Set())
+    byOrder.get(item.order_id)!.add(item.product_id)
+  }
+
+  const coCount = new Map<string, number>()
+  for (const productIds of byOrder.values()) {
+    if (cartIds.length && !cartIds.some(id => productIds.has(id))) continue
+    for (const pid of productIds) {
+      if (cartIds.includes(pid)) continue
+      coCount.set(pid, (coCount.get(pid) ?? 0) + 1)
+    }
+  }
+
+  let topIds = Array.from(coCount.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id]) => id)
+
+  // Sin suficiente historial de ordenes (negocio nuevo): recomienda los mas
+  // vendidos en general en vez de dejar la seccion vacia.
+  if (topIds.length < 3) {
+    const countAll = new Map<string, number>()
+    for (const item of items ?? []) {
+      if (cartIds.includes(item.product_id)) continue
+      countAll.set(item.product_id, (countAll.get(item.product_id) ?? 0) + 1)
+    }
+    topIds = Array.from(countAll.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id]) => id)
+  }
+
+  if (!topIds.length) { res.json({ success: true, data: [] }); return }
+
+  const { data: products } = await supabase
+    .from('menu_products')
+    .select('id, name, price_mxn, image_url, category_id')
+    .in('id', topIds)
+    .eq('tenant_id', tenant.id)
+    .eq('is_active', true)
+
+  const ordered = topIds.map(id => products?.find(p => p.id === id)).filter(Boolean)
+  res.json({ success: true, data: ordered })
+}
+
 // ── POST /api/public/order/:tenantSlug/:tableId ───────────────────────────────
 export async function createPublicOrder(req: Request, res: Response): Promise<void> {
   const { tenantSlug, tableId } = req.params

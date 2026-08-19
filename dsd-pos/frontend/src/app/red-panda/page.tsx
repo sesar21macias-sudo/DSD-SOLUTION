@@ -100,6 +100,16 @@ export default function RedPandaOrderPage() {
     },
   })
 
+  const cartIdsKey = cart.map(i => i.product_id).sort().join(',')
+  const { data: recommendations } = useQuery({
+    queryKey: ['recommendations', SLUG, cartIdsKey],
+    queryFn: async () => {
+      const { data } = await pub.get(`/public/recommendations/${SLUG}`, { params: { cart: cartIdsKey } })
+      return data.data as Product[]
+    },
+    enabled: showCart && cart.length > 0,
+  })
+
   const placeOrder = useMutation({
     mutationFn: async () => {
       const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
@@ -394,6 +404,23 @@ export default function RedPandaOrderPage() {
                   <button onClick={() => updateQty(item.product_id, item.quantity + 1)} className="rp-icon-btn" style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid #ddd', background: WHITE, cursor: 'pointer' }}><Plus size={12} /></button>
                 </div>
               ))}
+
+              {cart.length > 0 && recommendations && recommendations.length > 0 && (
+                <div style={{ marginTop: 8, paddingTop: 16, borderTop: '1px dashed #ddd' }}>
+                  <p className="rp-display" style={{ fontSize: 13, color: '#999', marginBottom: 10 }}>Tambien te puede gustar</p>
+                  <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+                    {recommendations.map((p) => (
+                      <div key={p.id} onClick={() => addToCart(p, photoFor(p))} style={{ flexShrink: 0, width: 100, cursor: 'pointer' }}>
+                        <div style={{ width: 100, height: 72, borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
+                          <img src={photoFor(p)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                        <p style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.2, marginBottom: 2 }}>{p.name}</p>
+                        <p style={{ fontSize: 11, color: RED, fontWeight: 700 }}>+${p.price_mxn}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {cart.length > 0 && (
               <div style={{ padding: 20, borderTop: '1px solid #eee' }}>
