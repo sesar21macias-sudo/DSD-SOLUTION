@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/auth'
 import { useSocket } from '@/hooks/useSocket'
 import { DSDLogo } from '@/components/DSDLogo'
+import { BusinessAssistant } from '@/components/BusinessAssistant'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useT } from '@/lib/i18n/useT'
 import {
@@ -173,6 +174,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-hidden" style={{ background: '#f5f6fa' }}>
         {children}
       </main>
+      {user.role === 'tenant_admin' && <BusinessAssistant />}
     </div>
   )
 }
