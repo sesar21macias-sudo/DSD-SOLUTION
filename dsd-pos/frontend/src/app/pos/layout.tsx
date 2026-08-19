@@ -16,20 +16,28 @@ import {
   LogOut, ChefHat, LayoutGrid, BarChart2, Users, Timer, Package, Star, Truck, CalendarClock, Settings
 } from 'lucide-react'
 
+type Role = 'tenant_admin' | 'manager' | 'cashier' | 'waiter' | 'kitchen'
+const ALL: Role[] = ['tenant_admin', 'manager', 'cashier', 'waiter', 'kitchen']
+const STAFF: Role[] = ['tenant_admin', 'manager', 'cashier', 'waiter']
+const ADMIN: Role[] = ['tenant_admin', 'manager']
+
+// Cada item declara que roles pueden verlo — sin esto, un mesero o cocina
+// veian el menu completo (inventario, reportes, empleados) aunque el backend
+// les bloqueara la accion al hacer clic. Confuso y mala primera impresion.
 const navItems = [
-  { href: '/pos',             labelKey: 'nav.pos'          as const, icon: ShoppingCart },
-  { href: '/pos/tables',      labelKey: 'nav.tables'       as const, icon: LayoutGrid },
-  { href: '/pos/reservations',labelKey: 'nav.reservations' as const, icon: CalendarClock },
-  { href: '/pos/orders',      labelKey: 'nav.orders'       as const, icon: ClipboardList },
-  { href: '/pos/kitchen',     labelKey: 'nav.kitchen'      as const, icon: ChefHat },
-  { href: '/pos/menu',        labelKey: 'nav.menu'         as const, icon: UtensilsCrossed },
-  { href: '/pos/inventory',   labelKey: 'nav.inventory'    as const, icon: Package },
-  { href: '/pos/loyalty',     labelKey: 'nav.loyalty'      as const, icon: Star },
-  { href: '/pos/integrations',labelKey: 'nav.integrations' as const, icon: Truck },
-  { href: '/pos/reports',     labelKey: 'nav.reports'      as const, icon: BarChart2 },
-  { href: '/pos/users',       labelKey: 'nav.users'        as const, icon: Users },
-  { href: '/pos/shift',       labelKey: 'nav.shift'        as const, icon: Timer },
-  { href: '/pos/settings',   labelKey: 'nav.settings'     as const, icon: Settings },
+  { href: '/pos',             labelKey: 'nav.pos'          as const, icon: ShoppingCart,      roles: STAFF },
+  { href: '/pos/tables',      labelKey: 'nav.tables'       as const, icon: LayoutGrid,         roles: STAFF },
+  { href: '/pos/reservations',labelKey: 'nav.reservations' as const, icon: CalendarClock,      roles: STAFF },
+  { href: '/pos/orders',      labelKey: 'nav.orders'       as const, icon: ClipboardList,      roles: ALL },
+  { href: '/pos/kitchen',     labelKey: 'nav.kitchen'      as const, icon: ChefHat,             roles: ALL },
+  { href: '/pos/menu',        labelKey: 'nav.menu'         as const, icon: UtensilsCrossed,    roles: ADMIN },
+  { href: '/pos/inventory',   labelKey: 'nav.inventory'    as const, icon: Package,             roles: ADMIN },
+  { href: '/pos/loyalty',     labelKey: 'nav.loyalty'      as const, icon: Star,                roles: [...ADMIN, 'cashier'] as Role[] },
+  { href: '/pos/integrations',labelKey: 'nav.integrations' as const, icon: Truck,               roles: ADMIN },
+  { href: '/pos/reports',     labelKey: 'nav.reports'      as const, icon: BarChart2,           roles: ADMIN },
+  { href: '/pos/users',       labelKey: 'nav.users'        as const, icon: Users,               roles: ADMIN },
+  { href: '/pos/shift',       labelKey: 'nav.shift'        as const, icon: Timer,                roles: [...ADMIN, 'cashier'] as Role[] },
+  { href: '/pos/settings',   labelKey: 'nav.settings'     as const, icon: Settings,             roles: ADMIN },
 ]
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
@@ -53,6 +61,19 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated && !user) router.replace('/login')
   }, [hydrated, user, router])
+
+  const allowedNavItems = navItems.filter(item => !user || item.roles.includes(user.role as Role))
+
+  // Si un rol entra directo por URL (link guardado, escrita a mano) a una
+  // pagina que no le corresponde, lo manda a la primera que si puede ver en
+  // vez de dejarlo en una pantalla que el backend le va a rechazar en cada click.
+  useEffect(() => {
+    if (!hydrated || !user) return
+    const current = navItems.find(item => pathname === item.href || pathname?.startsWith(item.href + '/'))
+    if (current && !current.roles.includes(user.role as Role)) {
+      router.replace(allowedNavItems[0]?.href ?? '/pos')
+    }
+  }, [hydrated, user, pathname, router, allowedNavItems])
 
   // Notificacion de pedido nuevo global — antes solo sonaba en /pos/orders y
   // /pos/kitchen, asi que si el cajero estaba en cualquier otra pantalla
@@ -90,7 +111,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav links */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ href, labelKey, icon: Icon }) => {
+          {allowedNavItems.map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href
             return (
               <Link
