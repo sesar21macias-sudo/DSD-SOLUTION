@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import axios from 'axios'
 import { ShoppingBag, Plus, Minus, X, CheckCircle2 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 const pub = axios.create({ baseURL: API_BASE })
@@ -88,6 +89,8 @@ export default function RedPandaOrderPage() {
   const [payingCard, setPayingCard] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [bump, setBump] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'counter'>('counter')
+  const [ticketItems, setTicketItems] = useState<CartItem[]>([])
 
   const { data, isLoading } = useQuery({
     queryKey: ['pub-menu', SLUG],
@@ -106,25 +109,30 @@ export default function RedPandaOrderPage() {
       })
       return data.data
     },
-    onSuccess: (res) => {
-      setOrderNumber(res.order_number ?? res.order_id?.slice(0, 6).toUpperCase() ?? '')
+    onSuccess: async (res) => {
+      const num = res.order_number ?? res.order_id?.slice(0, 6).toUpperCase() ?? ''
+      setOrderNumber(num)
       setPlacedOrderId(res.order_id)
-      setShowSuccess(true); setCart([]); setShowCart(false); setOrderNotes('')
+      setTicketItems(cart)
+      setCart([]); setShowCart(false); setOrderNotes('')
+
+      if (paymentMethod === 'card') {
+        // Pago con tarjeta: la orden ya se creo (la cocina la necesita ya),
+        // pero al cliente lo mandamos derecho a pagar, sin pasar por el ticket.
+        setPayingCard(true)
+        try {
+          const { data } = await pub.post(`/mp/preference/${SLUG}`, { order_id: res.order_id, tip_percent: 0 })
+          window.location.href = data.data.init_point
+          return
+        } catch {
+          setPayingCard(false)
+          alert('No se pudo iniciar el pago con tarjeta. Se muestra tu ticket para pagar en caja.')
+        }
+      }
+      setShowSuccess(true)
     },
     onError: () => alert('No se pudo enviar la orden. Intenta de nuevo.'),
   })
-
-  async function payWithCard() {
-    if (!placedOrderId) return
-    setPayingCard(true)
-    try {
-      const { data } = await pub.post(`/mp/preference/${SLUG}`, { order_id: placedOrderId, tip_percent: 0 })
-      window.location.href = data.data.init_point
-    } catch {
-      alert('No se pudo iniciar el pago. Intenta de nuevo o paga en caja.')
-      setPayingCard(false)
-    }
-  }
 
   function addToCart(p: Product, photo: string) {
     setCart(c => {
@@ -152,21 +160,42 @@ export default function RedPandaOrderPage() {
   if (isLoading) return <div style={{ minHeight: '100vh', background: BLACK, display: 'flex', alignItems: 'center', justifyContent: 'center', color: WHITE }}>Cargando...</div>
 
   if (showSuccess) {
+    const ticketTotal = ticketItems.reduce((s, i) => s + i.price * i.quantity, 0)
     return (
-      <div style={{ minHeight: '100vh', background: RED, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: 24, textAlign: 'center', fontFamily: "'DM Sans',sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'DM Sans',sans-serif" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=DM+Sans:wght@500;700&display=swap');`}</style>
-        <CheckCircle2 size={56} color={WHITE} />
-        <h1 style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 44, color: BLACK, textTransform: 'uppercase' }}>Orden enviada</h1>
-        <div style={{ background: BLACK, color: WHITE, padding: '10px 24px', borderRadius: 3, fontWeight: 700 }}>#{orderNumber}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20, width: '100%', maxWidth: 320 }}>
-          <button onClick={payWithCard} disabled={payingCard}
-            style={{ background: BLACK, color: WHITE, border: 'none', padding: '15px 28px', fontWeight: 700, textTransform: 'uppercase', cursor: payingCard ? 'default' : 'pointer', letterSpacing: '0.04em', opacity: payingCard ? 0.7 : 1 }}>
-            {payingCard ? 'Redirigiendo...' : 'Pagar con tarjeta ahora'}
-          </button>
-          <button onClick={() => { setShowSuccess(false); setPlacedOrderId(null) }}
-            style={{ background: 'transparent', color: BLACK, border: `2px solid ${BLACK}`, padding: '13px 28px', fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer', letterSpacing: '0.04em' }}>
-            Pagar en caja
-          </button>
+        <div style={{ background: WHITE, borderRadius: 4, maxWidth: 340, width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+          <div style={{ background: RED, padding: '22px 20px', textAlign: 'center' }}>
+            <CheckCircle2 size={32} color={WHITE} style={{ marginBottom: 6 }} />
+            <h1 style={{ fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 900, fontSize: 26, color: WHITE, textTransform: 'uppercase' }}>Muestra este ticket en caja</h1>
+            <p style={{ color: 'rgba(245,245,245,0.85)', fontSize: 12, marginTop: 4 }}>Para que confirmen tu pedido y pagues ahi</p>
+          </div>
+
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottom: '1px dashed #ddd' }}>
+            <div style={{ background: WHITE, padding: 10, border: '1px solid #eee', borderRadius: 6 }}>
+              <QRCodeSVG value={JSON.stringify({ order: orderNumber, id: placedOrderId, total: ticketTotal })} size={140} level="M" />
+            </div>
+            <p className="rp-display" style={{ fontSize: 20, color: BLACK, marginTop: 10 }}>#{orderNumber}</p>
+          </div>
+
+          <div style={{ padding: '16px 20px' }}>
+            {ticketItems.map(item => (
+              <div key={item.product_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6, color: '#333' }}>
+                <span>{item.quantity}× {item.name}</span>
+                <span style={{ fontWeight: 700 }}>${(item.price * item.quantity).toFixed(2)}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, marginTop: 8, borderTop: '1px solid #eee', fontWeight: 800, fontSize: 16 }}>
+              <span>Total a pagar</span><span style={{ color: RED }}>${ticketTotal.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div style={{ padding: '0 20px 20px' }}>
+            <button onClick={() => { setShowSuccess(false); setPlacedOrderId(null); setTicketItems([]) }}
+              style={{ width: '100%', background: BLACK, color: WHITE, border: 'none', padding: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer', borderRadius: 3 }}>
+              Hacer otro pedido
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -379,12 +408,22 @@ export default function RedPandaOrderPage() {
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 10, fontSize: 14 }} />
                 <textarea value={orderNotes} onChange={e => setOrderNotes(e.target.value)} placeholder="Notas (alergias, sin cebolla, etc.)" rows={2}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 12, fontSize: 13, fontFamily: 'inherit', resize: 'none' }} />
+
+                <p className="rp-display" style={{ fontSize: 13, color: '#999', marginBottom: 8 }}>Como vas a pagar?</p>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                  {([['card', 'Tarjeta ahora'], ['counter', 'Pagar en caja']] as const).map(([m, label]) => (
+                    <button key={m} onClick={() => setPaymentMethod(m)} style={{ flex: 1, padding: '10px 8px', borderRadius: 3, cursor: 'pointer', border: `2px solid ${paymentMethod === m ? RED : '#eee'}`, background: paymentMethod === m ? 'rgba(232,21,42,0.06)' : WHITE, color: paymentMethod === m ? RED : '#666', fontWeight: 600, fontSize: 13 }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginBottom: 14, borderTop: '1px dashed #ddd', fontWeight: 700, fontSize: 17 }}>
                   <span className="rp-display" style={{ fontSize: 15 }}>Total</span><span style={{ color: RED }}>${total.toFixed(2)}</span>
                 </div>
                 <button onClick={() => placeOrder.mutate()} disabled={placeOrder.isPending} className="rp-cta"
                   style={{ width: '100%', background: RED, color: WHITE, border: 'none', padding: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: placeOrder.isPending ? 'default' : 'pointer', opacity: placeOrder.isPending ? 0.7 : 1 }}>
-                  {placeOrder.isPending ? 'Enviando...' : 'Confirmar Orden'}
+                  {placeOrder.isPending ? 'Enviando...' : paymentMethod === 'card' ? 'Continuar a pago' : 'Confirmar orden'}
                 </button>
               </div>
             )}
