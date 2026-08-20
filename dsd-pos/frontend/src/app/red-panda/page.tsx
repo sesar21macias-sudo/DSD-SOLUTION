@@ -491,7 +491,9 @@ interface LoyaltyCustomer { full_name: string | null; points: number; total_visi
 
 function LoyaltyModal({ onClose }: { onClose: () => void }) {
   const [phone, setPhone] = useState('')
+  const [name, setName] = useState('')
   const [customer, setCustomer] = useState<LoyaltyCustomer | null>(null)
+  const [justRegistered, setJustRegistered] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -504,8 +506,11 @@ function LoyaltyModal({ onClose }: { onClose: () => void }) {
     if (phone.trim().length < 7) { setError('Escribe un telefono valido'); return }
     setLoading(true); setError('')
     try {
-      const { data } = await pub.post(`/public/loyalty/identify/${SLUG}`, { phone: phone.trim() })
+      // Este mismo endpoint registra al cliente si es la primera vez que
+      // pone su telefono — no hace falta un "boton de registro" aparte.
+      const { data } = await pub.post(`/public/loyalty/identify/${SLUG}`, { phone: phone.trim(), name: name.trim() || undefined })
       setCustomer(data.data.customer)
+      setJustRegistered(!!data.data.is_new)
     } catch {
       setError('No se pudo consultar. Intenta de nuevo.')
     } finally {
@@ -523,7 +528,9 @@ function LoyaltyModal({ onClose }: { onClose: () => void }) {
 
         {!customer ? (
           <>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Escribe tu telefono para ver tus puntos acumulados. Ganas 1 punto por cada $10 que gastas.</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Escribe tu telefono para ver tus puntos, o registrate si es tu primera vez. Ganas 1 punto por cada $10 que gastas.</p>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre (si es tu primera vez)"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 8, fontSize: 14 }} />
             <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Tu telefono" type="tel"
               style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 8, fontSize: 14 }} />
             {error && <p style={{ color: RED, fontSize: 12, marginBottom: 8 }}>{error}</p>}
@@ -534,6 +541,11 @@ function LoyaltyModal({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
+            {justRegistered && (
+              <p style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
+                🎉 Listo, ya estas registrado. Empieza a ganar puntos en tu proximo pedido.
+              </p>
+            )}
             <div style={{ background: BLACK, borderRadius: 6, padding: '18px 20px', textAlign: 'center', marginBottom: 16 }}>
               <p style={{ color: '#aaa', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{customer.full_name || 'Cliente'} &middot; nivel {customer.tier}</p>
               <p className="rp-display" style={{ color: LIME, fontSize: 40, marginTop: 4 }}>{customer.points}</p>
