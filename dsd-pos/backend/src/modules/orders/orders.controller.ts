@@ -6,6 +6,7 @@ import { AuthRequest } from '../../middleware/auth'
 import { OrderStatus, OrderType } from '../../types'
 import { io } from '../../server'
 import { deductInventoryForOrder } from '../inventory/inventory.controller'
+import { accrueLoyaltyPoints } from '../loyalty/loyalty.service'
 import { logAudit } from '../../utils/auditLog'
 import { sendError } from '../../utils/sendError'
 
@@ -216,6 +217,16 @@ export async function chargeAtCounter(req: AuthRequest, res: Response): Promise<
   if (error || !updated) { sendError(res, 500, error, 'No se pudo enviar la orden a cocina'); return }
 
   io.to(`tenant:${req.user!.tenantId}`).emit('order:new', { ...updated, source: 'counter' })
+
+  if (order.customer_phone) {
+    accrueLoyaltyPoints({
+      tenantId: req.user!.tenantId,
+      customerPhone: order.customer_phone,
+      amountSpent: Number(order.total),
+      orderId: order.id,
+    }).catch(err => console.error('[Loyalty] Error acumulando puntos en caja:', err))
+  }
+
   res.json({ success: true, data: updated })
 }
 

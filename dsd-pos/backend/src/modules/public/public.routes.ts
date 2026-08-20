@@ -2,7 +2,7 @@ import { Router } from 'express'
 import {
   getPublicMenu, createPublicOrder, getTableInfo, createOnlineOrder, getPublicTables,
   identifyLoyaltyCustomer, setCustomerPin, loginCustomer, getCustomerProfile, googleAuthCustomer,
-  getRecommendations,
+  getRecommendations, getPublicRewards,
 } from './public.controller'
 
 const router = Router()
@@ -15,6 +15,7 @@ router.post('/online-order/:tenantSlug',   createOnlineOrder)
 router.get('/recommendations/:tenantSlug', getRecommendations)
 
 // Loyalty — public, no staff auth required
+router.get('/loyalty/rewards/:tenantSlug',   getPublicRewards)
 router.post('/loyalty/identify/:tenantSlug', identifyLoyaltyCustomer)
 router.post('/loyalty/set-pin/:tenantSlug',  setCustomerPin)
 router.post('/loyalty/login/:tenantSlug',    loginCustomer)

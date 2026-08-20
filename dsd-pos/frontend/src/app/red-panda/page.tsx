@@ -83,7 +83,9 @@ export default function RedPandaOrderPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
   const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
   const [orderNotes, setOrderNotes] = useState('')
+  const [showLoyalty, setShowLoyalty] = useState(false)
   const [orderType, setOrderType] = useState<'dine_in' | 'takeout'>('takeout')
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null)
   const [payingCard, setPayingCard] = useState(false)
@@ -116,6 +118,7 @@ export default function RedPandaOrderPage() {
       const { data } = await pub.post(`/public/online-order/${SLUG}`, {
         customer_name: customerName.trim() || 'Cliente', order_type: orderType, items,
         notes: orderNotes.trim() || undefined,
+        customer_phone: customerPhone.trim() || undefined,
         // Ambos metodos requieren cobro antes de llegar a cocina: tarjeta se
         // cobra ahora mismo via Mercado Pago, caja se cobra cuando el cajero
         // presiona "Cobrar" con el ticket en mano.
@@ -202,6 +205,11 @@ export default function RedPandaOrderPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, marginTop: 8, borderTop: '1px solid #eee', fontWeight: 800, fontSize: 16 }}>
               <span>Total a pagar</span><span style={{ color: RED }}>${ticketTotal.toFixed(2)}</span>
             </div>
+            {customerPhone.trim() && (
+              <p style={{ marginTop: 10, fontSize: 12, color: LIME, background: '#111', display: 'inline-block', padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>
+                +{Math.floor(ticketTotal / 10)} puntos al pagar
+              </p>
+            )}
           </div>
 
           <div style={{ padding: '0 20px 20px' }}>
@@ -253,10 +261,17 @@ export default function RedPandaOrderPage() {
           {tenant?.logo_url && <img src={tenant.logo_url} alt="" style={{ height: 38, width: 38, borderRadius: '50%', objectFit: 'cover', background: WHITE }} />}
           RED<span style={{ color: RED }}>P</span>ANDA
         </div>
-        <button onClick={() => setShowCart(true)} className={`rp-cta${bump ? ' rp-bump' : ''}`} style={{ background: RED, color: WHITE, border: 'none', padding: '10px 20px', fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ShoppingBag size={15} /> {totalItems > 0 ? `Carrito (${totalItems})` : 'Ordenar'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowLoyalty(true)} style={{ background: 'transparent', color: LIME, border: `1px solid ${LIME}`, padding: '10px 14px', fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 3 }}>
+            Mis puntos
+          </button>
+          <button onClick={() => setShowCart(true)} className={`rp-cta${bump ? ' rp-bump' : ''}`} style={{ background: RED, color: WHITE, border: 'none', padding: '10px 20px', fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ShoppingBag size={15} /> {totalItems > 0 ? `Carrito (${totalItems})` : 'Ordenar'}
+          </button>
+        </div>
       </nav>
+
+      {showLoyalty && <LoyaltyModal onClose={() => setShowLoyalty(false)} />}
 
       {toast && (
         <div className="rp-toast" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 70, background: BLACK, color: WHITE, padding: '12px 22px', borderRadius: 3, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
@@ -437,6 +452,8 @@ export default function RedPandaOrderPage() {
                 </div>
                 <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Tu nombre"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 10, fontSize: 14 }} />
+                <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Tu telefono (para ganar puntos)" type="tel"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 10, fontSize: 14 }} />
                 <textarea value={orderNotes} onChange={e => setOrderNotes(e.target.value)} placeholder="Notas (alergias, sin cebolla, etc.)" rows={2}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 12, fontSize: 13, fontFamily: 'inherit', resize: 'none' }} />
 
@@ -461,6 +478,90 @@ export default function RedPandaOrderPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Consulta simple de puntos: solo con el telefono, sin contraseña — la
+// friccion cero es lo que hace que la gente realmente lo use en un negocio
+// chico. El saldo real y las recompensas viven en el backend (loyalty_customers/
+// loyalty_rewards), esto solo es la ventana para verlo.
+interface LoyaltyReward { id: string; name: string; description?: string; points_required: number }
+interface LoyaltyCustomer { full_name: string | null; points: number; total_visits: number; tier: string }
+
+function LoyaltyModal({ onClose }: { onClose: () => void }) {
+  const [phone, setPhone] = useState('')
+  const [customer, setCustomer] = useState<LoyaltyCustomer | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const { data: rewards } = useQuery({
+    queryKey: ['public-rewards', SLUG],
+    queryFn: async () => { const { data } = await pub.get(`/public/loyalty/rewards/${SLUG}`); return data.data as LoyaltyReward[] },
+  })
+
+  async function checkPoints() {
+    if (phone.trim().length < 7) { setError('Escribe un telefono valido'); return }
+    setLoading(true); setError('')
+    try {
+      const { data } = await pub.post(`/public/loyalty/identify/${SLUG}`, { phone: phone.trim() })
+      setCustomer(data.data.customer)
+    } catch {
+      setError('No se pudo consultar. Intenta de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: WHITE, borderRadius: 6, maxWidth: 360, width: '100%', maxHeight: '85vh', overflowY: 'auto', padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 className="rp-display" style={{ fontSize: 22, color: BLACK }}>Mis Puntos</h2>
+          <button onClick={onClose} style={{ background: '#f2f2f2', border: 'none', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer' }}><X size={14} /></button>
+        </div>
+
+        {!customer ? (
+          <>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Escribe tu telefono para ver tus puntos acumulados. Ganas 1 punto por cada $10 que gastas.</p>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Tu telefono" type="tel"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 8, fontSize: 14 }} />
+            {error && <p style={{ color: RED, fontSize: 12, marginBottom: 8 }}>{error}</p>}
+            <button onClick={checkPoints} disabled={loading} className="rp-cta"
+              style={{ width: '100%', background: BLACK, color: WHITE, border: 'none', padding: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
+              {loading ? 'Consultando...' : 'Ver mis puntos'}
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ background: BLACK, borderRadius: 6, padding: '18px 20px', textAlign: 'center', marginBottom: 16 }}>
+              <p style={{ color: '#aaa', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{customer.full_name || 'Cliente'} &middot; nivel {customer.tier}</p>
+              <p className="rp-display" style={{ color: LIME, fontSize: 40, marginTop: 4 }}>{customer.points}</p>
+              <p style={{ color: '#aaa', fontSize: 11 }}>puntos disponibles</p>
+            </div>
+
+            <p className="rp-display" style={{ fontSize: 13, color: '#999', marginBottom: 10 }}>Recompensas</p>
+            {(rewards ?? []).length === 0 && <p style={{ fontSize: 12, color: '#999' }}>Aun no hay recompensas configuradas.</p>}
+            {(rewards ?? []).map(r => {
+              const unlocked = customer.points >= r.points_required
+              return (
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #eee', opacity: unlocked ? 1 : 0.5 }}>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700 }}>{r.name}</p>
+                    {r.description && <p style={{ fontSize: 11, color: '#999' }}>{r.description}</p>}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: unlocked ? '#16a34a' : '#999', whiteSpace: 'nowrap', marginLeft: 10 }}>
+                    {unlocked ? '✓ Disponible' : `${r.points_required} pts`}
+                  </span>
+                </div>
+              )
+            })}
+            <button onClick={() => setCustomer(null)} style={{ marginTop: 16, width: '100%', background: 'transparent', color: '#999', border: 'none', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+              Consultar otro telefono
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

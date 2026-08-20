@@ -336,6 +336,25 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
   res.status(201).json({ success: true, data: { order_id: order.id, order_number: orderNumber, total, currency, discount: rewardDiscount } })
 }
 
+// ── GET /api/public/loyalty/rewards/:tenantSlug ────────────────────────────────
+// Catalogo publico de recompensas — para que el cliente vea que puede ganar
+// sin tener que iniciar sesion primero (le da un motivo real para dejar su
+// telefono al ordenar).
+export async function getPublicRewards(req: Request, res: Response): Promise<void> {
+  const { tenantSlug } = req.params
+  const { data: tenant } = await supabase.from('tenants').select('id').eq('slug', tenantSlug).eq('is_active', true).single()
+  if (!tenant) { res.status(404).json({ success: false, error: 'Restaurante no encontrado' }); return }
+
+  const { data: rewards } = await supabase
+    .from('loyalty_rewards')
+    .select('id, name, description, points_required, reward_type, reward_value')
+    .eq('tenant_id', tenant.id)
+    .eq('is_active', true)
+    .order('points_required')
+
+  res.json({ success: true, data: rewards ?? [] })
+}
+
 // ── POST /api/public/loyalty/identify/:tenantSlug ─────────────────────────────
 export async function identifyLoyaltyCustomer(req: Request, res: Response): Promise<void> {
   const { tenantSlug } = req.params
