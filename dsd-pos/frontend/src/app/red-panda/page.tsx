@@ -19,7 +19,7 @@ const PINK = '#E030A0'
 
 interface Category { id: string; name: string; sort_order: number }
 interface Product { id: string; name: string; description?: string; price_mxn: number; category_id: string; image_url?: string }
-interface Tenant { id: string; name: string; slug: string; currency: string; logo_url?: string; slogan?: string }
+interface Tenant { id: string; name: string; slug: string; currency: string; logo_url?: string; slogan?: string; tax_rate?: number }
 interface CartItem { product_id: string; name: string; price: number; quantity: number; photo?: string }
 
 // Foto exacta por nombre de producto — con un menu fijo esto da mejor resultado
@@ -166,7 +166,10 @@ export default function RedPandaOrderPage() {
     setCart(c => qty <= 0 ? c.filter(i => i.product_id !== id) : c.map(i => i.product_id === id ? { ...i, quantity: qty } : i))
   }
 
-  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+  const taxRate = data?.tenant.tax_rate ?? 0.16
+  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+  const tax = subtotal * taxRate
+  const total = subtotal + tax
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0)
   const tenant = data?.tenant
   const products = data?.products ?? []
@@ -177,7 +180,9 @@ export default function RedPandaOrderPage() {
   if (isLoading) return <div style={{ minHeight: '100vh', background: BLACK, display: 'flex', alignItems: 'center', justifyContent: 'center', color: WHITE }}>Cargando...</div>
 
   if (showSuccess) {
-    const ticketTotal = ticketItems.reduce((s, i) => s + i.price * i.quantity, 0)
+    const ticketSubtotal = ticketItems.reduce((s, i) => s + i.price * i.quantity, 0)
+    const ticketTax = ticketSubtotal * taxRate
+    const ticketTotal = ticketSubtotal + ticketTax
     return (
       <div style={{ minHeight: '100vh', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'DM Sans',sans-serif" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=DM+Sans:wght@500;700&display=swap');`}</style>
@@ -202,7 +207,13 @@ export default function RedPandaOrderPage() {
                 <span style={{ fontWeight: 700 }}>${(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, marginTop: 8, borderTop: '1px solid #eee', fontWeight: 800, fontSize: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, marginTop: 8, borderTop: '1px solid #eee', fontSize: 12, color: '#888' }}>
+              <span>Subtotal</span><span>${ticketSubtotal.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888', marginTop: 3 }}>
+              <span>IVA ({Math.round(taxRate * 100)}%)</span><span>${ticketTax.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, marginTop: 6, borderTop: '1px solid #eee', fontWeight: 800, fontSize: 16 }}>
               <span>Total a pagar</span><span style={{ color: RED }}>${ticketTotal.toFixed(2)}</span>
             </div>
             {customerPhone.trim() && (
@@ -466,8 +477,16 @@ export default function RedPandaOrderPage() {
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, marginBottom: 14, borderTop: '1px dashed #ddd', fontWeight: 700, fontSize: 17 }}>
-                  <span className="rp-display" style={{ fontSize: 15 }}>Total</span><span style={{ color: RED }}>${total.toFixed(2)}</span>
+                <div style={{ paddingTop: 12, borderTop: '1px dashed #ddd' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888' }}>
+                    <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888', marginTop: 3 }}>
+                    <span>IVA ({Math.round(taxRate * 100)}%)</span><span>${tax.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, marginTop: 6, marginBottom: 14, fontWeight: 700, fontSize: 17 }}>
+                    <span className="rp-display" style={{ fontSize: 15 }}>Total</span><span style={{ color: RED }}>${total.toFixed(2)}</span>
+                  </div>
                 </div>
                 <button onClick={() => placeOrder.mutate()} disabled={placeOrder.isPending} className="rp-cta"
                   style={{ width: '100%', background: RED, color: WHITE, border: 'none', padding: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: placeOrder.isPending ? 'default' : 'pointer', opacity: placeOrder.isPending ? 0.7 : 1 }}>

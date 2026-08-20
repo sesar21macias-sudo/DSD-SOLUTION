@@ -12,12 +12,20 @@ export function useSocket(handlers: Record<string, (data: unknown) => void> = {}
   useEffect(() => {
     if (!user) return
 
+    // socket.off(event) sin referencia borra TODOS los listeners de ese evento,
+    // no solo los de esta instancia — con eso, visitar una pantalla que tambien
+    // escucha 'order:new' apagaba la notificacion global del layout al salir.
+    // Guardamos la referencia exacta que registramos para solo quitar esa.
+    const attached: [string, (data: unknown) => void][] = []
+
     function joinAndListen() {
       // El backend ignora cualquier tenantId del cliente y usa el del JWT verificado
       socket.emit('join:tenant')
+      attached.forEach(([event, handler]) => socket.off(event, handler))
+      attached.length = 0
       Object.entries(handlersRef.current).forEach(([event, handler]) => {
-        socket.off(event)
         socket.on(event, handler)
+        attached.push([event, handler])
       })
     }
 
@@ -31,7 +39,7 @@ export function useSocket(handlers: Record<string, (data: unknown) => void> = {}
     socket.on('reconnect', joinAndListen)
 
     return () => {
-      Object.keys(handlersRef.current).forEach(event => socket.off(event))
+      attached.forEach(([event, handler]) => socket.off(event, handler))
       socket.off('reconnect', joinAndListen)
     }
   }, [user])

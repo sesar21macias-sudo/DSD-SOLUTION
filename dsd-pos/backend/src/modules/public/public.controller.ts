@@ -72,7 +72,7 @@ export async function getPublicMenu(req: Request, res: Response): Promise<void> 
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, logo_url, currency')
+    .select('id, name, logo_url, currency, tax_rate, description, phone, address, primary_color, bg_color, surface_color, cover_image_url, slogan')
     .eq('slug', tenantSlug)
     .eq('is_active', true)
     .single()
@@ -267,11 +267,22 @@ export async function createOnlineOrder(req: Request, res: Response): Promise<vo
     const custPayload = decodeCustomerToken(parsed.data.customer_token)
     if (custPayload && custPayload.tenantId === tenant.id) {
       const { data: custData } = await supabase.from('loyalty_customers').select('id, points').eq('id', custPayload.customerId).eq('tenant_id', tenant.id).single()
-      const { data: reward }   = await supabase.from('loyalty_rewards').select('id, points_required, reward_type, reward_value').eq('id', parsed.data.reward_id).eq('tenant_id', tenant.id).eq('is_active', true).single()
+      const { data: reward }   = await supabase.from('loyalty_rewards').select('id, points_required, reward_type, reward_value, product_id, menu_products(price_mxn)').eq('id', parsed.data.reward_id).eq('tenant_id', tenant.id).eq('is_active', true).single()
 
       if (custData && reward && custData.points >= reward.points_required) {
         if (reward.reward_type === 'discount')    rewardDiscount = Math.min(Number(reward.reward_value ?? 0), total)
         if (reward.reward_type === 'percentage')  rewardDiscount = Math.min((subtotal * Number(reward.reward_value ?? 0)) / 100, total)
+        // "Articulo gratis": antes se descontaban los puntos sin dar nada a
+        // cambio. Sin producto ligado, el descuento es el precio del producto
+        // que la recompensa referencia; si no tiene producto, no se puede
+        // aplicar y se rechaza el canje en vez de cobrar puntos por nada.
+        if (reward.reward_type === 'free_item') {
+          const linkedPrice = (reward as any).menu_products?.price_mxn
+          if (linkedPrice == null) {
+            res.status(400).json({ success: false, error: 'Esta recompensa no tiene un producto configurado, no se puede canjear' }); return
+          }
+          rewardDiscount = Math.min(Number(linkedPrice), total)
+        }
         appliedRewardId  = reward.id
         rewardCustomerId = custData.id
         pointsToDeduct   = reward.points_required
