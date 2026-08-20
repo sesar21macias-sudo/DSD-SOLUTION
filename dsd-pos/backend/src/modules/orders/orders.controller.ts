@@ -183,7 +183,14 @@ export async function updateOrderStatus(req: AuthRequest, res: Response): Promis
 // Cobrar en caja una orden "pagar en caja" (pending_payment): registra el
 // pago y recien ahi la manda a cocina. Antes de cobrarla nunca debe llegar
 // a la cocina — asi se evita preparar comida que nadie paso a pagar.
+const chargeAtCounterSchema = z.object({
+  method: z.enum(['cash', 'card', 'transfer']).default('cash'),
+})
+
 export async function chargeAtCounter(req: AuthRequest, res: Response): Promise<void> {
+  const parsed = chargeAtCounterSchema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
   const { data: order } = await supabase
     .from('orders')
     .select('id, total, currency, status, customer_phone')
@@ -201,7 +208,7 @@ export async function chargeAtCounter(req: AuthRequest, res: Response): Promise<
     order_id: order.id,
     amount: order.total,
     currency: order.currency,
-    method: 'cash',
+    method: parsed.data.method,
     status: 'completed',
     processed_by: req.user!.userId,
   })

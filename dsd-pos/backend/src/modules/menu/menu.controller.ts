@@ -168,6 +168,40 @@ export async function getTables(req: AuthRequest, res: Response): Promise<void> 
   res.json({ success: true, data })
 }
 
+const tableSchema = z.object({
+  number: z.number().int().positive(),
+  name: z.string().optional(),
+  capacity: z.number().int().positive().default(4),
+})
+
+export async function createTable(req: AuthRequest, res: Response): Promise<void> {
+  const parsed = tableSchema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
+
+  const { data, error } = await supabase
+    .from('tables')
+    .insert({ ...parsed.data, tenant_id: req.user!.tenantId })
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === '23505') { res.status(409).json({ success: false, error: 'Ya existe una mesa con ese numero' }); return }
+    sendError(res, 500, error); return
+  }
+  res.status(201).json({ success: true, data })
+}
+
+export async function deleteTable(req: AuthRequest, res: Response): Promise<void> {
+  const { error } = await supabase
+    .from('tables')
+    .update({ is_active: false })
+    .eq('id', req.params['id'])
+    .eq('tenant_id', req.user!.tenantId)
+
+  if (error) { sendError(res, 500, error); return }
+  res.json({ success: true, message: 'Mesa eliminada' })
+}
+
 export async function deleteProduct(req: AuthRequest, res: Response): Promise<void> {
   const { error } = await supabase
     .from('menu_products')

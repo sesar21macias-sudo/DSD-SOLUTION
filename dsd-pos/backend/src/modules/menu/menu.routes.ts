@@ -2,7 +2,7 @@ import { Router } from 'express'
 import {
   getCategories, createCategory, updateCategory, deleteCategory,
   getProducts, getProduct, createProduct, updateProduct, deleteProduct,
-  getTables,
+  getTables, createTable, deleteTable,
 } from './menu.controller'
 import { authenticate, authorize } from '../../middleware/auth'
 
@@ -12,6 +12,8 @@ router.use(authenticate)
 
 // Tables
 router.get('/tables', getTables)
+router.post('/tables', authorize('tenant_admin', 'manager'), createTable)
+router.delete('/tables/:id', authorize('tenant_admin', 'manager'), deleteTable)
 
 // Categories
 router.get('/categories', getCategories)

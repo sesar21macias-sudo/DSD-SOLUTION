@@ -52,9 +52,14 @@ export default function OrdersPage() {
     mutationFn: (id: string) => api.patch(`/orders/${id}/cancel`, { reason: 'Cancelada desde panel' }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['all-orders'] }); toast.success('Orden cancelada') },
   })
+  const [chargingOrder, setChargingOrder] = useState<Order | null>(null)
   const chargeAtCounter = useMutation({
-    mutationFn: (id: string) => api.post(`/orders/${id}/charge-counter`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['all-orders'] }); toast.success('Cobrado — enviado a cocina') },
+    mutationFn: ({ id, method }: { id: string; method: 'cash' | 'card' | 'transfer' }) => api.post(`/orders/${id}/charge-counter`, { method }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['all-orders'] })
+      toast.success('Cobrado — enviado a cocina')
+      setChargingOrder(null)
+    },
     onError: (e: any) => toast.error(e?.response?.data?.error ?? 'No se pudo cobrar'),
   })
 
@@ -186,10 +191,10 @@ export default function OrdersPage() {
                       <span className="text-xs font-medium flex-1" style={{ color: '#9a3412' }}>
                         Cliente muestra su ticket con QR — cobra y se manda a cocina
                       </span>
-                      <button onClick={() => chargeAtCounter.mutate(order.id)} disabled={chargeAtCounter.isPending}
-                        className="text-white text-xs font-bold px-4 py-2 rounded-lg transition disabled:opacity-40"
+                      <button onClick={() => setChargingOrder(order)}
+                        className="text-white text-xs font-bold px-4 py-2 rounded-lg transition"
                         style={{ background: '#16a34a' }}>
-                        {chargeAtCounter.isPending ? 'Cobrando...' : 'Cobrar y enviar a cocina'}
+                        Cobrar y enviar a cocina
                       </button>
                     </div>
                   )}
@@ -215,6 +220,37 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      {/* Selector de metodo de pago antes de cobrar en caja */}
+      {chargingOrder && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }} onClick={() => setChargingOrder(null)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-xs rounded-2xl p-5 space-y-4"
+            style={{ background: '#ffffff', border: '1px solid #e5e7eb', boxShadow: '0 20px 40px rgba(0,0,0,0.12)' }}>
+            <div>
+              <p className="font-bold text-sm" style={{ color: '#111827' }}>Cobrar {chargingOrder.order_number}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#9ca3af' }}>
+                Total: {chargingOrder.currency === 'USD' ? 'USD ' : '$'}{Number(chargingOrder.total).toFixed(2)}
+              </p>
+            </div>
+            <p className="text-xs font-semibold" style={{ color: '#6b7280' }}>¿Con que pago el cliente?</p>
+            <div className="grid grid-cols-3 gap-2">
+              {([['cash', '💵 Efectivo'], ['card', '💳 Tarjeta'], ['transfer', '🏦 Transferencia']] as const).map(([method, label]) => (
+                <button key={method}
+                  onClick={() => chargeAtCounter.mutate({ id: chargingOrder.id, method })}
+                  disabled={chargeAtCounter.isPending}
+                  className="py-3 rounded-lg text-xs font-bold transition disabled:opacity-40"
+                  style={{ background: '#f3f4f6', color: '#111827', border: '1px solid #e5e7eb' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setChargingOrder(null)} className="w-full text-xs font-semibold py-2 rounded-lg" style={{ color: '#9ca3af' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

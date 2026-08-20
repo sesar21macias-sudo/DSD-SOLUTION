@@ -47,6 +47,9 @@ export default function TablesPage() {
   const { setTable, setOrderType } = useOrderStore()
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
   const [showQR, setShowQR] = useState<Table | null>(null)
+  const [showAddTable, setShowAddTable] = useState(false)
+  const [newTableNumber, setNewTableNumber] = useState('')
+  const [newTableCapacity, setNewTableCapacity] = useState('4')
   const [showAddProducts, setShowAddProducts] = useState(false)
   const [productSearch, setProductSearch] = useState('')
 
@@ -70,6 +73,21 @@ export default function TablesPage() {
     'order:paid': () => {
       qc.invalidateQueries({ queryKey: ['tables-orders'] }); qc.invalidateQueries({ queryKey: ['tables'] })
     },
+  })
+
+  const createTable = useMutation({
+    mutationFn: (data: { number: number; capacity: number }) => api.post('/menu/tables', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tables'] })
+      toast.success('Mesa agregada')
+      setShowAddTable(false); setNewTableNumber(''); setNewTableCapacity('4')
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.error ?? 'No se pudo agregar la mesa'),
+  })
+  const deleteTable = useMutation({
+    mutationFn: (id: string) => api.delete(`/menu/tables/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tables'] }); toast.success('Mesa eliminada') },
+    onError: () => toast.error('No se pudo eliminar la mesa'),
   })
 
   const addItemToOrder = useMutation({
@@ -220,6 +238,9 @@ export default function TablesPage() {
             <span className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-orange-400"/> {occupied} ocupadas
             </span>
+            <button onClick={() => setShowAddTable(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg font-semibold" style={{ background: '#111827', color: '#fff' }}>
+              <Plus size={13}/> Agregar mesa
+            </button>
           </div>
         </div>
 
@@ -564,10 +585,52 @@ export default function TablesPage() {
                 size={200} level="H" includeMargin/>
             </div>
             <p className="text-xs" style={{ color: '#9ca3af' }}>El cliente escanea y ordena desde su celular</p>
-            <button onClick={() => setShowQR(null)}
-              className="w-full text-white font-bold py-3 rounded-xl" style={{ background: '#111827' }}>
-              Cerrar
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowQR(null)}
+                className="flex-1 text-white font-bold py-3 rounded-xl" style={{ background: '#111827' }}>
+                Cerrar
+              </button>
+              <button onClick={() => { if (confirm(`¿Eliminar la mesa ${showQR.number}?`)) { deleteTable.mutate(showQR.id); setShowQR(null) } }}
+                className="px-4 font-bold py-3 rounded-xl" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add table modal */}
+      {showAddTable && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-xs rounded-3xl p-6 space-y-4"
+            style={{ background: '#ffffff', border: '1px solid #e5e7eb', boxShadow: '0 20px 40px rgba(0,0,0,0.12)' }}>
+            <p className="font-black text-lg" style={{ color: '#111827' }}>Agregar mesa</p>
+            <div>
+              <label className="text-xs font-semibold" style={{ color: '#6b7280' }}>Numero de mesa</label>
+              <input type="number" min={1} value={newTableNumber} onChange={e => setNewTableNumber(e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: '#e5e7eb' }} autoFocus />
+            </div>
+            <div>
+              <label className="text-xs font-semibold" style={{ color: '#6b7280' }}>Capacidad (personas)</label>
+              <input type="number" min={1} value={newTableCapacity} onChange={e => setNewTableCapacity(e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-lg border text-sm" style={{ borderColor: '#e5e7eb' }} />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowAddTable(false)} className="flex-1 py-2.5 rounded-xl font-semibold text-sm" style={{ background: '#f3f4f6', color: '#374151' }}>
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  const n = Number(newTableNumber)
+                  if (!n || n < 1) { toast.error('Escribe un numero de mesa valido'); return }
+                  createTable.mutate({ number: n, capacity: Number(newTableCapacity) || 4 })
+                }}
+                disabled={createTable.isPending}
+                className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white disabled:opacity-50" style={{ background: '#111827' }}>
+                {createTable.isPending ? 'Agregando...' : 'Agregar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
