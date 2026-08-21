@@ -44,9 +44,16 @@ export default function OrdersPage() {
   // La notificacion de pedido nuevo ahora vive en el layout (pos/layout.tsx)
   // para que suene sin importar en que pantalla del POS este el cajero.
 
+  // Antes esto solo hacia PATCH status:'paid' directo, sin pasar por
+  // /payments — no quedaba registro del metodo de pago y el cliente no
+  // acumulaba puntos de lealtad para ninguna orden cerrada por aqui.
   const markPaid = useMutation({
-    mutationFn: (id: string) => api.patch(`/orders/${id}/status`, { status: 'paid' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['all-orders'] }); toast.success('Orden marcada como pagada') },
+    mutationFn: async ({ id, method }: { id: string; method: 'cash' | 'card' | 'transfer' }) => {
+      await api.post('/payments', { order_id: id, method })
+      await api.patch(`/orders/${id}/status`, { status: 'paid' })
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['all-orders'] }); toast.success('Orden marcada como pagada'); setChargingOrder(null) },
+    onError: (e: any) => toast.error(e?.response?.data?.error ?? 'No se pudo cobrar'),
   })
   const cancelOrder = useMutation({
     mutationFn: (id: string) => api.patch(`/orders/${id}/cancel`, { reason: 'Cancelada desde panel' }),
@@ -201,8 +208,8 @@ export default function OrdersPage() {
                   {!['paid','cancelled','pending_payment'].includes(order.status) && (
                     <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid #f0f2f5' }}>
                       {order.status === 'delivered' && (
-                        <button onClick={() => markPaid.mutate(order.id)} disabled={markPaid.isPending}
-                          className="flex-1 text-white text-xs font-semibold py-2 rounded-lg transition disabled:opacity-40"
+                        <button onClick={() => setChargingOrder(order)}
+                          className="flex-1 text-white text-xs font-semibold py-2 rounded-lg transition"
                           style={{ background: '#16a34a' }}>
                           Cobrar
                         </button>
@@ -237,8 +244,10 @@ export default function OrdersPage() {
             <div className="grid grid-cols-3 gap-2">
               {([['cash', '💵 Efectivo'], ['card', '💳 Tarjeta'], ['transfer', '🏦 Transferencia']] as const).map(([method, label]) => (
                 <button key={method}
-                  onClick={() => chargeAtCounter.mutate({ id: chargingOrder.id, method })}
-                  disabled={chargeAtCounter.isPending}
+                  onClick={() => chargingOrder.status === 'pending_payment'
+                    ? chargeAtCounter.mutate({ id: chargingOrder.id, method })
+                    : markPaid.mutate({ id: chargingOrder.id, method })}
+                  disabled={chargeAtCounter.isPending || markPaid.isPending}
                   className="py-3 rounded-lg text-xs font-bold transition disabled:opacity-40"
                   style={{ background: '#f3f4f6', color: '#111827', border: '1px solid #e5e7eb' }}>
                   {label}

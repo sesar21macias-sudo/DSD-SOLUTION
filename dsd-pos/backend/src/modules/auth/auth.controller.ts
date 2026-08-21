@@ -196,6 +196,12 @@ export async function createUser(req: AuthRequest, res: Response): Promise<void>
   const parsed = schema.safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
 
+  // Solo un tenant_admin puede crear otro tenant_admin — sin esto un manager
+  // podia darse a si mismo (o a cualquiera) el rol maximo del negocio.
+  if (parsed.data.role === 'tenant_admin' && req.user!.role !== 'tenant_admin') {
+    res.status(403).json({ success: false, error: 'Solo un administrador puede asignar el rol de administrador' }); return
+  }
+
   const { full_name, email, password, role } = parsed.data
   const password_hash = await bcrypt.hash(password, 12)
 
@@ -211,6 +217,11 @@ export async function createUser(req: AuthRequest, res: Response): Promise<void>
 
 export async function updateUser(req: AuthRequest, res: Response): Promise<void> {
   const { is_active, role } = req.body
+
+  if (role === 'tenant_admin' && req.user!.role !== 'tenant_admin') {
+    res.status(403).json({ success: false, error: 'Solo un administrador puede asignar el rol de administrador' }); return
+  }
+
   const { data, error } = await supabase
     .from('users')
     .update({ is_active, role })

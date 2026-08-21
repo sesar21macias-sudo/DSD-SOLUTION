@@ -69,7 +69,14 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   // vez de dejarlo en una pantalla que el backend le va a rechazar en cada click.
   useEffect(() => {
     if (!hydrated || !user) return
-    const current = navItems.find(item => pathname === item.href || pathname?.startsWith(item.href + '/'))
+    // '/pos' es prefijo de toda ruta anidada (/pos/reports, /pos/users...) —
+    // buscando en orden de declaracion, ese match generico ganaba siempre
+    // antes que la entrada especifica, y la redireccion nunca se disparaba
+    // para rutas restringidas. Se ordena por longitud de href (mas especifico
+    // primero) antes de buscar.
+    const current = [...navItems]
+      .sort((a, b) => b.href.length - a.href.length)
+      .find(item => pathname === item.href || pathname?.startsWith(item.href + '/'))
     if (current && !current.roles.includes(user.role as Role)) {
       router.replace(allowedNavItems[0]?.href ?? '/pos')
     }

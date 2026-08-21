@@ -421,7 +421,7 @@ export async function identifyLoyaltyCustomer(req: Request, res: Response): Prom
 // ── POST /api/public/loyalty/set-pin/:tenantSlug ─────────────────────────────
 export async function setCustomerPin(req: Request, res: Response): Promise<void> {
   const { tenantSlug } = req.params
-  const schema = z.object({ phone: z.string().min(7), pin: z.string().length(4).regex(/^\d{4}$/) })
+  const schema = z.object({ phone: z.string().min(7), pin: z.string().length(4).regex(/^\d{4}$/), current_pin: z.string().length(4).optional() })
   const parsed = schema.safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
 
@@ -430,14 +430,24 @@ export async function setCustomerPin(req: Request, res: Response): Promise<void>
 
   const phone = parsed.data.phone.replace(/\D/g, '')
   let customer: any = null
-  const { data: exactC } = await supabase.from('loyalty_customers').select('id').eq('tenant_id', tenant.id).eq('phone', phone).maybeSingle()
+  const { data: exactC } = await supabase.from('loyalty_customers').select('id, pin').eq('tenant_id', tenant.id).eq('phone', phone).maybeSingle()
   customer = exactC
   if (!customer && phone.length > 10) {
     const phone10 = phone.slice(-10)
-    const { data: fb } = await supabase.from('loyalty_customers').select('id').eq('tenant_id', tenant.id).eq('phone', phone10).maybeSingle()
+    const { data: fb } = await supabase.from('loyalty_customers').select('id, pin').eq('tenant_id', tenant.id).eq('phone', phone10).maybeSingle()
     if (fb) { await supabase.from('loyalty_customers').update({ phone }).eq('id', fb.id); customer = fb }
   }
   if (!customer) { res.status(404).json({ success: false, error: 'Cliente no encontrado' }); return }
+
+  // Sin verificacion de telefono (SMS/OTP) no hay forma de probar que quien
+  // llama es el dueno del numero. Mitigacion: si ya tiene PIN, exigir el PIN
+  // actual para poder cambiarlo — evita que alguien que solo sabe el telefono
+  // le robe la cuenta poniendole un PIN nuevo.
+  if (customer.pin) {
+    if (!parsed.data.current_pin || !bcrypt.compareSync(parsed.data.current_pin, customer.pin)) {
+      res.status(403).json({ success: false, error: 'PIN actual incorrecto' }); return
+    }
+  }
 
   const pin = bcrypt.hashSync(parsed.data.pin, 10)
   await supabase.from('loyalty_customers').update({ pin }).eq('id', customer.id)

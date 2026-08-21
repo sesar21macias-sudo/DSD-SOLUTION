@@ -70,6 +70,16 @@ export async function updateReservation(req: AuthRequest, res: Response): Promis
   const parsed = updateSchema.safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
 
+  if (parsed.data.table_id) {
+    const { data: table } = await supabase
+      .from('tables')
+      .select('id')
+      .eq('id', parsed.data.table_id)
+      .eq('tenant_id', req.user!.tenantId)
+      .maybeSingle()
+    if (!table) { res.status(400).json({ success: false, error: 'Mesa inválida' }); return }
+  }
+
   const { data, error } = await supabase
     .from('reservations')
     .update({ ...parsed.data, updated_at: new Date().toISOString() })

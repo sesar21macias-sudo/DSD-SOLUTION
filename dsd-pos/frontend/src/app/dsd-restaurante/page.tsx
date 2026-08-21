@@ -637,10 +637,16 @@ export default function DSDRestaurantePage() {
         onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
           if (selectedPaymentMethod === 'wallet_purchase') return
           try {
-            await pub.post(`/mp/process-card/${TENANT_SLUG}`, { order_id: paymentData.order_id, ...formData })
+            const { data } = await pub.post(`/mp/process-card/${TENANT_SLUG}`, { order_id: paymentData.order_id, ...formData })
+            // El backend siempre responde 200 con el status real de MP —
+            // sin este chequeo, una tarjeta rechazada se mostraba como
+            // "pago exitoso" porque solo se veia que la llamada no truena.
+            if (data.data.status !== 'approved') {
+              throw new Error('Tu tarjeta fue rechazada. Intenta con otra o paga en caja.')
+            }
             setPaySuccess(paymentData.order_number)
             setPaymentData(null)
-          } catch (e: any) { throw new Error(e?.response?.data?.error ?? 'Error al procesar el pago') }
+          } catch (e: any) { throw new Error(e?.response?.data?.error ?? e?.message ?? 'Error al procesar el pago') }
         },
         onError: (err: any) => { console.error('[MP Brick]', err) },
       },
@@ -696,7 +702,10 @@ export default function DSDRestaurantePage() {
         notes:           notes || undefined,
         order_type:      tableId ? 'dine_in' : 'takeout',
         table_id:        tableId || undefined,
-        require_payment: !atCounter,
+        // Antes "pagar en caja" mandaba la orden a cocina y acreditaba puntos
+        // de inmediato, sin cobrar nada — mismo arreglo que ya se hizo en
+        // Red Panda: toda orden espera el cobro antes de llegar a cocina.
+        require_payment: true,
         items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
       })
       const orderData = orderRes.data as { order_id: string; order_number: string; total: number; discount?: number }

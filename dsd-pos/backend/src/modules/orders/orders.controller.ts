@@ -203,6 +203,20 @@ export async function chargeAtCounter(req: AuthRequest, res: Response): Promise<
     res.status(400).json({ success: false, error: 'Esta orden no esta esperando cobro en caja' }); return
   }
 
+  // El cambio de estado va primero y filtrado por el estado que ya leimos:
+  // si dos cajeros (o un doble clic) disparan esto al mismo tiempo, solo uno
+  // consigue mover la orden de pending_payment a pending — el segundo no
+  // afecta ninguna fila y se corta antes de registrar un cobro duplicado.
+  const { data: updated, count, error } = await supabase
+    .from('orders')
+    .update({ status: 'pending', updated_at: new Date().toISOString() }, { count: 'exact' })
+    .eq('id', req.params['id'])
+    .eq('status', 'pending_payment')
+    .select('*, order_items(*, menu_products(name, image_url)), tables(number, name)')
+    .single()
+
+  if (error || !updated || !count) { res.status(409).json({ success: false, error: 'Esta orden ya fue cobrada' }); return }
+
   const { error: payError } = await supabase.from('payments').insert({
     tenant_id: req.user!.tenantId,
     order_id: order.id,
@@ -213,15 +227,6 @@ export async function chargeAtCounter(req: AuthRequest, res: Response): Promise<
     processed_by: req.user!.userId,
   })
   if (payError) { sendError(res, 500, payError, 'No se pudo registrar el cobro'); return }
-
-  const { data: updated, error } = await supabase
-    .from('orders')
-    .update({ status: 'pending', updated_at: new Date().toISOString() })
-    .eq('id', req.params['id'])
-    .select('*, order_items(*, menu_products(name, image_url)), tables(number, name)')
-    .single()
-
-  if (error || !updated) { sendError(res, 500, error, 'No se pudo enviar la orden a cocina'); return }
 
   io.to(`tenant:${req.user!.tenantId}`).emit('order:new', { ...updated, source: 'counter' })
 
