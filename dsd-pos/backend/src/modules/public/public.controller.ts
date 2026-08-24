@@ -369,7 +369,13 @@ export async function getPublicRewards(req: Request, res: Response): Promise<voi
 // ── POST /api/public/loyalty/identify/:tenantSlug ─────────────────────────────
 export async function identifyLoyaltyCustomer(req: Request, res: Response): Promise<void> {
   const { tenantSlug } = req.params
-  const schema = z.object({ phone: z.string().min(7), name: z.string().optional() })
+  const schema = z.object({
+    phone: z.string().min(10, 'El telefono debe tener al menos 10 digitos'),
+    name: z.string().optional(),
+    last_name: z.string().optional(),
+    email: z.string().email().optional(),
+    birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  })
   const parsed = schema.safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.issues[0]?.message }); return }
 
@@ -377,11 +383,12 @@ export async function identifyLoyaltyCustomer(req: Request, res: Response): Prom
   if (!tenant) { res.status(404).json({ success: false, error: 'Restaurante no encontrado' }); return }
 
   const phone = parsed.data.phone.replace(/\D/g, '')
+  const fullName = [parsed.data.name, parsed.data.last_name].filter(Boolean).join(' ').trim() || undefined
 
   let existing: any = null
   const { data: exactMatch } = await supabase
     .from('loyalty_customers')
-    .select('id, full_name, points, total_visits, tier, pin')
+    .select('id, full_name, email, birthday, points, total_visits, tier, pin')
     .eq('tenant_id', tenant.id).eq('phone', phone).maybeSingle()
   existing = exactMatch
 
@@ -389,7 +396,7 @@ export async function identifyLoyaltyCustomer(req: Request, res: Response): Prom
     const phone10 = phone.slice(-10)
     const { data: fallback } = await supabase
       .from('loyalty_customers')
-      .select('id, full_name, points, total_visits, tier, pin')
+      .select('id, full_name, email, birthday, points, total_visits, tier, pin')
       .eq('tenant_id', tenant.id).eq('phone', phone10).maybeSingle()
     if (fallback) {
       await supabase.from('loyalty_customers').update({ phone }).eq('id', fallback.id)
@@ -398,9 +405,15 @@ export async function identifyLoyaltyCustomer(req: Request, res: Response): Prom
   }
 
   if (existing) {
-    if (parsed.data.name && !existing.full_name) {
-      await supabase.from('loyalty_customers').update({ full_name: parsed.data.name }).eq('id', existing.id)
-      existing.full_name = parsed.data.name
+    // Solo rellena datos que faltan — no pisa lo que el cliente ya tenia
+    // guardado si vuelve a consultar sus puntos sin llenar el formulario.
+    const patch: Record<string, unknown> = {}
+    if (fullName && !existing.full_name) patch['full_name'] = fullName
+    if (parsed.data.email && !existing.email) patch['email'] = parsed.data.email
+    if (parsed.data.birthday && !existing.birthday) patch['birthday'] = parsed.data.birthday
+    if (Object.keys(patch).length > 0) {
+      await supabase.from('loyalty_customers').update(patch).eq('id', existing.id)
+      Object.assign(existing, patch)
     }
     const has_pin = !!existing.pin
     const { pin: _, ...customerData } = existing
@@ -410,8 +423,12 @@ export async function identifyLoyaltyCustomer(req: Request, res: Response): Prom
 
   const { data: customer, error } = await supabase
     .from('loyalty_customers')
-    .insert({ tenant_id: tenant.id, phone, full_name: parsed.data.name ?? null, points: 0, total_visits: 0, total_spent: 0, tier: 'bronze' })
-    .select('id, full_name, points, total_visits, tier')
+    .insert({
+      tenant_id: tenant.id, phone, full_name: fullName ?? null,
+      email: parsed.data.email ?? null, birthday: parsed.data.birthday ?? null,
+      points: 0, total_visits: 0, total_spent: 0, tier: 'bronze',
+    })
+    .select('id, full_name, email, birthday, points, total_visits, tier')
     .single()
 
   if (error || !customer) { sendError(res, 500, error, 'No se pudo registrar el cliente'); return }

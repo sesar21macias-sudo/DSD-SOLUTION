@@ -511,6 +511,9 @@ interface LoyaltyCustomer { full_name: string | null; points: number; total_visi
 function LoyaltyModal({ onClose }: { onClose: () => void }) {
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [birthday, setBirthday] = useState('')
   const [customer, setCustomer] = useState<LoyaltyCustomer | null>(null)
   const [justRegistered, setJustRegistered] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -522,16 +525,19 @@ function LoyaltyModal({ onClose }: { onClose: () => void }) {
   })
 
   async function checkPoints() {
-    if (phone.trim().length < 7) { setError('Escribe un telefono valido'); return }
+    if (phone.trim().replace(/\D/g, '').length < 10) { setError('Escribe un telefono valido (10 digitos)'); return }
     setLoading(true); setError('')
     try {
       // Este mismo endpoint registra al cliente si es la primera vez que
       // pone su telefono — no hace falta un "boton de registro" aparte.
-      const { data } = await pub.post(`/public/loyalty/identify/${SLUG}`, { phone: phone.trim(), name: name.trim() || undefined })
+      const { data } = await pub.post(`/public/loyalty/identify/${SLUG}`, {
+        phone: phone.trim(), name: name.trim() || undefined, last_name: lastName.trim() || undefined,
+        email: email.trim() || undefined, birthday: birthday || undefined,
+      })
       setCustomer(data.data.customer)
       setJustRegistered(!!data.data.is_new)
-    } catch {
-      setError('No se pudo consultar. Intenta de nuevo.')
+    } catch (e: any) {
+      setError(e?.response?.data?.error ?? 'No se pudo consultar. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -548,10 +554,21 @@ function LoyaltyModal({ onClose }: { onClose: () => void }) {
         {!customer ? (
           <>
             <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Escribe tu telefono para ver tus puntos, o registrate si es tu primera vez. Ganas 1 punto por cada $10 que gastas.</p>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre (si es tu primera vez)"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 8, fontSize: 14 }} />
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre"
+                style={{ flex: 1, padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', fontSize: 14 }} />
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido"
+                style={{ flex: 1, padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', fontSize: 14 }} />
+            </div>
             <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Tu telefono" type="tel"
               style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 8, fontSize: 14 }} />
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Correo (para promociones)" type="email"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginBottom: 8, fontSize: 14 }} />
+            <div>
+              <label style={{ fontSize: 11, color: '#999' }}>Fecha de cumpleanos (opcional)</label>
+              <input value={birthday} onChange={e => setBirthday(e.target.value)} type="date"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 3, border: '1px solid #ddd', marginTop: 4, marginBottom: 8, fontSize: 14 }} />
+            </div>
             {error && <p style={{ color: RED, fontSize: 12, marginBottom: 8 }}>{error}</p>}
             <button onClick={checkPoints} disabled={loading} className="rp-cta"
               style={{ width: '100%', background: BLACK, color: WHITE, border: 'none', padding: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
