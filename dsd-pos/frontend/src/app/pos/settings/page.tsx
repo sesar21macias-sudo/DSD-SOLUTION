@@ -258,43 +258,43 @@ export default function SettingsPage() {
 // Conexion de WhatsApp via QR (Baileys) — como WhatsApp Web, sin cuenta de
 // WhatsApp Business API ni verificacion de Meta. Se escanea una sola vez.
 function WhatsAppCard() {
-  const { data, refetch } = useQuery({
+  const [testPhone, setTestPhone] = useState('')
+
+  const { data } = useQuery({
     queryKey: ['wa-status'],
-    queryFn: async () => { const { data } = await api.get('/whatsapp-bot/status'); return data.data as { status: string; qr: string | null } },
-    refetchInterval: (q) => (q.state.data?.status === 'connected' ? false : 3000),
+    queryFn: async () => { const { data } = await api.get('/whatsapp-bot/status'); return data.data as { status: string; sandboxNumber: string | null } },
   })
 
-  const connect = useMutation({
-    mutationFn: () => api.post('/whatsapp-bot/connect'),
-    onSuccess: () => refetch(),
+  const sendTest = useMutation({
+    mutationFn: () => api.post('/whatsapp-bot/test', { phone: testPhone }),
+    onSuccess: () => toast.success('Mensaje de prueba enviado'),
+    onError: (e: any) => toast.error(e?.response?.data?.error ?? 'No se pudo enviar'),
   })
 
-  const statusLabel: Record<string, { label: string; color: string }> = {
-    disconnected: { label: 'Desconectado', color: '#9ca3af' },
-    connecting:   { label: 'Conectando...', color: '#f59e0b' },
-    waiting_qr:   { label: 'Escanea el codigo QR', color: '#f59e0b' },
-    connected:    { label: 'Conectado', color: '#16a34a' },
-  }
-  const cfg = statusLabel[data?.status ?? 'disconnected']
+  const connected = data?.status === 'connected'
 
   return (
-    <Card title="WhatsApp — confirmaciones y promociones">
+    <Card title="WhatsApp — confirmaciones de pedido (Twilio)">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color }} />
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{cfg.label}</span>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#16a34a' : '#9ca3af' }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{connected ? 'Configurado' : 'No configurado'}</span>
       </div>
-      <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>
-        Al conectar, se manda automatico un mensaje de confirmacion al cliente cuando su pedido se cobra.
-        No es la API oficial de WhatsApp Business — funciona como WhatsApp Web, sin espera de aprobacion de Meta.
+      <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12, lineHeight: 1.5 }}>
+        Manda confirmacion automatica por WhatsApp cuando un pedido se cobra. Usa la API oficial de Twilio
+        (no arriesga que baneen ningun numero personal). <strong>Modo sandbox de prueba:</strong> cada
+        telefono que quiera recibir mensajes debe primero mandar <code>join</code> + la palabra clave de
+        Twilio al numero {data?.sandboxNumber ?? 'de WhatsApp'} — para produccion real hace falta pasar la
+        cuenta de Twilio a pago y verificar el negocio ante Meta.
       </p>
-      {data?.status === 'waiting_qr' && data.qr && (
-        <img src={data.qr} alt="Escanea con WhatsApp" style={{ width: 200, height: 200, border: '1px solid #e5e7eb', borderRadius: 10, marginBottom: 12 }} />
-      )}
-      {data?.status !== 'connected' && (
-        <button onClick={() => connect.mutate()} disabled={connect.isPending}
-          style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: connect.isPending ? 0.7 : 1 }}>
-          {connect.isPending ? 'Conectando...' : 'Conectar WhatsApp'}
-        </button>
+      {connected && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input value={testPhone} onChange={e => setTestPhone(e.target.value)} placeholder="Tu telefono (ya unido al sandbox)"
+            style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 13 }} />
+          <button onClick={() => sendTest.mutate()} disabled={sendTest.isPending || !testPhone}
+            style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: sendTest.isPending || !testPhone ? 0.5 : 1 }}>
+            {sendTest.isPending ? 'Enviando...' : 'Mandar prueba'}
+          </button>
+        </div>
       )}
     </Card>
   )
