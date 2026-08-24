@@ -27,8 +27,11 @@ export async function sendWhatsAppMessage(phone: string, text: string): Promise<
     const token = process.env['TWILIO_AUTH_TOKEN']!
     const from = process.env['TWILIO_WHATSAPP_NUMBER']!
 
+    // WhatsApp usa "521" (con el 1 extra) para celulares mexicanos, no "52"
+    // a secas -- con solo "52" el mensaje se manda a un numero que WhatsApp
+    // nunca reconoce como el mismo que se unio al sandbox.
     const digits = phone.replace(/\D/g, '')
-    const withCountry = digits.length === 10 ? `52${digits}` : digits
+    const withCountry = digits.length === 10 ? `521${digits}` : digits
 
     const auth = Buffer.from(`${sid}:${token}`).toString('base64')
     const body = new URLSearchParams({
