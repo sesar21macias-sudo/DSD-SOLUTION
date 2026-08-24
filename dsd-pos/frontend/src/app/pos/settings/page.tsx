@@ -236,6 +236,8 @@ export default function SettingsPage() {
             </span>
           </div>
         </Card>
+
+        <WhatsAppCard />
       </div>
 
       {/* Save button bottom */}
@@ -250,5 +252,50 @@ export default function SettingsPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+// Conexion de WhatsApp via QR (Baileys) — como WhatsApp Web, sin cuenta de
+// WhatsApp Business API ni verificacion de Meta. Se escanea una sola vez.
+function WhatsAppCard() {
+  const { data, refetch } = useQuery({
+    queryKey: ['wa-status'],
+    queryFn: async () => { const { data } = await api.get('/whatsapp-bot/status'); return data.data as { status: string; qr: string | null } },
+    refetchInterval: (q) => (q.state.data?.status === 'connected' ? false : 3000),
+  })
+
+  const connect = useMutation({
+    mutationFn: () => api.post('/whatsapp-bot/connect'),
+    onSuccess: () => refetch(),
+  })
+
+  const statusLabel: Record<string, { label: string; color: string }> = {
+    disconnected: { label: 'Desconectado', color: '#9ca3af' },
+    connecting:   { label: 'Conectando...', color: '#f59e0b' },
+    waiting_qr:   { label: 'Escanea el codigo QR', color: '#f59e0b' },
+    connected:    { label: 'Conectado', color: '#16a34a' },
+  }
+  const cfg = statusLabel[data?.status ?? 'disconnected']
+
+  return (
+    <Card title="WhatsApp — confirmaciones y promociones">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{cfg.label}</span>
+      </div>
+      <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>
+        Al conectar, se manda automatico un mensaje de confirmacion al cliente cuando su pedido se cobra.
+        No es la API oficial de WhatsApp Business — funciona como WhatsApp Web, sin espera de aprobacion de Meta.
+      </p>
+      {data?.status === 'waiting_qr' && data.qr && (
+        <img src={data.qr} alt="Escanea con WhatsApp" style={{ width: 200, height: 200, border: '1px solid #e5e7eb', borderRadius: 10, marginBottom: 12 }} />
+      )}
+      {data?.status !== 'connected' && (
+        <button onClick={() => connect.mutate()} disabled={connect.isPending}
+          style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: connect.isPending ? 0.7 : 1 }}>
+          {connect.isPending ? 'Conectando...' : 'Conectar WhatsApp'}
+        </button>
+      )}
+    </Card>
   )
 }

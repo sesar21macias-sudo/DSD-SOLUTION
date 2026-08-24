@@ -23,6 +23,7 @@ import reservationsRoutes from './modules/reservations/reservations.routes'
 import settingsRoutes from './modules/settings/settings.routes'
 import stripeConnectRoutes from './modules/stripe-connect/stripe-connect.routes'
 import assistantRoutes from './modules/assistant/assistant.routes'
+import waRoutes from './modules/whatsapp-bot/wa.routes'
 import { errorHandler, notFound } from './middleware/errorHandler'
 
 // Sin esto, un error async no atrapado en cualquier endpoint tumba todo el
@@ -90,6 +91,7 @@ app.use('/api/reservations', reservationsRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/stripe-connect', stripeConnectRoutes)
 app.use('/api/assistant', assistantRoutes)
+app.use('/api/whatsapp-bot', waRoutes)
 
 // Socket.io — real-time kitchen display. Solo lo usan las páginas autenticadas
 // del dashboard (/pos/*); el flujo público de pago no depende de sockets.

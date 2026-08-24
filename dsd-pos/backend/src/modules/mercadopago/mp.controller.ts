@@ -4,6 +4,7 @@ import MercadoPagoConfig, { Preference, Payment } from 'mercadopago'
 import { supabase } from '../../config/supabase'
 import { io } from '../../server'
 import { accrueLoyaltyPoints } from '../loyalty/loyalty.service'
+import { sendWhatsAppMessage } from '../whatsapp-bot/wa.service'
 
 declare module 'mercadopago' {
   interface PaymentCreateData {
@@ -242,6 +243,12 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
       amountSpent: payment.transaction_amount ?? Number(order.total),
       orderId,
     }).catch(err => console.error('[Loyalty] Error acumulando puntos:', err))
+
+    if (orderBefore.customer_phone) {
+      sendWhatsAppMessage(orderBefore.customer_phone,
+        `Tu pago para el pedido *${order.order_number}* se confirmo. Va en camino a cocina. Gracias por tu compra!`
+      ).catch(err => console.error('[WhatsApp] Error enviando confirmacion:', err))
+    }
 
     // Liberar la mesa
     if (order.table_id) {

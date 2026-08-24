@@ -7,6 +7,7 @@ import { OrderStatus, OrderType } from '../../types'
 import { io } from '../../server'
 import { deductInventoryForOrder } from '../inventory/inventory.controller'
 import { accrueLoyaltyPoints } from '../loyalty/loyalty.service'
+import { sendWhatsAppMessage } from '../whatsapp-bot/wa.service'
 import { logAudit } from '../../utils/auditLog'
 import { sendError } from '../../utils/sendError'
 
@@ -237,6 +238,10 @@ export async function chargeAtCounter(req: AuthRequest, res: Response): Promise<
       amountSpent: Number(order.total),
       orderId: order.id,
     }).catch(err => console.error('[Loyalty] Error acumulando puntos en caja:', err))
+
+    sendWhatsAppMessage(order.customer_phone,
+      `Tu pedido *${updated.order_number}* ya se cobro y va en camino a cocina. Total: $${Number(order.total).toFixed(2)}. Gracias por tu compra!`
+    ).catch(err => console.error('[WhatsApp] Error enviando confirmacion:', err))
   }
 
   res.json({ success: true, data: updated })
