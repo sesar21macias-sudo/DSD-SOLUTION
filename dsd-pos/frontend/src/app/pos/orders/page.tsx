@@ -14,15 +14,17 @@ interface Order {
   payments?: { method: string; status: string }[]
 }
 
+// Paleta de estados alineada a los colores de sistema de iOS/macOS
+// (naranja, azul, verde, morado, rojo) en vez de los tonos genericos previos.
 const STATUS_CFG: Record<string, { label: string; fg: string; bg: string; border: string }> = {
-  pending_payment: { label: 'Por cobrar en caja', fg: '#9a3412', bg: '#fff7ed', border: '#fdba74' },
-  pending:   { label: 'Pendiente',   fg: '#92400e', bg: '#fffbeb', border: '#fde68a' },
-  confirmed: { label: 'Confirmada',  fg: '#1e40af', bg: '#eff6ff', border: '#bfdbfe' },
-  preparing: { label: 'Preparando', fg: '#9a3412', bg: '#fff7ed', border: '#fed7aa' },
-  ready:     { label: 'Lista',       fg: '#14532d', bg: '#f0fdf4', border: '#bbf7d0' },
-  delivered: { label: 'Entregada',  fg: '#4c1d95', bg: '#f5f3ff', border: '#ddd6fe' },
-  paid:      { label: 'Pagada',     fg: '#374151', bg: '#f9fafb', border: '#e5e7eb' },
-  cancelled: { label: 'Cancelada',  fg: '#991b1b', bg: '#fef2f2', border: '#fecaca' },
+  pending_payment: { label: 'Por cobrar en caja', fg: '#c2410c', bg: '#fff4ea', border: 'transparent' },
+  pending:   { label: 'Pendiente',   fg: '#a1580a', bg: '#fff8ea', border: 'transparent' },
+  confirmed: { label: 'Confirmada',  fg: '#007AFF', bg: '#eaf3ff', border: 'transparent' },
+  preparing: { label: 'Preparando', fg: '#FF9500', bg: '#fff4e5', border: 'transparent' },
+  ready:     { label: 'Lista',       fg: '#34C759', bg: '#e9f9ec', border: 'transparent' },
+  delivered: { label: 'Entregada',  fg: '#AF52DE', bg: '#f6ecfb', border: 'transparent' },
+  paid:      { label: 'Pagada',     fg: '#8e8e93', bg: '#f2f2f7', border: 'transparent' },
+  cancelled: { label: 'Cancelada',  fg: '#FF3B30', bg: '#ffeceb', border: 'transparent' },
 }
 
 const PAYMENT_LABEL: Record<string, string> = { card: '💳 Tarjeta', cash: '💵 Efectivo', transfer: '🏦 Transferencia', online: '💳 En linea' }
@@ -95,42 +97,37 @@ export default function OrdersPage() {
   const typeLabel: Record<string, string> = { dine_in: 'Mesa', takeout: 'Para llevar', delivery: 'Delivery', online: 'En línea' }
 
   return (
-    <div className="h-full flex flex-col" style={{ background: '#f5f6fa' }}>
+    <div className="h-full flex flex-col" style={{ background: '#f2f2f7' }}>
       {/* Header */}
-      <div className="px-6 py-4 flex items-center gap-3" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#f0f2f5' }}>
-          <ClipboardList size={17} style={{ color: '#374151' }} />
-        </div>
-        <h1 className="text-base font-bold" style={{ color: '#111827' }}>Órdenes</h1>
-        <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: '#f0f2f5', color: '#6b7280' }}>
+      <div className="px-6 py-4 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+        <h1 className="text-[22px] font-bold tracking-tight" style={{ color: '#1c1c1e' }}>Órdenes</h1>
+        <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,122,255,0.1)', color: '#007AFF' }}>
           {filtered?.length ?? 0}
         </span>
-        <button onClick={() => refetch()} className="ml-auto p-1.5 rounded-lg transition"
-          style={{ color: '#9ca3af' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#111827')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
-          <RefreshCw size={15}/>
+        <button onClick={() => refetch()} className="ml-auto p-2 rounded-full transition"
+          style={{ color: '#8e8e93', background: 'rgba(0,0,0,0.04)' }}>
+          <RefreshCw size={14}/>
         </button>
       </div>
 
       {/* Filtros tipo */}
-      <div className="px-4 py-2 flex gap-2 overflow-x-auto" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
+      <div className="px-5 py-3 flex gap-2 overflow-x-auto" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         {typeFilters.map(({ key, label, icon }) => (
           <button key={key} onClick={() => setFilterType(key)}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition"
+            className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all"
             style={filterType === key
-              ? { background: '#111827', color: '#ffffff' }
-              : { background: '#f0f2f5', color: '#6b7280' }}>
+              ? { background: '#007AFF', color: '#ffffff' }
+              : { background: 'rgba(0,0,0,0.05)', color: '#3c3c43' }}>
             {icon}{label}
           </button>
         ))}
         <div className="ml-auto flex gap-1">
           {statusFilters.map(({ key, label }) => (
             <button key={key} onClick={() => setFilterStatus(key)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition"
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all"
               style={filterStatus === key
-                ? { background: '#e5e7eb', color: '#111827' }
-                : { background: 'transparent', color: '#9ca3af' }}>
+                ? { background: 'rgba(0,0,0,0.08)', color: '#1c1c1e' }
+                : { background: 'transparent', color: '#8e8e93' }}>
               {label}
             </button>
           ))}
@@ -147,11 +144,11 @@ export default function OrdersPage() {
             <p className="text-sm">Sin órdenes</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {filtered?.map(order => {
               const cfg = STATUS_CFG[order.status] ?? STATUS_CFG['pending']
               return (
-                <div key={order.id} className="rounded-xl p-4" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
+                <div key={order.id} className="rounded-2xl p-4 transition-shadow" style={{ background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03)' }}>
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                       style={{ background: order.type === 'dine_in' ? '#fff7ed' : '#eff6ff' }}>

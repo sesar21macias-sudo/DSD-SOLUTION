@@ -102,51 +102,49 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
     router.push('/login')
   }
 
+  const SYSTEM_FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif"
+  const BLUE = '#007AFF'
+
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#f5f6fa' }}>
-      {/* ── Sidebar (dark) ── */}
+    <div className="flex h-screen overflow-hidden" style={{ background: '#f2f2f7', fontFamily: SYSTEM_FONT }}>
+      {/* ── Sidebar: vidrio esmerilado claro, estilo panel lateral de macOS ── */}
       <aside
-        className="w-16 md:w-56 flex flex-col flex-shrink-0"
-        style={{ background: '#111827', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+        className="w-16 md:w-60 flex flex-col flex-shrink-0"
+        style={{
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderRight: '1px solid rgba(0,0,0,0.06)',
+        }}
       >
         {/* Logo */}
-        <div className="px-3 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-4 py-5">
           <div className="px-1">
-            <DSDLogo size={36} showWordmark />
+            <DSDLogo size={32} showWordmark />
           </div>
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
           {allowedNavItems.map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href
             return (
               <Link
                 key={href}
                 href={href}
-                className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group"
+                className="relative flex items-center gap-3 px-3 py-2.5 rounded-[10px] transition-all duration-200"
                 style={active ? {
-                  background: 'rgba(255,255,255,0.1)',
+                  background: BLUE,
                   color: '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0,122,255,0.3)',
                 } : {
-                  color: '#6b7280',
+                  color: '#3c3c43',
                 }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(0,0,0,0.04)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
               >
-                {active && (
-                  <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                    style={{ background: '#f97316' }}
-                  />
-                )}
-                <Icon
-                  size={17}
-                  className="flex-shrink-0"
-                  style={{ color: active ? '#ffffff' : '#4b5563' }}
-                />
-                <span
-                  className="hidden md:block text-sm font-medium"
-                  style={{ color: active ? '#ffffff' : '#6b7280' }}
-                >
+                <Icon size={17} className="flex-shrink-0" style={{ color: active ? '#ffffff' : '#8e8e93' }} />
+                <span className="hidden md:block text-[13px] font-medium tracking-tight" style={{ color: active ? '#ffffff' : '#1c1c1e' }}>
                   {t(labelKey)}
                 </span>
               </Link>
@@ -155,21 +153,21 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* User + logout */}
-        <div className="px-2 py-3 space-y-1" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-3 py-3 space-y-1" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
           {/* User info */}
           <div
-            className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+            className="hidden md:flex items-center gap-2.5 px-3 py-2.5 rounded-[10px]"
+            style={{ background: 'rgba(0,0,0,0.03)' }}
           >
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-              style={{ background: 'rgba(249,115,22,0.2)', color: '#f97316' }}
+              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold text-white"
+              style={{ background: BLUE }}
             >
               {user.email[0].toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-xs truncate leading-tight" style={{ color: '#d1d5db' }}>{user.email}</p>
-              <p className="text-[10px] font-semibold capitalize leading-tight mt-0.5" style={{ color: '#f97316' }}>
+              <p className="text-xs truncate leading-tight font-medium" style={{ color: '#1c1c1e' }}>{user.email}</p>
+              <p className="text-[10px] font-semibold capitalize leading-tight mt-0.5" style={{ color: BLUE }}>
                 {user.role.replace('_', ' ')}
               </p>
             </div>
@@ -178,19 +176,19 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150"
-            style={{ color: '#6b7280' }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] transition-all duration-200"
+            style={{ color: '#8e8e93' }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(239,68,68,0.1)'
-              e.currentTarget.style.color = '#ef4444'
+              e.currentTarget.style.background = 'rgba(255,59,48,0.08)'
+              e.currentTarget.style.color = '#ff3b30'
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = '#6b7280'
+              e.currentTarget.style.color = '#8e8e93'
             }}
           >
             <LogOut size={17} className="flex-shrink-0" />
-            <span className="hidden md:block text-sm font-medium">{t('nav.logout')}</span>
+            <span className="hidden md:block text-[13px] font-medium">{t('nav.logout')}</span>
           </button>
           <div className="hidden md:flex justify-center pt-1">
             <LanguageSwitcher variant="dark" />
@@ -198,8 +196,8 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* ── Main content (light) ── */}
-      <main className="flex-1 overflow-hidden" style={{ background: '#f5f6fa' }}>
+      {/* ── Main content ── */}
+      <main className="flex-1 overflow-hidden" style={{ background: '#f2f2f7', fontFamily: SYSTEM_FONT }}>
         {children}
       </main>
       {user.role === 'tenant_admin' && <BusinessAssistant />}
