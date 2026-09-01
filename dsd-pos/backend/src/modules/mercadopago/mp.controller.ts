@@ -210,6 +210,14 @@ export async function mpWebhook(req: Request, res: Response): Promise<void> {
 
     if (!orderBefore) { console.error('[MP Webhook] Orden no encontrada:', orderId); return }
 
+    // MP reintenta el webhook si la respuesta tarda o es ambigua — sin este
+    // corte, un reintento duplicaba el pago en la tabla y le daba puntos de
+    // lealtad dos veces al mismo cliente por la misma compra.
+    if (orderBefore.status === 'paid') {
+      console.log('[MP Webhook] Orden ya estaba pagada, ignorando notificacion duplicada:', orderId)
+      return
+    }
+
     const wasPendingPayment = orderBefore.status === 'pending_payment'
 
     // Marcar orden como pagada
