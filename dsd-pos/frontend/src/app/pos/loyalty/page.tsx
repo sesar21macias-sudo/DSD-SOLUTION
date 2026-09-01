@@ -95,7 +95,7 @@ export default function LoyaltyPage() {
   const tierCfg = activeCustomer ? (TIER_CFG[activeCustomer.tier] ?? TIER_CFG['bronze']) : null
 
   return (
-    <div className="h-full flex" style={{ background: '#f5f6fa' }}>
+    <div className="h-full flex" style={{ background: '#f5f5f7' }}>
       {/* Lista de clientes */}
       <div className="w-80 flex flex-col flex-shrink-0" style={{ background: '#ffffff', borderRight: '1px solid #e5e7eb' }}>
         <div className="px-4 py-4" style={{ borderBottom: '1px solid #f0f2f5' }}>

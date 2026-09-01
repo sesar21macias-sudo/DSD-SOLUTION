@@ -105,7 +105,7 @@ export default function SettingsPage() {
   )
 
   return (
-    <div style={{ height: '100%', overflowY: 'auto', padding: '32px 40px', background: '#f5f6fa' }}>
+    <div style={{ height: '100%', overflowY: 'auto', padding: '32px 40px', background: '#f5f5f7' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
         <div>

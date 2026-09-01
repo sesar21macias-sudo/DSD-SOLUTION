@@ -122,7 +122,7 @@ export default function PosPage() {
   ]
 
   return (
-    <div className="flex h-full" style={{ background: '#f5f6fa' }}>
+    <div className="flex h-full" style={{ background: '#f5f5f7' }}>
 
       {/* Ready alert */}
       {readyAlert && (
@@ -138,7 +138,7 @@ export default function PosPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Toolbar */}
-        <div className="px-4 py-3 flex items-center gap-3" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
+        <div className="px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af' }} />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('pos.searchPlaceholder')}

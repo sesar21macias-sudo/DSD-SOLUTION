@@ -167,9 +167,9 @@ export default function InventoryPage() {
   })
 
   return (
-    <div className="h-full flex flex-col" style={{ background: '#f5f6fa' }}>
+    <div className="h-full flex flex-col" style={{ background: '#f5f5f7' }}>
       {/* Header */}
-      <div className="px-6 py-4 flex items-center gap-3" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
+      <div className="px-6 py-4 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#f0f2f5' }}>
           <Package size={17} style={{ color: '#374151' }} />
         </div>
@@ -200,7 +200,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="px-6 flex gap-6" style={{ background: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
+      <div className="px-6 flex gap-6" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         {([{ key:'stock',label:'Stock actual'},{key:'movements',label:'Movimientos'},{key:'recipes',label:'Recetas'}] as {key:Tab;label:string}[]).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={tabBtn(tab === t.key)}>{t.label}</button>
         ))}
