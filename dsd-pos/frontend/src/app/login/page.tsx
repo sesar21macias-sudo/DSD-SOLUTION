@@ -36,54 +36,51 @@ export default function LoginPage() {
     }
   }
 
+  const SYSTEM_FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif"
+  const BLUE = '#007AFF'
+
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: '#f9fafb',
-    border: '1px solid #e5e7eb',
-    borderRadius: '12px',
-    padding: '12px 16px',
+    background: '#ffffff',
+    border: '0.5px solid rgba(0,0,0,0.08)',
+    borderRadius: '10px',
+    padding: '12px 14px',
     fontSize: '14px',
-    color: '#111827',
+    color: '#1c1c1e',
     outline: 'none',
-    transition: 'border-color 0.15s',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+    fontFamily: SYSTEM_FONT,
   }
 
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: '#f5f6fa' }}
+      style={{ background: '#f5f5f7', fontFamily: SYSTEM_FONT }}
     >
-      {/* Subtle grid pattern */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: 'linear-gradient(#111 1px, transparent 1px), linear-gradient(90deg, #111 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-        }}
-      />
-
       <div className="w-full max-w-sm relative">
         <div className="flex justify-center mb-4">
           <LanguageSwitcher />
         </div>
         {/* Logo + heading */}
         <div className="text-center mb-8 flex flex-col items-center gap-4">
-          <DSDLogo size={52} variant="dark" />
+          <div style={{ filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.15))' }}>
+            <DSDLogo size={56} variant="dark" />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#111827' }}>{t('login.title')}</h1>
-            <p className="text-sm mt-1" style={{ color: '#6b7280' }}>{t('login.subtitle')}</p>
+            <h1 className="text-[20px] font-semibold tracking-tight" style={{ color: '#1c1c1e' }}>{t('login.title')}</h1>
+            <p className="text-[13px] mt-1" style={{ color: '#8e8e93' }}>{t('login.subtitle')}</p>
           </div>
         </div>
 
-        {/* Card */}
+        {/* Card: vidrio esmerilado, esquinas grandes, sombra suave */}
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl p-6 space-y-4"
-          style={{ background: '#ffffff', border: '1px solid #e5e7eb', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}
+          className="rounded-[18px] p-6 space-y-3.5"
+          style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}
         >
           {/* Email */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>
+            <label className="block text-[11px] font-medium" style={{ color: '#8e8e93' }}>
               {t('login.email')}
             </label>
             <input
@@ -93,14 +90,14 @@ export default function LoginPage() {
               placeholder="admin@restaurante.com"
               required
               style={inputStyle}
-              onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
+              onFocus={e => { e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.boxShadow = `0 0 0 3px ${BLUE}22` }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.boxShadow = 'none' }}
             />
           </div>
 
           {/* Password */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>
+            <label className="block text-[11px] font-medium" style={{ color: '#8e8e93' }}>
               {t('login.password')}
             </label>
             <div className="relative">
@@ -111,14 +108,14 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 required
                 style={{ ...inputStyle, paddingRight: '44px' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#111827')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
+                onFocus={e => { e.currentTarget.style.borderColor = BLUE; e.currentTarget.style.boxShadow = `0 0 0 3px ${BLUE}22` }}
+                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.boxShadow = 'none' }}
               />
               <button
                 type="button"
                 onClick={() => setShowPw(p => !p)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                style={{ color: '#9ca3af' }}
+                style={{ color: '#c7c7cc' }}
               >
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -129,8 +126,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full font-semibold py-3 rounded-xl text-white text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-60"
-            style={{ background: '#111827', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+            className="w-full font-semibold py-3 rounded-[10px] text-white text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-60"
+            style={{ background: BLUE, boxShadow: `0 4px 12px ${BLUE}4D` }}
           >
             {loading ? (
               <>
@@ -148,11 +145,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs mt-6" style={{ color: '#9ca3af' }}>
-          ¿No tienes negocio registrado? <Link href="/signup" className="font-semibold" style={{ color: '#111827' }}>Crea uno gratis</Link>
+        <p className="text-center text-xs mt-6" style={{ color: '#8e8e93' }}>
+          ¿No tienes negocio registrado? <Link href="/signup" className="font-semibold" style={{ color: BLUE }}>Crea uno gratis</Link>
         </p>
 
-        <p className="text-center text-xs mt-3" style={{ color: '#d1d5db' }}>
+        <p className="text-center text-xs mt-3" style={{ color: '#c7c7cc' }}>
           DSD AI Solutions © 2025
         </p>
       </div>
