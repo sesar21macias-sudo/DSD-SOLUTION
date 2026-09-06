@@ -4,33 +4,84 @@
     {
       "name": "bluedental",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3456", "bluedental"],
+      "runtimeArgs": [
+        "serve",
+        "-p",
+        "3456",
+        "bluedental"
+      ],
       "port": 3456
     },
     {
       "name": "macias-ise-advisory",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3457", "macias-ise-advisory"],
+      "runtimeArgs": [
+        "serve",
+        "-p",
+        "3457",
+        "macias-ise-advisory"
+      ],
       "port": 3457
     },
     {
       "name": "dsd-pos-backend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "dsd-pos/backend"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "dsd-pos/backend"
+      ],
       "port": 4000
     },
     {
       "name": "dsd-pos-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "dsd-pos/frontend"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "dsd-pos/frontend"
+      ],
       "port": 3000
     },
     {
       "name": "agente-whatsapp",
       "runtimeExecutable": "cmd.exe",
-      "runtimeArgs": ["/c", "agente-whatsapp\\dev.cmd"],
+      "runtimeArgs": [
+        "/c",
+        "agente-whatsapp\\dev.cmd"
+      ],
       "port": 3010,
       "autoPort": false
+    },
+    {
+      "name": "prime-tracker",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "prime-tracker",
+        "--",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "nice-seller-hub",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "nice-seller-hub",
+        "--",
+        "-p",
+        "3200"
+      ],
+      "port": 3200
     }
   ]
 }

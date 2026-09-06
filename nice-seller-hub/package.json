@@ -1,0 +1,41 @@
+{
+  "name": "nice-seller-hub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:generate": "drizzle-kit generate",
+    "db:local": "wrangler d1 migrations apply nice-seller-hub --local",
+    "db:remote": "wrangler d1 migrations apply nice-seller-hub --remote",
+    "db:seed:local": "wrangler d1 execute nice-seller-hub --local --file=./scripts/seed.sql",
+    "db:seed:remote": "wrangler d1 execute nice-seller-hub --remote --file=./scripts/seed.sql",
+    "seed:build": "node --experimental-strip-types scripts/build-seed.ts",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.3.0",
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^0.469.0",
+    "next": "^15.1.6",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260830.1",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.7",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.129.0"
+  }
+}

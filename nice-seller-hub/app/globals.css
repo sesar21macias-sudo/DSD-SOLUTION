@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+/**
+ * Identidad NICE.
+ *
+ * La paleta es casi toda neutra a proposito: en una tienda de joyeria el color
+ * lo pone la pieza, no la interfaz. El dorado y el magenta solo aparecen en
+ * acentos —un boton, un badge, un detalle— nunca como fondo de una pantalla.
+ */
+@theme {
+  --color-ink: #0a0a0b;
+  --color-ink-soft: #3f3f43;
+
+  --color-canvas: #fbfaf9;
+  --color-surface: #ffffff;
+  --color-line: #eceae7;
+  --color-line-strong: #dfdbd6;
+
+  --color-mute: #8a8580;
+  --color-mute-soft: #b4afa9;
+
+  /* Dorado metalico: el acento de lujo. */
+  --color-gold: #b08d57;
+  --color-gold-soft: #f4ede1;
+
+  /* Magenta NICE: solo para la marca y estados de marca. */
+  --color-nice: #e6007e;
+  --color-nice-soft: #fdeaf4;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif;
+
+  --radius-xl2: 1.25rem;
+
+  --shadow-card: 0 1px 2px rgb(15 15 20 / 0.04), 0 8px 24px -12px rgb(15 15 20 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(15 15 20 / 0.05), 0 18px 40px -16px rgb(15 15 20 / 0.22);
+
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/**
+ * Los estilos de elemento van dentro de @layer base a proposito.
+ *
+ * Tailwind v4 emite sus utilidades en @layer utilities, y en CSS **cualquier
+ * regla sin capa le gana a una regla en capa**, sin importar la especificidad.
+ * Un `button { color: inherit }` suelto anulaba `text-white` en todos los
+ * botones oscuros de la aplicacion: fondo negro, texto negro. Dentro de base,
+ * las utilidades vuelven a mandar.
+ */
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* La tienda se navega con el pulgar; el rebote horizontal estorba. */
+    overscroll-behavior-x: none;
+  }
+
+  /* Los titulos van un poco mas cerrados: es lo que hace que un peso ligero se
+     lea caro y no simplemente delgado. */
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+
+  input, textarea, select, button {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* iOS hace zoom al enfocar un campo de menos de 16px. */
+  input, textarea, select {
+    font-size: max(16px, 1rem);
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: white;
+  }
+}
+
+/* Cifras tabulares en precios y totales: las columnas de numeros se alinean. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Animaciones ---------------------------------------------------------
+   Todas cortas y con la misma curva. Una interfaz donde cada elemento entra
+   distinto se siente hecha por partes. */
+
+@keyframes nsh-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes nsh-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes nsh-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes nsh-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+
+@keyframes nsh-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@keyframes nsh-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.animate-fade-up { animation: nsh-fade-up 0.5s var(--ease-out-soft) both; }
+.animate-fade    { animation: nsh-fade 0.35s var(--ease-out-soft) both; }
+.animate-scale-in{ animation: nsh-scale-in 0.28s var(--ease-out-soft) both; }
+.animate-slide-up{ animation: nsh-slide-up 0.32s var(--ease-out-soft) both; }
+.animate-pop     { animation: nsh-pop 0.42s var(--ease-out-soft); }
+
+/* Escalona la entrada de una rejilla de productos sin escribir un delay por
+   tarjeta en el servidor. */
+.stagger > * { animation: nsh-fade-up 0.5s var(--ease-out-soft) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.05s; }
+.stagger > *:nth-child(3) { animation-delay: 0.08s; }
+.stagger > *:nth-child(4) { animation-delay: 0.11s; }
+.stagger > *:nth-child(5) { animation-delay: 0.14s; }
+.stagger > *:nth-child(6) { animation-delay: 0.17s; }
+.stagger > *:nth-child(7) { animation-delay: 0.20s; }
+.stagger > *:nth-child(8) { animation-delay: 0.23s; }
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-line) 25%,
+    #f6f4f1 37%,
+    var(--color-line) 63%
+  );
+  background-size: 200% 100%;
+  animation: nsh-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Quien pidio menos movimiento recibe menos movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Utilidades ---------------------------------------------------------- */
+
+/* Franja de filtros que se desliza con el dedo sin barra visible. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Respeta el notch y la barra de gestos del iPhone. */
+.safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+.safe-top { padding-top: max(0px, env(safe-area-inset-top)); }
+
+@media print {
+  .no-print { display: none !important; }
+}
