@@ -1,8 +1,6 @@
 import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { z } from "zod";
 import { getEnv } from "./env";
 
 /**
@@ -19,51 +17,89 @@ import { getEnv } from "./env";
  * viene impreso y la descripción va en el renglón de abajo del código.
  */
 
-const LineSchema = z.object({
-  code: z
-    .string()
-    .describe("El Id Nice tal como aparece impreso, sin espacios."),
-  quantity: z
-    .number()
-    .int()
-    .describe("Piezas de ese renglón. La columna Cant trae '1.000', que son 1 pieza."),
-  description: z
-    .string()
-    .describe(
-      "La descripción del renglón (ARETES, COLLAR...). En estos tickets va en el renglón de abajo del código. Vacío si no la hay."
-    ),
-  catalogPrice: z
-    .number()
-    .describe(
-      "El Precio Catálogo en pesos, como número (319.00 → 319). 0 si esa columna no existe o está vacía."
-    ),
-  rawLine: z
-    .string()
-    .describe("El renglón completo del ticket, tal cual se lee."),
-  confidence: z
-    .enum(["high", "low"])
-    .describe(
-      "high solo si cada carácter del Id Nice se lee sin ambigüedad. low si hay borrones, el renglón está cortado, o el último carácter podría ser 1, I o L."
-    ),
-});
+/**
+ * El esquema de salida, escrito a mano.
+ *
+ * No se usa `zodOutputFormat`: con zod v4 ese helper genera un JSON Schema
+ * corrupto —mete el `enum` y el `$schema` dentro de `description`— y la API
+ * responde 400 sin cuerpo, que es de los errores más difíciles de diagnosticar.
+ * Escribirlo a mano quita esa dependencia de versiones y deja el contrato a la
+ * vista.
+ */
+const TICKET_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["readable", "problem", "declaredItems", "lines"],
+  properties: {
+    readable: {
+      type: "boolean",
+      description: "false si la imagen no es un ticket de NICE o no se alcanza a leer.",
+    },
+    problem: {
+      type: "string",
+      description:
+        "Si readable es false, una frase corta en español explicando qué pasó. Vacío si readable es true.",
+    },
+    declaredItems: {
+      type: "integer",
+      description: "El número impreso en TOTAL ARTICULOS. 0 si no lo trae o no se lee.",
+    },
+    lines: {
+      type: "array",
+      description: "Un elemento por renglón de producto.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["code", "quantity", "description", "catalogPrice", "rawLine", "confidence"],
+        properties: {
+          code: {
+            type: "string",
+            description: "El Id Nice tal como aparece impreso, sin espacios.",
+          },
+          quantity: {
+            type: "integer",
+            description:
+              "Piezas de ese renglón. La columna Cant trae '1.000', que es 1 pieza.",
+          },
+          description: {
+            type: "string",
+            description:
+              "La descripción del renglón (ARETES, COLLAR...). Va en el renglón de abajo del código. Vacío si no la hay.",
+          },
+          catalogPrice: {
+            type: "number",
+            description:
+              "El Precio Catálogo en pesos, como número (319.00 → 319). 0 si no existe o está vacío.",
+          },
+          rawLine: {
+            type: "string",
+            description: "El renglón completo del ticket, tal cual se lee.",
+          },
+          confidence: {
+            type: "string",
+            enum: ["high", "low"],
+            description:
+              "high solo si cada carácter del Id Nice se lee sin ambigüedad. low si hay borrones, el renglón está cortado, o el último carácter podría ser 1, I o L.",
+          },
+        },
+      },
+    },
+  },
+} as const;
 
-const TicketSchema = z.object({
-  readable: z
-    .boolean()
-    .describe("false si la imagen no es un ticket de NICE o no se alcanza a leer."),
-  problem: z
-    .string()
-    .describe(
-      "Si readable es false, una frase corta en español dirigida a la persona explicando qué pasó. Vacío si readable es true."
-    ),
-  declaredItems: z
-    .number()
-    .int()
-    .describe(
-      "El número impreso en TOTAL ARTICULOS. 0 si el ticket no lo trae o no se lee."
-    ),
-  lines: z.array(LineSchema).describe("Un elemento por renglón de producto."),
-});
+interface ParsedTicket {
+  readable: boolean;
+  problem: string;
+  declaredItems: number;
+  lines: {
+    code: string;
+    quantity: number;
+    description: string;
+    catalogPrice: number;
+    rawLine: string;
+    confidence: string;
+  }[];
+}
 
 export type TicketLine = {
   code: string;
@@ -132,16 +168,25 @@ export async function readTicket(
   const env = await getEnv();
   const apiKey = env.ANTHROPIC_API_KEY;
 
-  if (!apiKey) {
+  // Una clave de Anthropic ronda los 100 caracteres. Si lo guardado es mucho
+  // más corto, el secret quedó mal escrito —pasa al pegarlo en una terminal— y
+  // conviene decirlo así en vez de dejar que la API responda un 400 sin cuerpo,
+  // que no explica nada.
+  if (!apiKey || apiKey.trim().length < 40) {
     return fail(
-      "La lectura de tickets no está configurada todavía. Puedes capturar los códigos a mano mientras tanto."
+      "La lectura de tickets no está bien configurada. Avisa al administrador."
     );
   }
 
-  const client = new Anthropic({ apiKey });
+  /**
+   * Se recorta: un secret pegado desde una terminal puede llevar un salto de
+   * línea o un espacio al final, y eso convierte la cabecera en inválida. El
+   * borde HTTP la rechaza con un 400 sin cuerpo, que no dice nada.
+   */
+  const client = new Anthropic({ apiKey: apiKey.trim() });
 
   try {
-    const response = await client.messages.parse({
+    const response = await client.messages.create({
       model: "claude-opus-5",
       max_tokens: 16000,
       system: SYSTEM,
@@ -160,7 +205,9 @@ export async function readTicket(
           ],
         },
       ],
-      output_config: { format: zodOutputFormat(TicketSchema) },
+      output_config: {
+        format: { type: "json_schema", schema: TICKET_SCHEMA },
+      },
     });
 
     // Una negativa del modelo llega como respuesta 200; hay que revisarla antes
@@ -169,8 +216,17 @@ export async function readTicket(
       return fail("No pudimos procesar esa imagen. Intenta con otra foto del ticket.");
     }
 
-    const parsed = response.parsed_output;
-    if (!parsed) {
+    // Con output_config la respuesta llega como un bloque de texto que contiene
+    // el JSON. Si viniera malformado, se trata como ilegible en vez de reventar.
+    const text = response.content.find((b) => b.type === "text");
+    let parsed: ParsedTicket | null = null;
+    try {
+      parsed = text && text.type === "text" ? (JSON.parse(text.text) as ParsedTicket) : null;
+    } catch {
+      parsed = null;
+    }
+
+    if (!parsed || !Array.isArray(parsed.lines)) {
       return fail(
         "No pudimos leer el ticket. Intenta con una foto más cercana y con buena luz."
       );
@@ -214,7 +270,15 @@ export async function readTicket(
     };
   } catch (err) {
     // Los errores tecnicos no se le enseñan a nadie; van a los logs del Worker.
-    console.error("readTicket", err);
+    // Nunca se registra la clave ni parte de ella; solo lo que sirve para
+    // diagnosticar desde `wrangler tail`.
+    const detail = err as { status?: number; error?: unknown; message?: string };
+    console.error(
+      "readTicket",
+      "status=", detail?.status,
+      "message=", detail?.message,
+      "error=", JSON.stringify(detail?.error)?.slice(0, 400)
+    );
 
     if (err instanceof Anthropic.AuthenticationError) {
       return fail("La lectura de tickets no está bien configurada. Avisa al administrador.");
