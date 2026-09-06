@@ -1,5 +1,8 @@
 import { webcrypto as crypto } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { writeFileSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 /**
  * Cambia la contraseña de una cuenta.
@@ -18,6 +21,9 @@ import { spawnSync } from "node:child_process";
 // Debe coincidir con lib/auth.ts. Cloudflare no admite más de 100 000.
 const PBKDF2_ITERATIONS = 100_000;
 const DB_NAME = "nice-seller-hub";
+
+const CTRL_C = String.fromCharCode(3);
+const BACKSPACE = String.fromCharCode(127);
 
 const remote = process.argv.includes("--remote");
 const enc = new TextEncoder();
@@ -82,16 +88,15 @@ function prompt(question, { mask = false } = {}) {
           done(buffer);
           return;
         }
-        if (ch === "\u0003") {
-          // Ctrl+C
+        if (ch === CTRL_C) {
           stdin.setRawMode(false);
           process.stdout.write("\n");
           process.exit(130);
         }
-        if (ch === "\u007f" || ch === "\b") {
+        if (ch === BACKSPACE || ch === "\b") {
           if (buffer.length > 0) {
             buffer = buffer.slice(0, -1);
-            if (!mask) process.stdout.write("\b \b");
+            process.stdout.write("\b \b");
           }
           continue;
         }
@@ -99,7 +104,7 @@ function prompt(question, { mask = false } = {}) {
         if (ch < " ") continue;
 
         buffer += ch;
-        process.stdout.write(mask ? "•" : ch);
+        process.stdout.write(mask ? "*" : ch);
       }
     };
 
@@ -107,9 +112,7 @@ function prompt(question, { mask = false } = {}) {
   });
 }
 
-console.log(
-  `\nCambiar contraseña — base ${remote ? "DE PRODUCCIÓN" : "local"}\n`
-);
+console.log(`\nCambiar contraseña — base ${remote ? "DE PRODUCCIÓN" : "local"}\n`);
 
 const email = (await prompt("Correo de la cuenta: ")).trim().toLowerCase();
 if (!email.includes("@")) {
@@ -140,13 +143,38 @@ const sql =
 
 console.log("\nAplicando…\n");
 
-const res = spawnSync(
-  "npx",
-  ["wrangler", "d1", "execute", DB_NAME, remote ? "--remote" : "--local", "--command", sql],
-  { stdio: "inherit", shell: true }
-);
+/**
+ * El SQL se manda por archivo, no como argumento.
+ *
+ * En Windows, `spawnSync` con `shell: true` concatena los argumentos sin
+ * comillas, así que una sentencia con espacios llega despedazada y wrangler la
+ * lee como veinte argumentos sueltos. Un archivo no tiene ese problema.
+ *
+ * El archivo lleva el hash y la sal —nunca la contraseña— y se borra enseguida.
+ */
+const sqlFile = join(tmpdir(), `nsh-pwd-${randomHex(8)}.sql`);
+writeFileSync(sqlFile, sql + "\n", "utf8");
 
-if (res.status !== 0) {
+// Sin esto, la terminal recién sacada del modo crudo puede tirar una aserción
+// de libuv al cerrar el proceso.
+process.stdin.unref();
+
+let status = 1;
+try {
+  const res = spawnSync(
+    `npx wrangler d1 execute ${DB_NAME} ${remote ? "--remote" : "--local"} --file "${sqlFile}"`,
+    { stdio: "inherit", shell: true }
+  );
+  status = res.status ?? 1;
+} finally {
+  try {
+    unlinkSync(sqlFile);
+  } catch {
+    // Si no se pudo borrar no es grave: solo contiene un hash.
+  }
+}
+
+if (status !== 0) {
   console.error("\nNo se pudo aplicar el cambio.");
   process.exit(1);
 }
