@@ -1,0 +1,227 @@
+import "server-only";
+
+import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { z } from "zod";
+import { getEnv } from "./env";
+
+/**
+ * Lectura del ticket de NICE.
+ *
+ * Se le pide al modelo una sola cosa —qué piezas y cuántas— y se le prohíbe
+ * inventar: un código adivinado se convierte en piezas que la distribuidora
+ * cree tener y que sus clientes van a pedir. Por eso cada renglón viene con el
+ * texto crudo que se leyó y una marca de confianza, y por eso nada de esto
+ * toca el inventario sin que una persona lo confirme.
+ *
+ * Las reglas de abajo salen de un ticket real, no de suposiciones: la columna
+ * se llama "Id Nice", las cantidades vienen como "1.000", el precio de catálogo
+ * viene impreso y la descripción va en el renglón de abajo del código.
+ */
+
+const LineSchema = z.object({
+  code: z
+    .string()
+    .describe("El Id Nice tal como aparece impreso, sin espacios."),
+  quantity: z
+    .number()
+    .int()
+    .describe("Piezas de ese renglón. La columna Cant trae '1.000', que son 1 pieza."),
+  description: z
+    .string()
+    .describe(
+      "La descripción del renglón (ARETES, COLLAR...). En estos tickets va en el renglón de abajo del código. Vacío si no la hay."
+    ),
+  catalogPrice: z
+    .number()
+    .describe(
+      "El Precio Catálogo en pesos, como número (319.00 → 319). 0 si esa columna no existe o está vacía."
+    ),
+  rawLine: z
+    .string()
+    .describe("El renglón completo del ticket, tal cual se lee."),
+  confidence: z
+    .enum(["high", "low"])
+    .describe(
+      "high solo si cada carácter del Id Nice se lee sin ambigüedad. low si hay borrones, el renglón está cortado, o el último carácter podría ser 1, I o L."
+    ),
+});
+
+const TicketSchema = z.object({
+  readable: z
+    .boolean()
+    .describe("false si la imagen no es un ticket de NICE o no se alcanza a leer."),
+  problem: z
+    .string()
+    .describe(
+      "Si readable es false, una frase corta en español dirigida a la persona explicando qué pasó. Vacío si readable es true."
+    ),
+  declaredItems: z
+    .number()
+    .int()
+    .describe(
+      "El número impreso en TOTAL ARTICULOS. 0 si el ticket no lo trae o no se lee."
+    ),
+  lines: z.array(LineSchema).describe("Un elemento por renglón de producto."),
+});
+
+export type TicketLine = {
+  code: string;
+  quantity: number;
+  description: string;
+  catalogPriceCents: number | null;
+  rawLine: string;
+  confidence: "high" | "low";
+};
+
+const SYSTEM = `Lees tickets y notas de remisión de NICE, una marca mexicana de joyería, para una distribuidora que está dando de alta lo que acaba de recibir.
+
+Extraes, por cada renglón de producto: el Id Nice, la cantidad, la descripción y el precio de catálogo.
+
+CÓMO SON ESTOS TICKETS
+La tabla de productos tiene estas columnas, en este orden:
+  Cant | Id Nice | Precio Catalogo | Precio Unitario | Importe
+- "Cant" viene con decimales: "1.000" significa UNA pieza, "2.000" significa DOS. Nunca leas "1.000" como mil.
+- "Id Nice" es el código de la pieza. Suele tener 6 u 8 caracteres.
+- "Precio Catalogo" es el precio de lista ($319.00). "Precio Unitario" e "Importe" suelen venir en 0.00 porque la distribuidora no paga en ese momento; ignóralos.
+- La DESCRIPCIÓN del producto (ARETES, COLLAR, PULSERA...) va en el renglón de ABAJO del código, no en el mismo renglón. Es parte del mismo producto.
+- Puede haber un recuadro o casilla □ al inicio de cada renglón. Es solo tinta, ignórala.
+
+EL CARÁCTER FINAL DEL Id Nice
+Muchos Id Nice terminan en una letra que indica la variante. En papel térmico, esa letra final se confunde con un dígito: "1", "I" y "L" se ven casi idénticos. Cuando el último carácter pueda ser cualquiera de esos tres, transcribe el que más se parezca Y marca confidence "low". No lo resuelvas por tu cuenta: quien revisa tiene el ticket en la mano.
+
+REGLAS QUE NO PUEDES ROMPER
+- Nunca inventes un Id Nice. Si un carácter no se distingue, transcribe lo que ves y marca confidence "low".
+- Nunca inventes una cantidad. Si el renglón no la trae, usa 1.
+- Ignora todo lo que no sea un renglón de producto: encabezado de la tienda, RFC, dirección, orden, factura, descuento, puntos generados, fecha, cajero, EIN, nombre y dirección del destinatario, presentador, código de barras.
+- Ignora también el bloque de totales: TOTAL PRECIO CAT., SUBTOTAL, MANEJO, IMPUESTOS, ENVIO, TOTAL, PROYECTOS ESPECIALES. La única excepción es TOTAL ARTICULOS, que sí devuelves en declaredItems.
+- Si el mismo Id Nice aparece en dos renglones, devuelve los dos: quien revisa decide si los junta.
+- Si la foto no es un ticket, está muy borrosa, o está cortada de forma que no se puedan leer los renglones, devuelve readable=false y explica el problema en una frase.`;
+
+export interface OcrResult {
+  ok: boolean;
+  lines: TicketLine[];
+  /** El TOTAL ARTICULOS impreso, para verificar que no se perdio un renglon. */
+  declaredItems: number | null;
+  /** Mensaje para la persona cuando algo salio mal. */
+  error?: string;
+}
+
+/** Formatos que aceptamos desde la camara o la galeria del telefono. */
+export const ACCEPTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
+
+export type AcceptedImageType = (typeof ACCEPTED_IMAGE_TYPES)[number];
+
+export function isAcceptedImageType(v: string): v is AcceptedImageType {
+  return (ACCEPTED_IMAGE_TYPES as readonly string[]).includes(v);
+}
+
+function fail(error: string): OcrResult {
+  return { ok: false, lines: [], declaredItems: null, error };
+}
+
+export async function readTicket(
+  base64Image: string,
+  mediaType: AcceptedImageType
+): Promise<OcrResult> {
+  const env = await getEnv();
+  const apiKey = env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    return fail(
+      "La lectura de tickets no está configurada todavía. Puedes capturar los códigos a mano mientras tanto."
+    );
+  }
+
+  const client = new Anthropic({ apiKey });
+
+  try {
+    const response = await client.messages.parse({
+      model: "claude-opus-5",
+      max_tokens: 16000,
+      system: SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: mediaType, data: base64Image },
+            },
+            {
+              type: "text",
+              text: "Extrae los renglones de producto de este ticket NICE.",
+            },
+          ],
+        },
+      ],
+      output_config: { format: zodOutputFormat(TicketSchema) },
+    });
+
+    // Una negativa del modelo llega como respuesta 200; hay que revisarla antes
+    // de leer el contenido.
+    if (response.stop_reason === "refusal") {
+      return fail("No pudimos procesar esa imagen. Intenta con otra foto del ticket.");
+    }
+
+    const parsed = response.parsed_output;
+    if (!parsed) {
+      return fail(
+        "No pudimos leer el ticket. Intenta con una foto más cercana y con buena luz."
+      );
+    }
+
+    if (!parsed.readable) {
+      return fail(
+        parsed.problem?.trim() ||
+          "No se alcanza a leer el ticket. Intenta con más luz y sin sombras encima."
+      );
+    }
+
+    // Se limpia aqui y no se confia en el modelo: codigos vacios, cantidades
+    // absurdas o precios negativos no deben llegar a la revision.
+    const lines: TicketLine[] = parsed.lines
+      .map((l) => {
+        const price = Number(l.catalogPrice);
+        return {
+          code: String(l.code ?? "").trim().toUpperCase().replace(/\s+/g, ""),
+          quantity: Math.min(999, Math.max(1, Math.round(Number(l.quantity) || 1))),
+          description: String(l.description ?? "").trim().slice(0, 80),
+          catalogPriceCents:
+            Number.isFinite(price) && price > 0 ? Math.round(price * 100) : null,
+          rawLine: String(l.rawLine ?? "").slice(0, 200),
+          confidence: l.confidence === "low" ? ("low" as const) : ("high" as const),
+        };
+      })
+      .filter((l) => /^[A-Z0-9-]{3,20}$/.test(l.code))
+      .slice(0, 120);
+
+    if (lines.length === 0) {
+      return fail("No encontramos códigos NICE en esa foto. ¿Es el ticket completo?");
+    }
+
+    const declared = Math.round(Number(parsed.declaredItems) || 0);
+
+    return {
+      ok: true,
+      lines,
+      declaredItems: declared > 0 ? declared : null,
+    };
+  } catch (err) {
+    // Los errores tecnicos no se le enseñan a nadie; van a los logs del Worker.
+    console.error("readTicket", err);
+
+    if (err instanceof Anthropic.AuthenticationError) {
+      return fail("La lectura de tickets no está bien configurada. Avisa al administrador.");
+    }
+    if (err instanceof Anthropic.RateLimitError) {
+      return fail("Hay muchas lecturas en curso. Espera un momento e intenta otra vez.");
+    }
+    return fail("No pudimos leer el ticket. Intenta otra vez o captura los códigos a mano.");
+  }
+}

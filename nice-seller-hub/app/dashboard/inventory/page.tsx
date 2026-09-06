@@ -1,4 +1,4 @@
-import { Package, Plus } from "lucide-react";
+import { Package, Plus, ScanLine } from "lucide-react";
 import type { Metadata } from "next";
 import { requireSeller } from "@/lib/session";
 import { listInventory, listMovements } from "@/lib/seller";
@@ -30,10 +30,16 @@ export default async function InventoryPage({
         title="Inventario"
         subtitle={`${items.length} ${items.length === 1 ? "pieza" : "piezas"} en tu tienda`}
         action={
-          <LinkButton href="/dashboard/inventory/new" size="sm">
-            <Plus size={15} strokeWidth={2} />
-            Agregar
-          </LinkButton>
+          <div className="flex gap-2">
+            <LinkButton href="/dashboard/inventory/new" size="sm" variant="secondary">
+              <Plus size={15} strokeWidth={2} />
+              Agregar
+            </LinkButton>
+            <LinkButton href="/dashboard/inventory/receive" size="sm">
+              <ScanLine size={15} strokeWidth={2} />
+              Recibir
+            </LinkButton>
+          </div>
         }
       />
 
@@ -41,12 +47,18 @@ export default async function InventoryPage({
         <EmptyState
           icon={<Package size={30} strokeWidth={1.3} />}
           title="Tu inventario está vacío"
-          description="Agrega tus primeras piezas para que aparezcan en tu tienda y tus clientes puedan pedirlas."
+          description="Toma una foto de tu ticket NICE y cargamos las piezas por ti, o agrégalas una por una."
           action={
-            <LinkButton href="/dashboard/inventory/new">
-              <Plus size={16} strokeWidth={2} />
-              Agregar mi primera pieza
-            </LinkButton>
+            <div className="flex flex-col gap-2.5 sm:flex-row">
+              <LinkButton href="/dashboard/inventory/receive">
+                <ScanLine size={16} strokeWidth={2} />
+                Recibir con foto del ticket
+              </LinkButton>
+              <LinkButton href="/dashboard/inventory/new" variant="secondary">
+                <Plus size={16} strokeWidth={2} />
+                Agregar una pieza
+              </LinkButton>
+            </div>
           }
         />
       ) : (

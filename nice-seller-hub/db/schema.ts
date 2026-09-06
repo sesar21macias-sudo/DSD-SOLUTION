@@ -117,6 +117,13 @@ export const products = sqliteTable(
     material: text("material"),
     finish: text("finish"),
     imageUrl: text("image_url"),
+    /**
+     * Precio de lista del catalogo, en centavos. Es una sugerencia: al recibir
+     * mercancia se usa para prellenar el precio de la distribuidora, que sigue
+     * siendo suyo y editable. El precio con el que se vende vive en
+     * seller_inventory, no aqui.
+     */
+    suggestedPriceCents: integer("suggested_price_cents"),
     /** Imagenes adicionales, JSON: ["url", ...]. */
     gallery: text("gallery"),
     /**
@@ -380,6 +387,85 @@ export const loyaltyTransactions = sqliteTable(
   })
 );
 
+// --- Recepcion de mercancia -------------------------------------------------
+
+/**
+ * Una recepcion es lo que la distribuidora acaba de recibir de NICE, leido de
+ * la foto de su ticket.
+ *
+ * Nace SIEMPRE en `draft` y no toca el inventario hasta que ella confirma. El
+ * OCR se equivoca —tickets termicos borrosos, digitos que se parecen— y un
+ * inventario mal cargado es peor que no tener la funcion: lo que se publica en
+ * la tienda deja de ser cierto.
+ *
+ * La foto del ticket no se guarda. Una vez extraidos los codigos ya no aporta
+ * nada, y guardar fotos de tickets es un costo y una responsabilidad que este
+ * producto no necesita.
+ */
+export const receptions = sqliteTable(
+  "receptions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sellerId: integer("seller_id")
+      .notNull()
+      .references(() => sellers.id, { onDelete: "cascade" }),
+    /** draft | confirmed | cancelled */
+    status: text("status").notNull().default("draft"),
+    /** photo | manual */
+    source: text("source").notNull().default("photo"),
+    /**
+     * El "TOTAL ARTICULOS" impreso en el ticket. Sirve de verificación: si la
+     * suma de las cantidades no cuadra con este número, el OCR se saltó un
+     * renglón y hay que avisarlo antes de cargar nada.
+     */
+    declaredItems: integer("declared_items"),
+    note: text("note"),
+    createdAt: text("created_at").notNull().default(now),
+    confirmedAt: text("confirmed_at"),
+  },
+  (t) => ({
+    sellerIdx: index("receptions_seller_idx").on(t.sellerId, t.createdAt),
+  })
+);
+
+export const receptionItems = sqliteTable(
+  "reception_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    receptionId: integer("reception_id")
+      .notNull()
+      .references(() => receptions.id, { onDelete: "cascade" }),
+    /** El codigo tal como quedo tras la revision de la persona. */
+    niceCode: text("nice_code").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    /** Nulo mientras el codigo no exista en el catalogo global. */
+    productId: integer("product_id").references(() => products.id),
+    /** Precio al que ella lo va a vender. Se prellena, se puede cambiar. */
+    priceCents: integer("price_cents"),
+    /**
+     * El "Precio Catálogo" impreso en el ticket, en centavos. Es la mejor
+     * sugerencia que existe para una pieza que todavia no esta en el catalogo
+     * global: viene de NICE, en el papel que ella tiene en la mano.
+     */
+    catalogPriceCents: integer("catalog_price_cents"),
+    /**
+     * La descripcion del ticket ("ARETES"). En los tickets de NICE va en el
+     * renglon de abajo del codigo. Prellena el alta de una pieza nueva para
+     * que no haya que escribirla desde cero.
+     */
+    nameHint: text("name_hint"),
+    /** matched | not_found | skipped */
+    status: text("status").notNull().default("matched"),
+    /** El renglon crudo que leyo el OCR, para poder cotejarlo con el ticket. */
+    rawLine: text("raw_line"),
+    /** high | low — si es low, la interfaz pide revisarlo con cuidado. */
+    confidence: text("confidence").notNull().default("high"),
+  },
+  (t) => ({
+    receptionIdx: index("reception_items_reception_idx").on(t.receptionId),
+  })
+);
+
 // --- Limites de uso --------------------------------------------------------
 
 /**
@@ -412,3 +498,5 @@ export type Customer = typeof customers.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type Sale = typeof sales.$inferSelect;
+export type Reception = typeof receptions.$inferSelect;
+export type ReceptionItem = typeof receptionItems.$inferSelect;
