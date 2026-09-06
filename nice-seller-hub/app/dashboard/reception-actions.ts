@@ -8,6 +8,7 @@ import {
   assertDraftItem,
   confirmReception,
   createDraftReception,
+  importFromNice,
   searchCatalog,
   type CatalogMatch,
 } from "@/lib/receptions";
@@ -99,6 +100,69 @@ export async function removeItem(itemId: number): Promise<ActionState> {
 export async function findInCatalog(query: string): Promise<CatalogMatch[]> {
   await requireSeller();
   return searchCatalog(query);
+}
+
+/**
+ * Busca el código en la tienda oficial de NICE y, si lo confirma por sku, trae
+ * su foto, nombre y precio, lo guarda en el catálogo global y liga el renglón.
+ *
+ * Es la salida para los renglones que quedaron fuera del tope de consultas
+ * automáticas, y el reintento cuando la tienda de NICE no respondió a tiempo.
+ */
+export async function lookupItemOnNice(itemId: number): Promise<ActionState> {
+  const { seller } = await requireSeller();
+
+  const receptionId = await assertDraftItem(seller.id, itemId);
+  if (receptionId === null) return { ok: false, error: "Ese renglón ya no se puede editar." };
+
+  const db = await getDb();
+  const rows = await db
+    .select({ niceCode: schema.receptionItems.niceCode })
+    .from(schema.receptionItems)
+    .where(eq(schema.receptionItems.id, itemId))
+    .limit(1);
+
+  const code = rows[0]?.niceCode;
+  if (!code) return { ok: false, error: "No encontramos ese renglón." };
+
+  const imported = await importFromNice([code], 1);
+  const product = imported.get(code);
+
+  if (!product) {
+    return {
+      ok: false,
+      error: "No encontramos ese código en la tienda de NICE. Revísalo o da de alta la pieza.",
+    };
+  }
+
+  const own = await db
+    .select({ priceCents: schema.sellerInventory.priceCents })
+    .from(schema.sellerInventory)
+    .where(
+      and(
+        eq(schema.sellerInventory.sellerId, seller.id),
+        eq(schema.sellerInventory.productId, product.id)
+      )
+    )
+    .limit(1);
+
+  await db
+    .update(schema.receptionItems)
+    .set({
+      productId: product.id,
+      // NICE es la autoridad sobre su propio código: si el sku difiere de lo
+      // que leímos del papel, gana el sku.
+      niceCode: product.niceCode,
+      status: "matched",
+      priceCents: own[0]?.priceCents ?? product.suggestedPriceCents ?? null,
+    })
+    .where(eq(schema.receptionItems.id, itemId));
+
+  revalidatePath(`/dashboard/inventory/receive/${receptionId}`);
+  return {
+    ok: true,
+    message: product.niceCode !== code ? `Encontrada como ${product.niceCode}` : "Pieza encontrada",
+  };
 }
 
 /** Liga un renglón sin producto a una pieza del catálogo. */

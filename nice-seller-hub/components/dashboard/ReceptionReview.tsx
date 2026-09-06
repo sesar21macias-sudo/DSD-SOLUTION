@@ -8,6 +8,7 @@ import {
   Minus,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   confirmReceptionAction,
   findInCatalog,
   linkItemToProduct,
+  lookupItemOnNice,
   removeItem,
   setItemPrice,
   setItemQuantity,
@@ -398,7 +400,16 @@ function ResolveNotFound({
         <p className="text-[12px] leading-snug text-amber-900">
           Este código no está en el catálogo NICE.
         </p>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex flex-wrap gap-2">
+          {/* Primero la tienda de NICE: es donde está la foto de verdad. */}
+          <button
+            onClick={() => run(() => lookupItemOnNice(item.id))}
+            disabled={disabled}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-ink px-3 text-[12px] font-medium text-white disabled:opacity-40"
+          >
+            <Sparkles size={12} strokeWidth={2} />
+            Buscar en NICE
+          </button>
           <button
             onClick={() => {
               setMode("search");
@@ -407,14 +418,14 @@ function ResolveNotFound({
             disabled={disabled}
             className="h-8 rounded-lg border border-line-strong bg-surface px-3 text-[12px] font-medium"
           >
-            Buscarlo
+            En mi catálogo
           </button>
           <button
             onClick={() => setMode("create")}
             disabled={disabled}
             className="h-8 rounded-lg border border-line-strong bg-surface px-3 text-[12px] font-medium"
           >
-            Darlo de alta
+            Darla de alta
           </button>
         </div>
       </div>

@@ -183,21 +183,6 @@ const PRODUCTS = [
    "Tejido figaro clásico, 3 mm."],
   ["714260", "Anillo banda martillada", "anillos", "anillo", "negro", "Acero inoxidable", "Acero", 359,
    "Banda de 6 mm con textura martillada a mano."],
-
-  /**
-   * Estas cinco vienen de un ticket real de NICE (orden PD38-4944698). Los
-   * códigos y los precios son los impresos; el nombre es la descripción que
-   * trae el ticket —"ARETES"— sin adornar: inventarles una descripción de
-   * catálogo sería poner en boca de NICE algo que NICE no dijo.
-   *
-   * A propósito NO están en el inventario de nadie: son las piezas que llegan
-   * al escanear ese ticket, y así el flujo de recepción se ve completo.
-   */
-  ["925094L", "Aretes", "aretes", "aretes", "dorado", null, null, 319, null],
-  ["925181", "Aretes", "aretes", "aretes", "plateado", null, null, 279, null],
-  ["925485L", "Aretes", "aretes", "aretes", "rosa", null, null, 249, null],
-  ["925636L", "Aretes", "aretes", "aretes", "dorado", null, null, 319, null],
-  ["925655L", "Aretes", "aretes", "aretes", "plateado", null, null, 259, null],
 ];
 
 // --- Distribuidoras --------------------------------------------------------

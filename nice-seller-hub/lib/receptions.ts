@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { TicketLine } from "./ocr";
+import { guessCategorySlug, lookupNiceProduct } from "./nice-catalog";
 import { outer } from "./sql-helpers";
 
 /**
@@ -68,6 +69,89 @@ function normalizedKey(code: string): string {
 /** La misma normalización, del lado de SQLite. */
 const SQL_NORMALIZED_CODE = sql<string>`replace(replace(replace(replace(upper(${schema.products.niceCode}), 'O', '0'), 'Q', '0'), 'I', '1'), 'L', '1')`;
 
+export interface CatalogProduct {
+  id: number;
+  niceCode: string;
+  suggestedPriceCents: number | null;
+}
+
+/**
+ * Cuántos códigos desconocidos se consultan contra la tienda de NICE mientras
+ * se arma el borrador.
+ *
+ * El tope existe por el límite de subpeticiones de un Worker: cada código
+ * cuesta hasta tres (una búsqueda y dos fichas). Lo que quede fuera aparece
+ * como "no encontrado" con un botón para buscarlo, y como el catálogo global es
+ * compartido, la segunda vez que alguien reciba esa pieza ya no cuesta nada.
+ */
+const MAX_INLINE_LOOKUPS = 5;
+
+/**
+ * Trae de la tienda oficial de NICE las piezas que todavía no están en nuestro
+ * catálogo y las guarda. El catálogo es global: lo que una distribuidora
+ * descubre al recibir su mercancía queda disponible para todas.
+ */
+export async function importFromNice(
+  codes: string[],
+  limit = MAX_INLINE_LOOKUPS
+): Promise<Map<string, CatalogProduct>> {
+  const db = await getDb();
+  const resolved = new Map<string, CatalogProduct>();
+
+  for (const code of codes.slice(0, limit)) {
+    const found = await lookupNiceProduct(code);
+    if (!found) continue;
+
+    // NICE pudo devolver un sku distinto del que leímos —ahí se resuelve la
+    // ambigüedad del papel—, y esa pieza ya podría estar en el catálogo.
+    const existing = await db
+      .select({
+        id: schema.products.id,
+        niceCode: schema.products.niceCode,
+        suggestedPriceCents: schema.products.suggestedPriceCents,
+      })
+      .from(schema.products)
+      .where(eq(schema.products.niceCode, found.sku))
+      .limit(1);
+
+    if (existing[0]) {
+      resolved.set(code, existing[0]);
+      continue;
+    }
+
+    const slug = guessCategorySlug(found.name);
+    const category = slug
+      ? await db
+          .select({ id: schema.categories.id })
+          .from(schema.categories)
+          .where(eq(schema.categories.slug, slug))
+          .limit(1)
+      : [];
+
+    const inserted = await db
+      .insert(schema.products)
+      .values({
+        niceCode: found.sku,
+        name: found.name,
+        description: found.description,
+        imageUrl: found.imageUrl,
+        suggestedPriceCents: found.priceCents,
+        categoryId: category[0]?.id ?? null,
+        // Sin dueño: viene del catálogo oficial, no lo subió una distribuidora.
+        createdBySellerId: null,
+      })
+      .returning({
+        id: schema.products.id,
+        niceCode: schema.products.niceCode,
+        suggestedPriceCents: schema.products.suggestedPriceCents,
+      });
+
+    resolved.set(code, inserted[0]);
+  }
+
+  return resolved;
+}
+
 /**
  * Convierte lo que se leyo del ticket en un borrador.
  *
@@ -126,6 +210,15 @@ export async function createDraftReception(
       const match = uniqueByKey.get(normalizedKey(code));
       if (match) byCode.set(code, match);
     }
+  }
+
+  // Tercera pasada: lo que nuestro catálogo no conoce se busca en la tienda
+  // oficial de NICE, que además trae la foto —sin foto, una pieza de joyería no
+  // se vende— y confirma el código por su sku.
+  const stillMissing = codes.filter((c) => !byCode.has(c));
+  if (stillMissing.length > 0) {
+    const imported = await importFromNice(stillMissing);
+    for (const [code, product] of imported) byCode.set(code, product);
   }
 
   // Lo que ya tiene en su inventario: si el precio ya lo definio antes, se

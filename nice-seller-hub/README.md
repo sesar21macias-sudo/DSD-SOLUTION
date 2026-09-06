@@ -111,6 +111,60 @@ equivocada es peor que un "no encontrado"—; y un código resuelto así nunca s
 marca como confiable: la revisión muestra el renglón crudo para cotejarlo con el
 papel.
 
+### La foto viene del catálogo de NICE
+
+Sin foto, una pieza de joyería no se vende — y pedirle a la distribuidora que
+suba veinte fotos anula el ahorro de escanear el ticket. Así que el código se
+resuelve contra la tienda oficial, `niceonline.com`:
+
+1. Se busca el código en `/mx/search`. La búsqueda de la tienda es difusa y
+   devuelve quince resultados: **el primero no se acepta por ser el primero**.
+2. Se abre la ficha de los candidatos y se lee su JSON-LD (`schema.org/Product`),
+   que trae `sku`. Solo se acepta cuando ese `sku` coincide con el código o con
+   una de sus variantes. Es la única forma de no colgarle a una pieza la foto de
+   otra.
+3. Lo encontrado se guarda en el **catálogo global**. La segunda vez que
+   cualquier distribuidora reciba esa pieza, ya no cuesta una consulta.
+
+**Y de paso resuelve la ambigüedad del papel.** Buscar "9250941" en NICE no
+devuelve nada —ese código no existe—, así que si el último carácter es de los
+dudosos se busca también sin él: "925094" sí encuentra la pieza, cuyo `sku` real
+es "925094L". NICE es la autoridad sobre su propio catálogo, así que ese `sku`
+gana sobre lo que se leyó del papel. Una consulta por tronco cubre todas las
+variantes del último carácter en lugar de una petición por cada una.
+
+Verificado en producción con los cinco códigos del ticket:
+
+| Leído del papel | Resuelto | Pieza | Precio |
+| --- | --- | --- | --- |
+| `9250941` | `925094L` | Aretes arracada rectangular con baño de oro… | $319 |
+| `925181` | `925181` | Aretes pequeños tipo botón con piedras de colores | $279 |
+| `9254851` | `925485L` | Aretes tipo arracada con baño de rodio | $249 |
+| `9256361` | `925636L` | Aretes Huggie con textura tipo malla | $319 |
+| `9256551` | `925655L` | Aretes Huggie con acabado acanalado | $259 |
+
+Los precios coinciden exactamente con el "Precio Catálogo" impreso en el ticket.
+
+El mismo resolvedor alimenta el alta manual: en `/dashboard/inventory/new`, al
+escribir el código se llenan solos el nombre, la foto, la categoría y el precio.
+
+**Límites y consideraciones**
+
+- Se consultan hasta **5 códigos desconocidos** por recepción, porque cada uno
+  cuesta varias subpeticiones y un Worker las tiene contadas. Lo que quede fuera
+  aparece con un botón *Buscar en NICE*; y como el catálogo es compartido, el
+  costo tiende a cero con el uso.
+- El `robots.txt` de niceonline.com permite `/search` y `/products/`; solo
+  bloquea carrito, cuenta y checkout, que aquí no se tocan. Las peticiones van
+  identificadas con un User-Agent propio.
+- **Las imágenes se enlazan a su CDN, no se copian.** Eso evita redistribuir
+  material de NICE, pero consume ancho de banda suyo y depende de que esa URL
+  siga viva. Si NICE lo autoriza, el siguiente paso natural es copiarlas a R2.
+- **Esto no es una API oficial ni un acuerdo con NICE.** Es lectura de páginas
+  públicas de su tienda. Antes de operarlo en serio, conviene confirmarlo con
+  ellos; si prefieren que no, el flujo sigue funcionando con las fotos que suba
+  cada distribuidora.
+
 **Prioridad del precio:** el que ella ya le puso a esa pieza → el del catálogo
 global → el impreso en el ticket. Nunca se le pisa una decisión suya.
 
@@ -172,6 +226,7 @@ app/
     auth/                  login, registro, cierre de sesión
     stores/[slug]/orders/  creación de pedidos (público, con límite por IP)
     dashboard/receptions/  foto del ticket → borrador (privado)
+    dashboard/catalog/lookup/  qué sabe NICE de un código (privado)
 
 lib/
   session.ts    de dónde sale el sellerId          [server-only]
@@ -181,6 +236,9 @@ lib/
   orders.ts     folios y creación de pedidos       [server-only]
   receptions.ts borradores de recepción            [server-only]
   ocr.ts        lectura del ticket con visión      [server-only]
+  nice-catalog.ts  resuelve un Id Nice contra      [server-only]
+                   niceonline.com (foto, nombre,
+                   precio) verificando el sku
   admin.ts      consultas de plataforma            [server-only]
   whatsapp.ts   el mensaje del pedido              (puro)
   inventory.ts  estados derivados del stock        (puro)
@@ -194,12 +252,11 @@ lib/
 
 Fase 1 quedó completa. Pendientes deliberados:
 
-- **Subida de imágenes.** Hoy se pega la URL de la foto. Falta un adaptador a
-  R2 o Cloudflare Images; el resto ya está listo para recibirlo.
-- **Nombres reales del catálogo.** Las cinco piezas del ticket de prueba están
-  dadas de alta con la descripción que trae el papel ("Aretes") y sin foto:
-  inventarles un nombre de catálogo sería poner en boca de NICE algo que NICE
-  no dijo.
+- **Copiar las imágenes a R2.** Hoy se enlazan desde el CDN de NICE. Copiarlas
+  dejaría de depender de sus URLs y de su ancho de banda — pero requiere su
+  autorización.
+- **Subida de fotos propias.** Para piezas que no estén en el catálogo de NICE,
+  hoy se pega la URL. Falta el adaptador a R2; el resto ya está listo.
 - **Recompensas y cupones.** Los puntos ya se acumulan por venta y por tienda,
   y las tablas existen; falta la interfaz para canjearlos (Fase 2).
 - **Cuentas de cliente.** Hoy se compra como invitado. El pedido guarda su
