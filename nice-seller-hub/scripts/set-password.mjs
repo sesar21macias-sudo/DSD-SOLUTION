@@ -1,5 +1,4 @@
 import { webcrypto as crypto } from "node:crypto";
-import { createInterface } from "node:readline";
 import { spawnSync } from "node:child_process";
 
 /**
@@ -42,50 +41,89 @@ async function hashPassword(password, salt) {
   return hex(bits);
 }
 
-function ask(question, hidden = false) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+/**
+ * Lee una línea de la terminal.
+ *
+ * Se hace con stdin en modo crudo, carácter por carácter, en vez de con
+ * `readline`: es la única forma de no dibujar la contraseña en pantalla sin
+ * pelearse con el eco de readline —que fue justo lo que dejó el prompt
+ * atascado sin aceptar teclas—.
+ *
+ * `mask` decide si se muestra lo tecleado. Un pegado llega como un solo trozo
+ * de varios caracteres, por eso se recorre.
+ */
+function prompt(question, { mask = false } = {}) {
+  return new Promise((resolve, reject) => {
+    const stdin = process.stdin;
 
-  return new Promise((resolve) => {
-    if (!hidden) {
-      rl.question(question, (answer) => {
-        rl.close();
-        resolve(answer.trim());
-      });
+    if (!stdin.isTTY) {
+      reject(new Error("Este script necesita una terminal interactiva."));
       return;
     }
 
-    // Sin eco: la contraseña no se dibuja en pantalla ni queda en el scrollback.
     process.stdout.write(question);
-    const onData = (char) => {
-      const s = String(char);
-      if (s === "\n" || s === "\r" || s === "") process.stdin.pause();
-      else process.stdout.write("");
-    };
-    process.stdin.on("data", onData);
-    rl.output.write = () => {};
 
-    rl.question("", (answer) => {
-      process.stdin.removeListener("data", onData);
-      rl.close();
+    let buffer = "";
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+
+    const done = (value) => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdin.removeListener("data", onData);
       process.stdout.write("\n");
-      resolve(answer.trim());
-    });
+      resolve(value);
+    };
+
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") {
+          done(buffer);
+          return;
+        }
+        if (ch === "\u0003") {
+          // Ctrl+C
+          stdin.setRawMode(false);
+          process.stdout.write("\n");
+          process.exit(130);
+        }
+        if (ch === "\u007f" || ch === "\b") {
+          if (buffer.length > 0) {
+            buffer = buffer.slice(0, -1);
+            if (!mask) process.stdout.write("\b \b");
+          }
+          continue;
+        }
+        // Se ignoran las teclas de control (flechas, etc.).
+        if (ch < " ") continue;
+
+        buffer += ch;
+        process.stdout.write(mask ? "•" : ch);
+      }
+    };
+
+    stdin.on("data", onData);
   });
 }
 
-const email = (await ask("Correo de la cuenta: ")).toLowerCase();
+console.log(
+  `\nCambiar contraseña — base ${remote ? "DE PRODUCCIÓN" : "local"}\n`
+);
+
+const email = (await prompt("Correo de la cuenta: ")).trim().toLowerCase();
 if (!email.includes("@")) {
-  console.error("Ese correo no se ve válido.");
+  console.error("Ese correo no se ve válido. No se cambió nada.");
   process.exit(1);
 }
 
-const password = await ask("Contraseña nueva (no se muestra): ", true);
+const password = await prompt("Contraseña nueva: ", { mask: true });
 if (password.length < 12) {
-  console.error("Usa al menos 12 caracteres. Esta cuenta administra toda la plataforma.");
+  console.error("Usa al menos 12 caracteres. No se cambió nada.");
   process.exit(1);
 }
 
-const confirmation = await ask("Repítela: ", true);
+const confirmation = await prompt("Repítela: ", { mask: true });
 if (password !== confirmation) {
   console.error("No coinciden. No se cambió nada.");
   process.exit(1);
@@ -100,13 +138,18 @@ const sql =
   `password_iterations = ${PBKDF2_ITERATIONS} ` +
   `WHERE email = '${email.replace(/'/g, "''")}';`;
 
-const args = ["wrangler", "d1", "execute", DB_NAME, remote ? "--remote" : "--local", "--command", sql];
-const res = spawnSync("npx", args, { stdio: "inherit", shell: true });
+console.log("\nAplicando…\n");
+
+const res = spawnSync(
+  "npx",
+  ["wrangler", "d1", "execute", DB_NAME, remote ? "--remote" : "--local", "--command", sql],
+  { stdio: "inherit", shell: true }
+);
 
 if (res.status !== 0) {
   console.error("\nNo se pudo aplicar el cambio.");
   process.exit(1);
 }
 
-console.log(`\nListo. Contraseña de ${email} actualizada en la base ${remote ? "de producción" : "local"}.`);
-console.log("Si no ves 'rows_written: 1' arriba, ese correo no existe en la base.");
+console.log(`\nListo: contraseña de ${email} actualizada.`);
+console.log("Si arriba dice 'rows_written: 0', ese correo no existe en la base.");
