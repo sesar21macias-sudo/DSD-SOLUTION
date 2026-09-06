@@ -8,12 +8,35 @@ llega completo al WhatsApp de esa distribuidora.
 
 ---
 
-## Cuentas de demostración
+## Estado: piloto, no abierto al público
 
-Contraseña de todas: `nicedemo2026`
+La base de producción **no tiene datos de demostración**. Se vació el
+2026-09-06 con `scripts/reset-demo.sql`, conservando las categorías, las cinco
+piezas traídas del catálogo real de NICE y la cuenta de administración.
 
-| Cuenta | Correo | Tienda |
-| --- | --- | --- |
+Para arrancar, cada distribuidora se da de alta en `/register` o se le crea la
+cuenta a mano — mientras no exista "olvidé mi contraseña", crearlas tú evita
+que alguien quede fuera.
+
+### Cambiar la contraseña de una cuenta
+
+Mientras no haya recuperación por correo, esta es la forma. La contraseña se
+teclea en la terminal: no se pasa como argumento ni queda en el historial.
+
+```bash
+node scripts/set-password.mjs --remote
+```
+
+### Volver a poner datos de prueba (solo en local)
+
+```bash
+npm run db:seed:local
+```
+
+Las cuentas del seed usan la contraseña `nicedemo2026`. **Nunca lo cargues en
+producción.**
+
+--- | --- | --- |
 | Ana García | `ana@nicehub.mx` | `/ana` — 15 piezas, Ciudad Juárez |
 | María López | `maria@nicehub.mx` | `/maria` — 11 piezas, Monterrey |
 | Carlos Rodríguez | `carlos@nicehub.mx` | `/carlos` — 8 piezas, Guadalajara |
@@ -247,6 +270,31 @@ lib/
 ```
 
 ---
+
+## Antes de abrirlo al público
+
+Ordenados por lo que más estorba:
+
+1. **Recuperar contraseña.** No existe. Quien olvide la suya queda fuera sin
+   salida; hoy se resuelve a mano con `scripts/set-password.mjs`. Es el único
+   hueco que bloquea de verdad crecer más allá de un puñado de personas.
+2. **Aviso de privacidad y términos.** Se guardan nombres y teléfonos de
+   clientes en México: la LFPDPPP obliga a publicar aviso de privacidad. No es
+   trabajo de programación, pero sin eso no se puede operar.
+3. **Dominio propio.** Hoy es `nice-seller-hub.sesar21macias.workers.dev`. Las
+   distribuidoras van a compartir ese enlace en sus redes; un dominio propio
+   cambia la credibilidad. Es configuración de Cloudflare, no código.
+4. **Costo de la lectura de tickets.** Cada escaneo cuesta. Hay tope de 30 por
+   hora por distribuidora, pero no hay cuota ni control de gasto: conviene
+   ponerle números antes de tener cincuenta distribuidoras, no después.
+5. **Subir fotos propias.** Para piezas que no estén en el catálogo de NICE hoy
+   hay que pegar una URL. Falta el adaptador a R2.
+6. **Correo.** No hay verificación de cuenta ni avisos de ningún tipo.
+7. **Autorización de NICE.** La parte del catálogo lee páginas públicas de su
+   tienda. Funciona, pero no es un acuerdo. Conviene hablarlo antes de que esto
+   sea el sustento de alguien.
+8. **Nunca se probó con carga real.** Está diseñado para escalar; eso no es lo
+   mismo que haberlo comprobado.
 
 ## Lo que todavía no está
 
