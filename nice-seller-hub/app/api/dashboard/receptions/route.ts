@@ -32,8 +32,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // Leer un ticket cuesta dinero por llamada; el límite es por distribuidora,
-  // no por IP, porque varias pueden compartir la conexión de un local.
+  /**
+   * Dos topes, no uno.
+   *
+   * El de por hora frena el bucle accidental —el dedo que presiona tres veces
+   * porque la foto tardo—. El mensual es el que protege la cuenta: cada lectura
+   * cuesta dinero de verdad, y sin un techo por tienda una sola distribuidora
+   * subiendo tickets en serie puede volverse una factura que nadie vio venir.
+   *
+   * 200 al mes son unas seis recepciones diarias. Quien de verdad las necesite
+   * puede pedir que se le suba; lo que no debe pasar es que nadie se entere.
+   */
   const limit = await rateLimit("ticket", `seller:${seller.id}`, 30, 3600);
   if (!limit.ok) {
     return NextResponse.json(
@@ -42,6 +51,18 @@ export async function POST(req: Request) {
         error: "Llegaste al límite de tickets por hora. Puedes seguir capturando a mano.",
       },
       { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
+  const monthly = await rateLimit("ticket-mes", `seller:${seller.id}`, 200, 2_592_000);
+  if (!monthly.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Llegaste al límite de lecturas de ticket de este mes. Escríbenos y lo ampliamos, o captura las piezas a mano.",
+      },
+      { status: 429 }
     );
   }
 

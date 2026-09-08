@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { requireSeller } from "@/lib/session";
 import { lookupNiceProduct } from "@/lib/nice-catalog";
+import { findSiblingSize } from "@/lib/sibling-size";
+import { NICE_CODE_RE } from "@/lib/nice-code";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 /**
@@ -27,7 +29,7 @@ export async function GET(req: Request) {
   }
 
   const code = (new URL(req.url).searchParams.get("code") ?? "").trim().toUpperCase();
-  if (!/^[A-Z0-9-]{3,20}$/.test(code)) {
+  if (!NICE_CODE_RE.test(code)) {
     return NextResponse.json({ ok: false, error: "Ese código no se ve válido." }, { status: 400 });
   }
 
@@ -57,6 +59,27 @@ export async function GET(req: Request) {
 
   if (local[0]) {
     return NextResponse.json({ ok: true, source: "catalogo", product: local[0] });
+  }
+
+  /**
+   * Antes de salir a internet, otra talla del mismo anillo que ya tengamos.
+   * Es la misma pieza y ahorra una consulta a la tienda de NICE — que ademas
+   * no lista todas las tallas.
+   */
+  const sibling = await findSiblingSize(code);
+  if (sibling) {
+    return NextResponse.json({
+      ok: true,
+      source: "talla",
+      product: {
+        niceCode: code,
+        name: sibling.name,
+        description: sibling.description,
+        imageUrl: sibling.imageUrl,
+        suggestedPriceCents: sibling.suggestedPriceCents,
+        categoryId: sibling.categoryId,
+      },
+    });
   }
 
   const found = await lookupNiceProduct(code);

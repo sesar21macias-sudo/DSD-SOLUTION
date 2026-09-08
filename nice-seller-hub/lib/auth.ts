@@ -2,6 +2,14 @@ export const SESSION_COOKIE = "nsh_session";
 export const SESSION_DAYS = 30;
 
 /**
+ * La sesion de una clienta del club. Es una cookie distinta y con claims
+ * distintos: una clienta no es una usuaria del panel, no tiene contraseña y no
+ * debe poder llegar a ninguna pantalla de administracion ni por accidente.
+ */
+export const MEMBER_COOKIE = "nsh_member";
+export const MEMBER_DAYS = 180;
+
+/**
  * PBKDF2-SHA256. No es Argon2, pero es lo que ofrece WebCrypto en el runtime
  * de Workers sin meter una dependencia nativa; con sal por usuario cumple para
  * este caso.
@@ -116,6 +124,56 @@ export async function readSession(
     const claims = JSON.parse(b64urlDecode(body)) as SessionClaims;
     if (typeof claims.uid !== "number" || typeof claims.exp !== "number") return null;
     if (claims.exp < Math.floor(Date.now() / 1000)) return null;
+    return claims;
+  } catch {
+    return null;
+  }
+}
+
+// --- Sesion de clienta del club -------------------------------------------
+
+export interface MemberClaims {
+  /** customers.id */
+  cid: number;
+  /** sellers.id — la sesion vale solo en la tienda donde se registro. */
+  sid: number;
+  exp: number;
+}
+
+export async function signMember(
+  claims: Omit<MemberClaims, "exp">,
+  secret: string,
+  days = MEMBER_DAYS
+): Promise<string> {
+  const payload: MemberClaims = {
+    ...claims,
+    exp: Math.floor(Date.now() / 1000) + days * 86_400,
+  };
+  const body = b64urlEncode(JSON.stringify(payload));
+  const sig = await crypto.subtle.sign("HMAC", await hmacKey(secret), enc.encode(body));
+  return `${body}.${toHex(sig)}`;
+}
+
+export async function readMember(
+  token: string | undefined,
+  secret: string
+): Promise<MemberClaims | null> {
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot < 1) return null;
+
+  const body = token.slice(0, dot);
+  const given = token.slice(dot + 1);
+
+  try {
+    const expected = toHex(
+      await crypto.subtle.sign("HMAC", await hmacKey(secret), enc.encode(body))
+    );
+    if (!safeEqual(given, expected)) return null;
+
+    const claims = JSON.parse(b64urlDecode(body)) as MemberClaims;
+    if (typeof claims.cid !== "number" || typeof claims.sid !== "number") return null;
+    if (typeof claims.exp !== "number" || claims.exp < Math.floor(Date.now() / 1000)) return null;
     return claims;
   } catch {
     return null;

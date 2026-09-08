@@ -11,7 +11,7 @@ export default async function AdminHome() {
   return (
     <main className="mx-auto max-w-5xl px-5 py-8">
       <h1 className="text-[28px] font-light">Resumen de la plataforma</h1>
-      <p className="mt-1 text-[13px] text-mute">Todo lo que pasa en NICE Seller Hub.</p>
+      <p className="mt-1 text-[13px] text-mute">Todo lo que pasa en DSD Seller Hub.</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard label="Ventas totales" value={formatMoney(stats.salesCents)} accent />

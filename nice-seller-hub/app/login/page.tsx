@@ -16,7 +16,7 @@ export default function LoginPage() {
       <h1 className="text-[28px] font-light leading-tight">
         Entra a tu
         <br />
-        <span className="font-normal">tienda NICE.</span>
+        <span className="font-normal">tienda digital.</span>
       </h1>
       <p className="mt-3 text-[14px] leading-relaxed text-mute">
         Administra tu inventario, tus pedidos y tus clientes.

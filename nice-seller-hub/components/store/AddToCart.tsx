@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
 import { useCart, type CartItem } from "@/components/cart/CartProvider";
+import { reservedHint, type StockStatus } from "@/lib/inventory";
 import { useToast } from "@/components/Toast";
 
 /**
@@ -50,13 +51,22 @@ export function AddButton({ item, disabled }: { item: Payload; disabled?: boolea
 }
 
 /** Version completa, con selector de cantidad, para el detalle del producto. */
-export function AddToCartPanel({ item, buyable }: { item: Payload; buyable: boolean }) {
+export function AddToCartPanel({
+  item,
+  status,
+  stock,
+}: {
+  item: Payload;
+  status: StockStatus;
+  /** Las piezas fisicas, para poder explicar cuantas estan apartadas. */
+  stock: number;
+}) {
   const { add } = useCart();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const max = Math.max(1, item.stock);
+  const max = Math.max(1, item.available);
 
   function submit() {
     const res = add(item, quantity);
@@ -69,7 +79,22 @@ export function AddToCartPanel({ item, buyable }: { item: Payload; buyable: bool
     setTimeout(() => setAdded(false), 1800);
   }
 
-  if (!buyable) {
+  /**
+   * Apartada no es lo mismo que agotada, y decirlo importa: agotada la manda a
+   * otra tienda, apartada la hace volver en diez minutos.
+   */
+  if (status === "reserved") {
+    return (
+      <div className="rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-4 text-center">
+        <p className="text-[14px] font-medium text-violet-900">Apartada en este momento</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-violet-900/70">
+          {reservedHint(stock, item.available)}
+        </p>
+      </div>
+    );
+  }
+
+  if (status !== "available" && status !== "last_pieces") {
     return (
       <div className="rounded-2xl border border-line bg-canvas px-4 py-4 text-center">
         <p className="text-[14px] font-medium text-mute">Esta pieza está agotada</p>

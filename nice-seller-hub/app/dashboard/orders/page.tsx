@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requireSeller } from "@/lib/session";
 import { listOrders } from "@/lib/seller";
 import { PageHeader, PageShell } from "@/components/dashboard/PageHeader";
+import { ExportButton } from "@/components/dashboard/ExportButton";
 import { OrdersList } from "@/components/dashboard/OrdersList";
 import { EmptyState, LinkButton } from "@/components/ui";
 
@@ -18,6 +19,7 @@ export default async function OrdersPage() {
       <PageHeader
         title="Pedidos"
         subtitle="Lo que te han pedido desde tu tienda. Todavía no descuentan inventario."
+        action={<ExportButton tipo="pedidos" label="Excel" />}
       />
 
       {orders.length === 0 ? (

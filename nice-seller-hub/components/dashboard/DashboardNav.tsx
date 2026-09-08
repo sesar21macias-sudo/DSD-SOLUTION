@@ -10,6 +10,7 @@ import {
   QrCode,
   Settings,
   ShoppingBag,
+  Sparkles,
   Users,
   Wallet,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const ITEMS = [
   { href: "/dashboard/orders", label: "Pedidos", icon: ShoppingBag, primary: true },
   { href: "/dashboard/sales", label: "Ventas", icon: Wallet, primary: true },
   { href: "/dashboard/customers", label: "Clientes", icon: Users, primary: true },
+  { href: "/dashboard/loyalty", label: "Club de puntos", icon: Sparkles, primary: false },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, primary: false },
   { href: "/dashboard/qr", label: "Códigos QR", icon: QrCode, primary: false },
   { href: "/dashboard/settings", label: "Configuración", icon: Settings, primary: false },

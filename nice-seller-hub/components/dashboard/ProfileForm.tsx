@@ -8,6 +8,7 @@ import { displayPhone } from "@/lib/phone";
 import { Button, ErrorNote, Field, Input, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { ShareSheet } from "@/components/store/ShareSheet";
+import { ImageUploadField } from "@/components/dashboard/ImageUploadField";
 
 /**
  * El perfil publico. El enlace de la tienda no se edita aqui a proposito:
@@ -53,6 +54,18 @@ export function ProfileForm({ seller, email }: { seller: Seller; email: string }
         </Field>
 
         <Field
+          label="Debajo de tu nombre"
+          hint="Opcional. Ej. “Distribuidora NICE”, “Joyería Mayela”. Vacío no muestra nada."
+        >
+          <Input
+            name="tagline"
+            defaultValue={seller.tagline ?? ""}
+            placeholder="Distribuidora NICE"
+            maxLength={60}
+          />
+        </Field>
+
+        <Field
           label="WhatsApp"
           hint={`Ahí llegan los pedidos. Guardado como ${displayPhone(seller.whatsapp)}.`}
         >
@@ -84,14 +97,18 @@ export function ProfileForm({ seller, email }: { seller: Seller; email: string }
           </Field>
         </div>
 
-        <Field label="Tu foto" hint="Pega el enlace de una imagen cuadrada.">
-          <Input
-            name="profileImage"
-            defaultValue={seller.profileImage ?? ""}
-            placeholder="https://…"
-            inputMode="url"
-            maxLength={500}
-          />
+        <Field
+          label="Tu foto"
+          hint="Pega el enlace de una imagen cuadrada, o súbela desde tu celular."
+        >
+          <ImageUploadField name="profileImage" defaultValue={seller.profileImage ?? ""} />
+        </Field>
+
+        <Field
+          label="Portada de tu tienda"
+          hint="Opcional. Una imagen ancha que sale hasta arriba de tu enlace."
+        >
+          <ImageUploadField name="coverImage" defaultValue={seller.coverImage ?? ""} />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
@@ -140,6 +157,44 @@ export function ProfileForm({ seller, email }: { seller: Seller; email: string }
           />
         </Field>
 
+        {/*
+          Lo privado va al final y separado: el resto de esta pantalla es
+          "asi te ven tus clientes", y este numero no lo ve nadie mas que ella.
+        */}
+        <div className="border-t border-line pt-6">
+          <p className="mb-4 text-[13px] font-semibold">Solo para ti</p>
+        {/*
+            El descuento no se ve en la tienda: es informacion de su negocio, no
+            de su vitrina. Vive aqui porque de el sale el costo estimado de cada
+            pieza que recibe, y es el numero que hace posible saber cuanto gana.
+          */}
+          <Field
+            label="Tu descuento de distribuidora"
+            hint="Con cuánto te descuenta NICE sobre el precio de catálogo. Solo tú lo ves."
+          >
+            <div className="relative">
+              <Input
+                name="distributorDiscountPct"
+                type="number"
+                min={0}
+                max={80}
+                defaultValue={seller.distributorDiscountPct}
+                inputMode="numeric"
+                className="pr-8"
+              />
+              <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[15px] text-mute">
+                %
+              </span>
+            </div>
+          </Field>
+
+          {/*
+            La linea que va debajo del nombre en su tienda. Antes decia
+            "Distribuidora NICE" a fuerza para todas: le ponia a su negocio una
+            marca que no es suya y daba por hecho lo que vende.
+          */}
+        </div>
+
         {state.error && <ErrorNote>{state.error}</ErrorNote>}
 
         <Button type="submit" size="lg" disabled={pending} className="w-full">
@@ -165,6 +220,7 @@ export function ProfileForm({ seller, email }: { seller: Seller; email: string }
         <ShareSheet
           slug={seller.slug}
           businessName={seller.businessName}
+          messageTemplate={seller.shareMessageTemplate}
           onClose={() => setShare(false)}
         />
       )}

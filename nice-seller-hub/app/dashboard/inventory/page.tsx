@@ -1,11 +1,13 @@
 import { Package, Plus, ScanLine } from "lucide-react";
 import type { Metadata } from "next";
 import { requireSeller } from "@/lib/session";
-import { listInventory, listMovements } from "@/lib/seller";
+import { getInventoryValuation, listInventory, listMovements } from "@/lib/seller";
 import { MOVEMENT_LABELS } from "@/lib/inventory";
 import { formatDateTime } from "@/lib/format";
 import { PageHeader, PageShell } from "@/components/dashboard/PageHeader";
 import { InventoryTable } from "@/components/dashboard/InventoryTable";
+import { InventoryValue } from "@/components/dashboard/InventoryValue";
+import { ExportButton } from "@/components/dashboard/ExportButton";
 import { Card, EmptyState, LinkButton, SectionTitle } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Inventario" };
@@ -19,9 +21,10 @@ export default async function InventoryPage({
   const { seller } = await requireSeller();
   const { q } = await searchParams;
 
-  const [items, movements] = await Promise.all([
+  const [items, movements, valuation] = await Promise.all([
     listInventory(seller.id, q),
     listMovements(seller.id, 15),
+    getInventoryValuation(seller.id),
   ]);
 
   return (
@@ -31,6 +34,7 @@ export default async function InventoryPage({
         subtitle={`${items.length} ${items.length === 1 ? "pieza" : "piezas"} en tu tienda`}
         action={
           <div className="flex gap-2">
+            <ExportButton tipo="inventario" label="Excel" />
             <LinkButton href="/dashboard/inventory/new" size="sm" variant="secondary">
               <Plus size={15} strokeWidth={2} />
               Agregar
@@ -42,6 +46,14 @@ export default async function InventoryPage({
           </div>
         }
       />
+
+      {valuation.lines > 0 && (
+        <InventoryValue
+          valuation={valuation}
+          discountPct={seller.distributorDiscountPct}
+          className="mb-6"
+        />
+      )}
 
       {items.length === 0 && !q ? (
         <EmptyState

@@ -14,8 +14,8 @@ export function ProductGallery({ images, alt }: { images: string[]; alt: string 
 
   if (images.length === 0) {
     return (
-      <div className="animate-fade grid aspect-square w-full place-items-center rounded-3xl border border-line bg-surface text-[12px] tracking-[0.25em] text-mute-soft">
-        NICE
+      <div className="animate-fade grid aspect-square w-full place-items-center rounded-3xl border border-line bg-surface text-[12px] text-mute-soft">
+        Sin foto
       </div>
     );
   }

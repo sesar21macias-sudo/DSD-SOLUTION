@@ -5,8 +5,11 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { createInventoryItem, type ActionState } from "@/app/dashboard/actions";
 import { centsToPesosInput } from "@/lib/format";
+import { costFromCatalog } from "@/lib/costing";
+import { NICE_CODE_RE } from "@/lib/nice-code";
 import { Button, ErrorNote, Field, Input, Select, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { ImageUploadField } from "@/components/dashboard/ImageUploadField";
 
 /**
  * Alta de una pieza.
@@ -30,7 +33,14 @@ interface FoundProduct {
   categoryId: number | null;
 }
 
-export function ProductForm({ categories }: { categories: { id: number; name: string }[] }) {
+export function ProductForm({
+  categories,
+  discountPct,
+}: {
+  categories: { id: number; name: string }[];
+  /** Su descuento de distribuidora, para sugerir el costo. */
+  discountPct: number;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [state, action, pending] = useActionState<ActionState, FormData>(createInventoryItem, {
@@ -42,6 +52,14 @@ export function ProductForm({ categories }: { categories: { id: number; name: st
   const [looking, setLooking] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [preview, setPreview] = useState("");
+
+  // El costo sugerido sale del precio de catalogo de la pieza encontrada y de
+  // su descuento. Si no hay ninguno de los dos, el campo queda vacio y ella lo
+  // escribe: es preferible a inventarle un numero.
+  const suggestedCost =
+    found?.suggestedPriceCents && discountPct > 0
+      ? costFromCatalog(found.suggestedPriceCents, discountPct)
+      : null;
 
   // Cada búsqueda cancela la anterior: si alguien escribe rápido, la respuesta
   // de un código a medio teclear no debe pisar la del código completo.
@@ -58,7 +76,7 @@ export function ProductForm({ categories }: { categories: { id: number; name: st
     const clean = code.trim().toUpperCase();
     setLookupError(null);
 
-    if (!/^[A-Z0-9-]{5,20}$/.test(clean)) {
+    if (!NICE_CODE_RE.test(clean)) {
       setFound(null);
       return;
     }
@@ -110,14 +128,14 @@ export function ProductForm({ categories }: { categories: { id: number; name: st
     <form action={action} className="max-w-lg space-y-5">
       <Field
         label="Código NICE"
-        hint="El de la etiqueta. Al escribirlo buscamos la pieza en el catálogo."
+        hint="El de la etiqueta. Los anillos llevan su talla: 426307/6."
       >
         <div className="relative">
           <Input
             name="niceCode"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="925094L"
+            placeholder="925094L o 426307/6"
             required
             maxLength={20}
             autoCapitalize="characters"
@@ -176,6 +194,23 @@ export function ProductForm({ categories }: { categories: { id: number; name: st
           />
         </Field>
 
+        <Field
+          label="Lo que te costó"
+          hint={
+            suggestedCost !== null
+              ? `Calculado con tu ${discountPct}% de descuento. Cámbialo si pagaste otra cosa.`
+              : "Opcional. Es lo que permite calcular tu ganancia."
+          }
+        >
+          <Input
+            name="cost"
+            defaultValue={suggestedCost !== null ? centsToPesosInput(suggestedCost) : ""}
+            placeholder="En pesos"
+            inputMode="decimal"
+            maxLength={12}
+          />
+        </Field>
+
         <div className="grid grid-cols-2 gap-3">
           <Field
             label="Tu precio"
@@ -220,14 +255,15 @@ export function ProductForm({ categories }: { categories: { id: number; name: st
           </Select>
         </Field>
 
-        <Field label="Foto" hint="Se llena sola si la pieza está en el catálogo NICE.">
-          <Input
+        <Field
+          label="Foto"
+          hint="Se llena sola si la pieza está en el catálogo NICE, o súbela desde tu celular."
+        >
+          <ImageUploadField
             name="imageUrl"
             defaultValue={found?.imageUrl ?? ""}
-            placeholder="https://…"
-            inputMode="url"
-            maxLength={500}
-            onChange={(e) => setPreview(e.target.value.trim())}
+            showPreview={false}
+            onValueChange={(url) => setPreview(url.trim())}
           />
         </Field>
 

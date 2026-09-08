@@ -14,7 +14,8 @@
     "seed:build": "node --experimental-strip-types scripts/build-seed.ts",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "backup": "wrangler d1 export nice-seller-hub --remote --output backups/respaldo.sql"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

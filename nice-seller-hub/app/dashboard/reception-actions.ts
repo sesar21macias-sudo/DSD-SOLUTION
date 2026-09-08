@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { requireSeller } from "@/lib/session";
+import { NICE_CODE_RE } from "@/lib/nice-code";
 import {
   assertDraftItem,
   confirmReception,
@@ -232,7 +233,7 @@ export async function createProductForItem(
 
   const niceCode = String(form.get("niceCode") ?? "").trim().toUpperCase();
   const name = String(form.get("name") ?? "").trim();
-  if (!/^[A-Z0-9-]{3,20}$/.test(niceCode)) {
+  if (!NICE_CODE_RE.test(niceCode)) {
     return { ok: false, error: "El código NICE solo lleva letras, números y guiones (3 a 20)." };
   }
   if (name.length < 2) return { ok: false, error: "Escribe el nombre de la pieza." };
@@ -286,7 +287,7 @@ export async function addManualItem(
   if (!rows[0]) return { ok: false, error: "Esa recepción ya no se puede editar." };
 
   const code = niceCode.trim().toUpperCase();
-  if (!/^[A-Z0-9-]{3,20}$/.test(code)) {
+  if (!NICE_CODE_RE.test(code)) {
     return { ok: false, error: "Ese código no se ve válido." };
   }
 

@@ -81,7 +81,7 @@ export function Filters({
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Buscar pieza o código NICE"
+            placeholder="Buscar pieza o código"
             inputMode="search"
             className="h-11 w-full rounded-xl border border-line-strong bg-surface pl-10 pr-9 text-[15px] placeholder:text-mute-soft focus:border-ink focus:outline-none focus:ring-4 focus:ring-ink/5"
           />

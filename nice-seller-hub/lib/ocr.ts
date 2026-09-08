@@ -2,6 +2,7 @@ import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
 import { getEnv } from "./env";
+import { NICE_CODE_RE } from "./nice-code";
 
 /**
  * Lectura del ticket de NICE.
@@ -119,6 +120,7 @@ La tabla de productos tiene estas columnas, en este orden:
   Cant | Id Nice | Precio Catalogo | Precio Unitario | Importe
 - "Cant" viene con decimales: "1.000" significa UNA pieza, "2.000" significa DOS. Nunca leas "1.000" como mil.
 - "Id Nice" es el código de la pieza. Suele tener 6 u 8 caracteres.
+- **Los anillos llevan la talla pegada al código, separada por una diagonal**: "426307/6" es el modelo 426307 en talla 6. Transcribe la diagonal y la talla tal cual; sin ellas la pieza queda incompleta, porque dos tallas del mismo anillo son dos piezas distintas.
 - "Precio Catalogo" es el precio de lista ($319.00). "Precio Unitario" e "Importe" suelen venir en 0.00 porque la distribuidora no paga en ese momento; ignóralos.
 - La DESCRIPCIÓN del producto (ARETES, COLLAR, PULSERA...) va en el renglón de ABAJO del código, no en el mismo renglón. Es parte del mismo producto.
 - Puede haber un recuadro o casilla □ al inicio de cada renglón. Es solo tinta, ignórala.
@@ -254,7 +256,7 @@ export async function readTicket(
           confidence: l.confidence === "low" ? ("low" as const) : ("high" as const),
         };
       })
-      .filter((l) => /^[A-Z0-9-]{3,20}$/.test(l.code))
+      .filter((l) => NICE_CODE_RE.test(l.code))
       .slice(0, 120);
 
     if (lines.length === 0) {

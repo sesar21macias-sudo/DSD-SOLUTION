@@ -22,6 +22,76 @@
       "when": 1788719901677,
       "tag": "0002_absent_paibok",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788760656786,
+      "tag": "0003_mature_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788762058085,
+      "tag": "0004_dusty_morph",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788762221680,
+      "tag": "0005_backfill_lifetime_points",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788763321654,
+      "tag": "0006_ordinary_reptil",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788763333280,
+      "tag": "0007_backfill_paid_sales",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788809836812,
+      "tag": "0008_slippery_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788814075549,
+      "tag": "0009_cool_rhodey",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788832621124,
+      "tag": "0010_fresh_toad_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788846663162,
+      "tag": "0011_remarkable_titania",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1788847903343,
+      "tag": "0012_outstanding_gambit",
+      "breakpoints": true
     }
   ]
 }

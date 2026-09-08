@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import { getSellerBySlug, getStoreProduct, listRelated } from "@/lib/store";
 import { STATUS_LABELS, stockHint } from "@/lib/inventory";
+import { getProgram, pointsForSale } from "@/lib/loyalty";
+import { paramToCode, sizeLabel } from "@/lib/nice-code";
 import { formatMoney } from "@/lib/format";
 import { AddToCartPanel } from "@/components/store/AddToCart";
 import { ProductGallery } from "@/components/store/ProductGallery";
@@ -20,7 +23,7 @@ export async function generateMetadata({
   const seller = await getSellerBySlug(slug);
   if (!seller) return { title: "No encontrado" };
 
-  const product = await getStoreProduct(seller.id, code);
+  const product = await getStoreProduct(seller.id, paramToCode(code));
   if (!product) return { title: "Pieza no encontrada" };
 
   return {
@@ -46,11 +49,18 @@ export default async function ProductPage({
   const seller = await getSellerBySlug(slug);
   if (!seller) notFound();
 
-  const product = await getStoreProduct(seller.id, code);
+  const product = await getStoreProduct(seller.id, paramToCode(code));
   if (!product) notFound();
 
   const status = STATUS_LABELS[product.status];
-  const related = await listRelated(seller.id, product.categoryId, product.productId);
+  const [related, program] = await Promise.all([
+    listRelated(seller.id, product.categoryId, product.productId),
+    getProgram(seller.id),
+  ]);
+
+  // Los puntos que deja esta pieza. Se enseña junto al precio porque ahi es
+  // donde la persona esta decidiendo, no en una pagina aparte del club.
+  const points = program.enabled ? pointsForSale(product.priceCents, program.centsPerPoint) : 0;
 
   // La galeria se guarda como JSON; si viene corrupta se ignora en vez de
   // tumbar la pagina por una comilla mal puesta.
@@ -80,17 +90,30 @@ export default async function ProductPage({
 
         <h1 className="mt-2 text-[28px] font-light leading-tight sm:text-[34px]">{product.name}</h1>
 
-        <p className="mt-1.5 text-[13px] tabular-nums text-mute">Código NICE {product.niceCode}</p>
+        <p className="mt-1.5 text-[13px] tabular-nums text-mute">
+          Código NICE {product.niceCode}
+          {sizeLabel(product.niceCode) ? ` · ${sizeLabel(product.niceCode)}` : ""}
+        </p>
 
         <p className="mt-5 text-[26px] font-medium tabular-nums">
           {formatMoney(product.priceCents)}
           <span className="ml-1.5 text-[13px] font-normal text-mute">MXN</span>
         </p>
 
+        {points > 0 && status.buyable && (
+          <Link
+            href={`/${slug}/club`}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-3 py-1.5 text-[12px] font-medium text-gold transition-colors hover:bg-gold-soft/70"
+          >
+            <Sparkles size={12} strokeWidth={2} />
+            Te da {points} {points === 1 ? "punto" : "puntos"} del {program.name}
+          </Link>
+        )}
+
         <p className="mt-3 flex items-center gap-2 text-[14px]">
           <StatusDot className={status.dot} />
           <span className={status.text}>{status.label}</span>
-          {status.buyable && <span className="text-mute">· {stockHint(product.stock)}</span>}
+          {status.buyable && <span className="text-mute">· {stockHint(product.available)}</span>}
         </p>
       </div>
 
@@ -101,9 +124,10 @@ export default async function ProductPage({
             name: product.name,
             imageUrl: product.imageUrl,
             priceCents: product.priceCents,
-            stock: product.stock,
+            available: product.available,
           }}
-          buyable={status.buyable}
+          status={product.status}
+          stock={product.stock}
         />
       </div>
 

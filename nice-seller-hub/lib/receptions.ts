@@ -2,8 +2,10 @@ import "server-only";
 
 import { and, asc, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { costFromCatalog } from "./costing";
 import type { TicketLine } from "./ocr";
 import { guessCategorySlug, lookupNiceProduct } from "./nice-catalog";
+import { findSiblingSize } from "./sibling-size";
 import { outer } from "./sql-helpers";
 
 /**
@@ -27,6 +29,8 @@ export interface ReceptionItemView {
   quantity: number;
   productId: number | null;
   priceCents: number | null;
+  /** Lo que le costo esa pieza. Se estima al confirmar si viene vacio. */
+  costCents: number | null;
   status: ItemStatus;
   rawLine: string | null;
   confidence: string;
@@ -99,6 +103,41 @@ export async function importFromNice(
   const resolved = new Map<string, CatalogProduct>();
 
   for (const code of codes.slice(0, limit)) {
+    /**
+     * Otra talla del mismo anillo que ya este en el catalogo.
+     *
+     * NICE no lista todas las tallas de un anillo, asi que la 8 no se resuelve
+     * contra su sitio aunque exista. Pero es la misma pieza: si la 6 ya entro
+     * alguna vez, de ahi salen la foto, el nombre y el precio. Va primero
+     * porque ademas ahorra la consulta a internet.
+     */
+    const sibling = await findSiblingSize(code);
+    if (sibling) {
+      const twin = await db
+        .insert(schema.products)
+        .values({
+          niceCode: code,
+          name: sibling.name,
+          description: sibling.description,
+          imageUrl: sibling.imageUrl,
+          suggestedPriceCents: sibling.suggestedPriceCents,
+          categoryId: sibling.categoryId,
+          material: sibling.material,
+          finish: sibling.finish,
+          createdBySellerId: null,
+        })
+        .returning({
+          id: schema.products.id,
+          niceCode: schema.products.niceCode,
+          suggestedPriceCents: schema.products.suggestedPriceCents,
+        });
+
+      if (twin[0]) {
+        resolved.set(code, twin[0]);
+        continue;
+      }
+    }
+
     const found = await lookupNiceProduct(code);
     if (!found) continue;
 
@@ -314,6 +353,7 @@ export async function getReception(
       quantity: schema.receptionItems.quantity,
       productId: schema.receptionItems.productId,
       priceCents: schema.receptionItems.priceCents,
+      costCents: schema.receptionItems.costCents,
       status: schema.receptionItems.status,
       rawLine: schema.receptionItems.rawLine,
       confidence: schema.receptionItems.confidence,
@@ -443,8 +483,26 @@ export async function confirmReception(
     return { ok: false, error: "Esta recepción ya se había confirmado." };
   }
 
+  /**
+   * El costo de cada pieza sale del precio de catálogo impreso en el ticket y
+   * del descuento de distribuidora que ella tenga guardado.
+   *
+   * Es una estimación, y por eso solo se escribe cuando hay las dos cosas: si
+   * no tiene descuento configurado, el costo queda en nulo —"no lo sé"— en vez
+   * de guardar el precio de catálogo completo, que diría que no ganó nada.
+   */
+  const sellerRows = await db
+    .select({ discountPct: schema.sellers.distributorDiscountPct })
+    .from(schema.sellers)
+    .where(eq(schema.sellers.id, sellerId))
+    .limit(1);
+  const discountPct = sellerRows[0]?.discountPct ?? 0;
+
   // Agrupar por producto antes de escribir.
-  const byProduct = new Map<number, { quantity: number; priceCents: number }>();
+  const byProduct = new Map<
+    number,
+    { quantity: number; priceCents: number; costCents: number | null }
+  >();
   let skipped = 0;
 
   for (const item of reception.items) {
@@ -458,10 +516,17 @@ export async function confirmReception(
       skipped++;
       continue;
     }
+
+    const catalog = item.catalogPriceCents ?? item.suggestedPriceCents;
+    const cost =
+      item.costCents ??
+      (catalog && discountPct > 0 ? costFromCatalog(catalog, discountPct) : null);
+
     const current = byProduct.get(item.productId);
     byProduct.set(item.productId, {
       quantity: (current?.quantity ?? 0) + item.quantity,
       priceCents: current?.priceCents ?? price,
+      costCents: current?.costCents ?? cost,
     });
   }
 
@@ -478,6 +543,7 @@ export async function confirmReception(
       id: schema.sellerInventory.id,
       productId: schema.sellerInventory.productId,
       stock: schema.sellerInventory.stock,
+      costCents: schema.sellerInventory.costCents,
     })
     .from(schema.sellerInventory)
     .where(
@@ -500,10 +566,16 @@ export async function confirmReception(
 
     if (current) {
       // Ya la tiene: se suma. El precio NO se toca — ya era decisión suya.
+      // El costo sí se rellena, pero solo si estaba vacío: es un dato que le
+      // faltaba, no una corrección de lo que ella capturó.
       const after = current.stock + line.quantity;
       await db
         .update(schema.sellerInventory)
-        .set({ stock: after, updatedAt: nowIso })
+        .set({
+          stock: after,
+          costCents: current.costCents ?? line.costCents,
+          updatedAt: nowIso,
+        })
         .where(
           and(
             eq(schema.sellerInventory.id, current.id),
@@ -527,6 +599,7 @@ export async function confirmReception(
         sellerId,
         productId,
         priceCents: line.priceCents,
+        costCents: line.costCents,
         stock: line.quantity,
         isVisible: true,
       });

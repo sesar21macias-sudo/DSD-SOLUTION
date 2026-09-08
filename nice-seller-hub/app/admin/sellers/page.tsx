@@ -4,13 +4,17 @@ import { requireAdmin } from "@/lib/session";
 import { listSellers, setSellerStatus } from "@/lib/admin";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { Card } from "@/components/ui";
+import { ResetLinkButton } from "@/components/admin/ResetLinkButton";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Suspender una tienda la saca de la portada, de su enlace publico y del
- * panel de quien la administra —`getSellerBySlug` y `requireSeller` filtran
- * por `status = 'active'`—. Los datos no se borran.
+ * Esta es la unica pantalla del sistema donde se ven todas las tiendas juntas,
+ * y es a proposito: ninguna distribuidora tiene por que ver el negocio de otra.
+ *
+ * Suspender una tienda apaga su enlace publico y el panel de quien la
+ * administra —`getSellerBySlug` y `requireSeller` filtran por
+ * `status = 'active'`—. Los datos no se borran.
  */
 async function toggle(formData: FormData) {
   "use server";
@@ -76,6 +80,14 @@ export default async function AdminSellersPage() {
                 </span>
                 ventas
               </span>
+            </div>
+
+            <div className="shrink-0">
+              <ResetLinkButton
+                userId={s.userId}
+                businessName={s.businessName}
+                whatsapp={s.whatsapp}
+              />
             </div>
 
             <form action={toggle} className="shrink-0">

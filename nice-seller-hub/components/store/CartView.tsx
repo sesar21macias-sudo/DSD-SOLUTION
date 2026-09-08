@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/components/cart/CartProvider";
+import { HoldNotice } from "./HoldNotice";
 import { formatMoney } from "@/lib/format";
+import { codeToParam } from "@/lib/nice-code";
 import { EmptyState, LinkButton } from "@/components/ui";
 
 /**
@@ -47,10 +49,12 @@ export function CartView({ slug, businessName }: { slug: string; businessName: s
         {count} {count === 1 ? "pieza" : "piezas"} de {businessName}
       </p>
 
+      <HoldNotice className="mt-5" />
+
       <ul className="stagger mt-6 space-y-3">
         {items.map((item) => {
           const lineTotal = item.priceCents * item.quantity;
-          const atMax = item.quantity >= item.stock;
+          const atMax = item.quantity >= item.available;
 
           return (
             <li
@@ -58,7 +62,7 @@ export function CartView({ slug, businessName }: { slug: string; businessName: s
               className="flex gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card"
             >
               <Link
-                href={`/${slug}/product/${item.niceCode}`}
+                href={`/${slug}/product/${codeToParam(item.niceCode)}`}
                 className="shrink-0 overflow-hidden rounded-xl bg-canvas"
               >
                 {item.imageUrl ? (
@@ -70,8 +74,8 @@ export function CartView({ slug, businessName }: { slug: string; businessName: s
                     loading="lazy"
                   />
                 ) : (
-                  <span className="grid h-20 w-20 place-items-center text-[10px] tracking-[0.2em] text-mute-soft">
-                    NICE
+                  <span className="grid h-20 w-20 place-items-center px-1 text-center text-[10px] leading-tight text-mute-soft">
+                    {item.niceCode}
                   </span>
                 )}
               </Link>
@@ -80,7 +84,7 @@ export function CartView({ slug, businessName }: { slug: string; businessName: s
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <Link
-                      href={`/${slug}/product/${item.niceCode}`}
+                      href={`/${slug}/product/${codeToParam(item.niceCode)}`}
                       className="line-clamp-2 text-[14px] font-medium leading-snug"
                     >
                       {item.name}
@@ -132,9 +136,9 @@ export function CartView({ slug, businessName }: { slug: string; businessName: s
 
                 {atMax && (
                   <p className="mt-1.5 text-[11px] text-amber-700">
-                    {item.stock === 1
-                      ? "Es la última pieza disponible."
-                      : `Es todo lo que hay (${item.stock}).`}
+                    {item.available === 1
+                      ? "Es la última pieza libre."
+                      : `Es todo lo que hay libre (${item.available}).`}
                   </p>
                 )}
               </div>

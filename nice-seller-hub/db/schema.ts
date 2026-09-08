@@ -58,6 +58,15 @@ export const sellers = sqliteTable(
     businessName: text("business_name").notNull(),
     profileImage: text("profile_image"),
     coverImage: text("cover_image"),
+    /**
+     * La linea que va debajo del nombre de la tienda.
+     *
+     * Antes decia "Distribuidora NICE" a fuerza, para todas. Eso daba por
+     * hecho que quien usa esto vende NICE, y ademas le ponia a su tienda una
+     * marca que no es suya. Ahora lo escribe ella: "Distribuidora NICE",
+     * "Joyeria Mayela" o nada.
+     */
+    tagline: text("tagline"),
     description: text("description"),
     city: text("city"),
     state: text("state"),
@@ -70,6 +79,33 @@ export const sellers = sqliteTable(
     instagram: text("instagram"),
     facebook: text("facebook"),
     schedule: text("schedule"),
+    /**
+     * Los mensajes de WhatsApp que arma el sistema, a su manera de escribir.
+     *
+     * Nulo = usa el texto por omision (`lib/message-templates.ts`). Guardar
+     * nulo y no el texto por omision copiado es lo que permite que, si algun
+     * dia se mejora la redaccion por defecto, quien nunca lo toco se beneficie
+     * solo — y quien si lo personalizo conserva exactamente lo suyo.
+     *
+     * Solo la parte de "voz" es editable; los renglones con precios, folio y
+     * totales del pedido son siempre los mismos, calculados por el sistema:
+     * eso es dinero, y ahi no hay redaccion que valga mas que la exactitud.
+     */
+    orderGreetingTemplate: text("order_greeting_template"),
+    orderClosingTemplate: text("order_closing_template"),
+    shareMessageTemplate: text("share_message_template"),
+    paymentReminderTemplate: text("payment_reminder_template"),
+    couponMessageTemplate: text("coupon_message_template"),
+    pointsGreetingTemplate: text("points_greeting_template"),
+    pointsClosingTemplate: text("points_closing_template"),
+
+    /**
+     * El descuento con el que ella le compra a NICE, en porcentaje entero.
+     * De aqui sale el costo estimado de cada pieza: catalogo x (1 - d). Se
+     * guarda como porcentaje y no como factor porque es el numero que ella
+     * conoce y dice ("tengo el 30").
+     */
+    distributorDiscountPct: integer("distributor_discount_pct").notNull().default(0),
     deliveryMethods: text("delivery_methods"),
     paymentMethods: text("payment_methods"),
     /** "active" | "suspended" — solo el admin la cambia. */
@@ -153,6 +189,14 @@ export const sellerInventory = sqliteTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     priceCents: integer("price_cents").notNull(),
+    /**
+     * Lo que le costo la pieza, en centavos. Nullable a proposito: el
+     * inventario que ya existia se cargo sin costo, y un 0 seria una mentira
+     * —diria que le salio gratis— mientras que un nulo dice la verdad, que no
+     * se sabe. Todos los calculos de ganancia lo tratan como desconocido y lo
+     * reportan aparte.
+     */
+    costCents: integer("cost_cents"),
     stock: integer("stock").notNull().default(0),
     /**
      * "Disponible / Ultimas piezas / Agotado" NO se guardan: se derivan del
@@ -258,6 +302,10 @@ export const orders = sqliteTable(
     contactPhone: text("contact_phone"),
     note: text("note"),
     subtotalCents: integer("subtotal_cents").notNull(),
+    /** Lo que descuenta el cupon del club, si la clienta aplico uno. */
+    discountCents: integer("discount_cents").notNull().default(0),
+    /** El cupon aplicado. Se guarda el codigo, no el id: es lo que se lee. */
+    redemptionCode: text("redemption_code"),
     totalCents: integer("total_cents").notNull(),
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
@@ -314,6 +362,31 @@ export const sales = sqliteTable(
     customerId: integer("customer_id").references(() => customers.id),
     /** Si la venta nacio de un pedido, queda la liga. */
     orderId: integer("order_id").references(() => orders.id),
+    /**
+     * paid | partial | cancelled
+     *
+     * "partial" es una venta a abonos: la pieza ya salio del inventario —esta
+     * apartada, nadie mas se la puede llevar— pero todavia no esta pagada.
+     * "cancelled" devuelve las piezas al inventario.
+     */
+    status: text("status").notNull().default("paid"),
+    /** Lo abonado hasta ahora. En una venta de contado es igual al total. */
+    paidCents: integer("paid_cents").notNull().default(0),
+    /** Fecha limite acordada para terminar de pagar. Solo informativa. */
+    dueDate: text("due_date"),
+    /**
+     * Los puntos que ya se otorgaron por esta venta. Se guarda para no darlos
+     * dos veces: en una venta a abonos los puntos llegan al quedar pagada, y
+     * ese momento puede ocurrir en cualquier abono.
+     */
+    pointsAwarded: integer("points_awarded").notNull().default(0),
+    /**
+     * Lo que descontó el cupón del club. El total ya viene con el descuento
+     * aplicado: es lo que la clienta pagó de verdad, y por eso es tambien la
+     * base sobre la que se acumulan los puntos de esta compra.
+     */
+    discountCents: integer("discount_cents").notNull().default(0),
+    redemptionCode: text("redemption_code"),
     totalCents: integer("total_cents").notNull(),
     /** efectivo | transferencia | tarjeta | otro */
     paymentMethod: text("payment_method").notNull().default("efectivo"),
@@ -337,6 +410,12 @@ export const saleItems = sqliteTable(
     codeSnapshot: text("code_snapshot").notNull(),
     quantity: integer("quantity").notNull(),
     unitPriceCents: integer("unit_price_cents").notNull(),
+    /**
+     * El costo unitario al momento de vender. Se copia igual que el precio: si
+     * el mes que entra ella recibe la misma pieza mas cara, la ganancia de la
+     * venta de hoy tiene que seguir calculandose con lo que le costo hoy.
+     */
+    unitCostCents: integer("unit_cost_cents"),
     subtotalCents: integer("subtotal_cents").notNull(),
   },
   (t) => ({
@@ -344,10 +423,75 @@ export const saleItems = sqliteTable(
   })
 );
 
+/**
+ * Un abono.
+ *
+ * Se guarda cada pago por separado y nunca se edita el acumulado a mano: el
+ * saldo es la resta entre el total y la suma de los abonos, asi que siempre se
+ * puede reconstruir de donde salio cada peso. Una clienta que pregunta "cuanto
+ * llevo" merece una respuesta que se pueda demostrar.
+ */
+export const salePayments = sqliteTable(
+  "sale_payments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sellerId: integer("seller_id")
+      .notNull()
+      .references(() => sellers.id, { onDelete: "cascade" }),
+    saleId: integer("sale_id")
+      .notNull()
+      .references(() => sales.id, { onDelete: "cascade" }),
+    amountCents: integer("amount_cents").notNull(),
+    /** efectivo | transferencia | tarjeta | otro */
+    method: text("method").notNull().default("efectivo"),
+    note: text("note"),
+    createdAt: text("created_at").notNull().default(now),
+  },
+  (t) => ({
+    saleIdx: index("sale_payments_sale_idx").on(t.saleId, t.createdAt),
+    sellerIdx: index("sale_payments_seller_idx").on(t.sellerId, t.createdAt),
+  })
+);
+
 // --- Lealtad ---------------------------------------------------------------
-// Las tablas existen desde ahora y los puntos se acumulan con cada venta, para
-// que cuando se construya la Fase 2 el historial ya este completo. La interfaz
-// de recompensas y cupones todavia no esta hecha.
+//
+// Cada distribuidora lleva su propio programa: sus reglas, sus recompensas y
+// sus clientas. No hay una bolsa global de puntos — los puntos que alguien
+// junto con Ana no valen nada con Maria, igual que en la vida real.
+
+/**
+ * Las reglas del programa de una distribuidora. Existe una fila por tienda y
+ * se crea sola con valores razonables la primera vez que se consulta: asi
+ * ninguna pantalla tiene que lidiar con "todavia no hay configuracion".
+ */
+export const loyaltyPrograms = sqliteTable(
+  "loyalty_programs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sellerId: integer("seller_id")
+      .notNull()
+      .references(() => sellers.id, { onDelete: "cascade" }),
+    /** Apagado por omision: nadie deberia estrenar un programa sin haberlo leido. */
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    /** Como se llama el club en su tienda. */
+    name: text("name").notNull().default("Club de puntos"),
+    /**
+     * Cuantos centavos de compra valen un punto. 1000 = 1 punto por cada $10.
+     * Se guarda asi, y no como "puntos por peso", porque en enteros no hay
+     * forma de escribir 0.1 sin perder precision al acumular.
+     */
+    centsPerPoint: integer("cents_per_point").notNull().default(1000),
+    /** Puntos de bienvenida al registrarse. 0 = ninguno. */
+    welcomePoints: integer("welcome_points").notNull().default(0),
+    /** Texto libre con las condiciones que ella quiera poner. */
+    terms: text("terms"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (t) => ({
+    sellerIdx: uniqueIndex("loyalty_programs_seller_idx").on(t.sellerId),
+  })
+);
 
 export const loyaltyAccounts = sqliteTable(
   "loyalty_accounts",
@@ -359,7 +503,10 @@ export const loyaltyAccounts = sqliteTable(
     customerId: integer("customer_id")
       .notNull()
       .references(() => customers.id, { onDelete: "cascade" }),
+    /** Saldo disponible: lo ganado menos lo canjeado. */
     points: integer("points").notNull().default(0),
+    /** Acumulado historico, nunca baja. Es lo que define el nivel. */
+    lifetimePoints: integer("lifetime_points").notNull().default(0),
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
   },
@@ -375,8 +522,9 @@ export const loyaltyTransactions = sqliteTable(
     accountId: integer("account_id")
       .notNull()
       .references(() => loyaltyAccounts.id, { onDelete: "cascade" }),
-    /** "earn" | "redeem" | "adjust" */
+    /** "earn" | "redeem" | "adjust" | "welcome" */
     type: text("type").notNull(),
+    /** Positivo suma, negativo resta. */
     points: integer("points").notNull(),
     description: text("description"),
     referenceId: integer("reference_id"),
@@ -384,6 +532,73 @@ export const loyaltyTransactions = sqliteTable(
   },
   (t) => ({
     accountIdx: index("loyalty_tx_account_idx").on(t.accountId, t.createdAt),
+  })
+);
+
+/**
+ * Una recompensa es lo que la distribuidora ofrece a cambio de puntos. Las
+ * define ella, en su panel, y solo aplican en su tienda.
+ */
+export const loyaltyRewards = sqliteTable(
+  "loyalty_rewards",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sellerId: integer("seller_id")
+      .notNull()
+      .references(() => sellers.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    pointsCost: integer("points_cost").notNull(),
+    /** "percent" (% de descuento) | "amount" (pesos) | "gift" (regalo o envio) */
+    kind: text("kind").notNull().default("percent"),
+    /** 15 = 15%. En "amount", centavos. En "gift" no se usa. */
+    value: integer("value").notNull().default(0),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    position: integer("position").notNull().default(0),
+    createdAt: text("created_at").notNull().default(now),
+  },
+  (t) => ({
+    sellerIdx: index("loyalty_rewards_seller_idx").on(t.sellerId, t.position),
+  })
+);
+
+/**
+ * Un cupon ya canjeado.
+ *
+ * Los datos de la recompensa se copian al canjear: si manana ella cambia el
+ * descuento de 10% a 5%, el cupon que alguien ya tiene en la mano tiene que
+ * seguir valiendo el 10% que se le prometio.
+ *
+ * El codigo es lo que la clienta enseña por WhatsApp y lo que la distribuidora
+ * busca en su panel para marcarlo como usado.
+ */
+export const loyaltyRedemptions = sqliteTable(
+  "loyalty_redemptions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sellerId: integer("seller_id")
+      .notNull()
+      .references(() => sellers.id, { onDelete: "cascade" }),
+    customerId: integer("customer_id")
+      .notNull()
+      .references(() => customers.id, { onDelete: "cascade" }),
+    rewardId: integer("reward_id"),
+    code: text("code").notNull(),
+    pointsSpent: integer("points_spent").notNull(),
+    nameSnapshot: text("name_snapshot").notNull(),
+    kind: text("kind").notNull(),
+    value: integer("value").notNull().default(0),
+    /** available | used | cancelled */
+    status: text("status").notNull().default("available"),
+    /** El pedido en el que se aplico, si se aplico en uno. */
+    orderId: integer("order_id"),
+    createdAt: text("created_at").notNull().default(now),
+    usedAt: text("used_at"),
+  },
+  (t) => ({
+    codeIdx: uniqueIndex("loyalty_redemptions_code_idx").on(t.code),
+    sellerIdx: index("loyalty_redemptions_seller_idx").on(t.sellerId, t.createdAt),
+    customerIdx: index("loyalty_redemptions_customer_idx").on(t.customerId),
   })
 );
 
@@ -442,6 +657,8 @@ export const receptionItems = sqliteTable(
     productId: integer("product_id").references(() => products.id),
     /** Precio al que ella lo va a vender. Se prellena, se puede cambiar. */
     priceCents: integer("price_cents"),
+    /** Lo que le costo, ya con su descuento de distribuidora aplicado. */
+    costCents: integer("cost_cents"),
     /**
      * El "Precio Catálogo" impreso en el ticket, en centavos. Es la mejor
      * sugerencia que existe para una pieza que todavia no esta en el catalogo
@@ -463,6 +680,106 @@ export const receptionItems = sqliteTable(
   },
   (t) => ({
     receptionIdx: index("reception_items_reception_idx").on(t.receptionId),
+  })
+);
+
+// --- Apartado temporal ------------------------------------------------------
+
+/**
+ * Una pieza retenida mientras alguien la esta comprando.
+ *
+ * El problema que resuelve es concreto: dos clientas abren la tienda el mismo
+ * sabado, las dos ven "queda 1", las dos mandan su pedido por WhatsApp y una de
+ * las dos se va a quedar sin nada. El inventario decia la verdad en los dos
+ * momentos; lo que faltaba era que la primera en tomarla la retuviera.
+ *
+ * Una reserva NO baja las existencias. El stock sigue siendo el numero de
+ * piezas que ella tiene fisicamente en su casa; lo que cambia es cuantas estan
+ * *disponibles para alguien mas*. Si bajara el stock, un carrito abandonado se
+ * veria en el panel como mercancia que se esfumo.
+ *
+ * Y siempre vence. Un apartado sin vencimiento es una pieza perdida: nadie va
+ * a volver a abrir ese carrito y nadie mas la va a poder comprar.
+ */
+export const stockReservations = sqliteTable(
+  "stock_reservations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sellerId: integer("seller_id")
+      .notNull()
+      .references(() => sellers.id, { onDelete: "cascade" }),
+    productId: integer("product_id").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    /**
+     * Quien la tiene apartada: un identificador opaco del navegador, guardado
+     * en una cookie. No dice quien es la persona y no hace falta que lo diga —
+     * solo tiene que distinguir "yo" de "alguien mas".
+     *
+     * Alguien que borre su cookie pierde sus propias reservas; no gana las de
+     * nadie. Ese es el peor caso y es aceptable.
+     */
+    visitorId: text("visitor_id").notNull(),
+    /** cart | order — el pedido ya mandado aguanta mucho mas que un carrito. */
+    source: text("source").notNull().default("cart"),
+    orderId: integer("order_id"),
+    createdAt: text("created_at").notNull().default(now),
+    /**
+     * Cuando deja de valer, en ISO. Las consultas filtran por esta columna, asi
+     * que una reserva vencida deja de contar sola: no hace falta un proceso que
+     * corra a limpiarlas para que la tienda diga la verdad.
+     */
+    expiresAt: text("expires_at").notNull(),
+  },
+  (t) => ({
+    // Una fila por visitante y pieza en cada tienda: renovar es un UPDATE, no
+    // una fila mas cada vez que alguien recarga el carrito.
+    uniqueIdx: uniqueIndex("stock_reservations_unique_idx").on(
+      t.sellerId,
+      t.productId,
+      t.visitorId
+    ),
+    lookupIdx: index("stock_reservations_lookup_idx").on(
+      t.sellerId,
+      t.productId,
+      t.expiresAt
+    ),
+    visitorIdx: index("stock_reservations_visitor_idx").on(t.visitorId),
+    orderIdx: index("stock_reservations_order_idx").on(t.orderId),
+  })
+);
+
+// --- Recuperacion de contraseña ---------------------------------------------
+
+/**
+ * Un enlace de un solo uso para volver a poner una contraseña.
+ *
+ * Todavia no hay correo saliente, asi que no puede haber un "olvide mi
+ * contraseña" que se resuelva solo. Lo que si puede haber —y es lo que hace la
+ * diferencia entre operar y no operar— es que quien administra la plataforma
+ * genere el enlace desde el panel y se lo mande por WhatsApp, en vez de tener
+ * que correr un script desde su computadora un domingo en la noche.
+ *
+ * Del token se guarda solo su huella SHA-256. Si alguien llegara a leer esta
+ * tabla, no obtiene ningun enlace utilizable — igual que con las contraseñas.
+ */
+export const passwordResets = sqliteTable(
+  "password_resets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** SHA-256 del token en hexadecimal. El token en claro no se guarda. */
+    tokenHash: text("token_hash").notNull(),
+    /** Quien lo genero. Hoy siempre un admin. */
+    createdBy: integer("created_by"),
+    createdAt: text("created_at").notNull().default(now),
+    expiresAt: text("expires_at").notNull(),
+    usedAt: text("used_at"),
+  },
+  (t) => ({
+    hashIdx: uniqueIndex("password_resets_hash_idx").on(t.tokenHash),
+    userIdx: index("password_resets_user_idx").on(t.userId, t.createdAt),
   })
 );
 
@@ -498,5 +815,10 @@ export type Customer = typeof customers.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type Sale = typeof sales.$inferSelect;
+export type SalePayment = typeof salePayments.$inferSelect;
+export type LoyaltyProgram = typeof loyaltyPrograms.$inferSelect;
+export type LoyaltyReward = typeof loyaltyRewards.$inferSelect;
+export type LoyaltyRedemption = typeof loyaltyRedemptions.$inferSelect;
+export type StockReservation = typeof stockReservations.$inferSelect;
 export type Reception = typeof receptions.$inferSelect;
 export type ReceptionItem = typeof receptionItems.$inferSelect;

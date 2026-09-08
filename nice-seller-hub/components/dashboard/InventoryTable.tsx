@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Eye, EyeOff, Minus, Plus, Search, Trash2, X } from "lucide-react";
+import { Clock, Eye, EyeOff, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import { adjustStock, deleteInventoryItem, toggleVisibility } from "@/app/dashboard/actions";
 import type { InventoryItem } from "@/lib/seller";
 import { STATUS_LABELS } from "@/lib/inventory";
 import { formatMoney } from "@/lib/format";
+import { marginPct } from "@/lib/costing";
+import { codeToParam, sizeLabel } from "@/lib/nice-code";
 import { useToast } from "@/components/Toast";
 import { StatusDot } from "@/components/ui";
 
@@ -91,7 +93,7 @@ export function InventoryTable({
             >
               <div className="flex gap-3">
                 <Link
-                  href={`/${slug}/product/${item.niceCode}`}
+                  href={`/${slug}/product/${codeToParam(item.niceCode)}`}
                   target="_blank"
                   className="shrink-0 overflow-hidden rounded-xl bg-canvas"
                 >
@@ -116,12 +118,26 @@ export function InventoryTable({
                       <p className="truncate text-[14px] font-medium">{item.name}</p>
                       <p className="text-[11px] tabular-nums text-mute">
                         {item.niceCode}
+                        {sizeLabel(item.niceCode) ? ` · ${sizeLabel(item.niceCode)}` : ""}
                         {item.categoryName ? ` · ${item.categoryName}` : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 text-[15px] font-medium tabular-nums">
-                      {formatMoney(item.priceCents)}
-                    </span>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[15px] font-medium tabular-nums">
+                        {formatMoney(item.priceCents)}
+                      </p>
+                      {/* La ganancia por pieza solo aparece cuando se sabe el
+                          costo. Sin el, este renglon se quedaria callado en vez
+                          de enseñar un margen inventado. */}
+                      {item.costCents !== null && (
+                        <p className="text-[11px] tabular-nums text-gold">
+                          gana {formatMoney(item.priceCents - item.costCents)}
+                          {marginPct(item.priceCents, item.costCents) !== null
+                            ? ` · ${marginPct(item.priceCents, item.costCents)}%`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -129,6 +145,16 @@ export function InventoryTable({
                       <StatusDot className={status.dot} />
                       <span className={status.text}>{status.label}</span>
                     </span>
+
+                    {/* Apartadas por clientas que están comprando ahora mismo.
+                        No baja el stock: son piezas que ella sigue teniendo,
+                        solo que otra persona llegó primero. */}
+                    {item.reserved > 0 && (
+                      <span className="flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+                        <Clock size={10} strokeWidth={2.2} />
+                        {item.reserved} apartada{item.reserved === 1 ? "" : "s"}
+                      </span>
+                    )}
 
                     <div className="ml-auto flex items-center gap-1">
                       <div className="flex h-8 items-center rounded-lg border border-line-strong">

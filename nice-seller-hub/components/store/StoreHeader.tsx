@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ChevronLeft, Instagram, MapPin, MessageCircle, Share2 } from "lucide-react";
+import { ChevronLeft, Instagram, MapPin, MessageCircle, Share2, Sparkles } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ShareSheet } from "./ShareSheet";
 import { CartIcon } from "./CartIcon";
@@ -21,9 +21,16 @@ export function StoreHeader(props: {
   state: string | null;
   description: string | null;
   profileImage: string | null;
+  coverImage: string | null;
+  /** Lo que ella escribio debajo del nombre. Vacio = no se muestra nada. */
+  tagline: string | null;
   whatsapp: string;
   instagram: string | null;
   facebook: string | null;
+  /** El nombre del club, o null si esta apagado. */
+  clubName: string | null;
+  /** Su version del mensaje al compartir. Null = el de siempre. */
+  shareMessageTemplate: string | null;
 }) {
   const pathname = usePathname();
   const [shareOpen, setShareOpen] = useState(false);
@@ -40,7 +47,7 @@ export function StoreHeader(props: {
       >
         <div className="safe-top mx-auto flex h-14 max-w-3xl items-center gap-3 px-5">
           {isHome ? (
-            <Link href="/" aria-label="NICE Seller Hub">
+            <Link href="/" aria-label="DSD Seller Hub">
               <Logo size="sm" />
             </Link>
           ) : (
@@ -66,6 +73,16 @@ export function StoreHeader(props: {
         </div>
       </header>
 
+      {/* La portada de su tienda, si subio una. */}
+      {isHome && props.coverImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={props.coverImage}
+          alt=""
+          className="h-40 w-full object-cover sm:h-52"
+        />
+      )}
+
       {isHome && (
         <section className="mx-auto max-w-3xl px-5 pb-8 pt-8">
           <div className="animate-fade-up flex items-start gap-4">
@@ -83,8 +100,12 @@ export function StoreHeader(props: {
             )}
 
             <div className="min-w-0 flex-1 pt-1">
-              <h1 className="text-[26px] font-medium leading-tight">{props.businessName}</h1>
-              <p className="mt-0.5 text-[13px] text-mute">Distribuidora NICE</p>
+              <h1 className="font-display text-[29px] font-normal leading-tight">
+                {props.businessName}
+              </h1>
+              {props.tagline?.trim() && (
+                <p className="mt-0.5 text-[13px] text-mute">{props.tagline}</p>
+              )}
               {location && (
                 <p className="mt-1.5 flex items-center gap-1 text-[13px] text-mute">
                   <MapPin size={13} strokeWidth={1.7} />
@@ -117,6 +138,15 @@ export function StoreHeader(props: {
               <Share2 size={15} strokeWidth={1.9} />
               Compartir tienda
             </button>
+            {props.clubName && (
+              <Link
+                href={`/${props.slug}/club`}
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-gold/40 bg-gold-soft px-4 text-[14px] font-medium text-gold transition-all duration-200 hover:border-gold/70 active:scale-[0.98]"
+              >
+                <Sparkles size={14} strokeWidth={2} />
+                {props.clubName}
+              </Link>
+            )}
             {props.instagram && (
               <a
                 href={`https://instagram.com/${props.instagram.replace(/^@/, "")}`}
@@ -136,6 +166,7 @@ export function StoreHeader(props: {
         <ShareSheet
           slug={props.slug}
           businessName={props.businessName}
+          messageTemplate={props.shareMessageTemplate}
           onClose={() => setShareOpen(false)}
         />
       )}

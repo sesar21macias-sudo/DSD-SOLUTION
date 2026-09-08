@@ -16,10 +16,12 @@ import { useToast } from "@/components/Toast";
 export function ShareSheet({
   slug,
   businessName,
+  messageTemplate,
   onClose,
 }: {
   slug: string;
   businessName: string;
+  messageTemplate: string | null;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState("");
@@ -36,7 +38,7 @@ export function ShareSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const message = buildShareMessage(businessName, url);
+  const message = buildShareMessage(businessName, url, messageTemplate);
 
   async function copy() {
     try {

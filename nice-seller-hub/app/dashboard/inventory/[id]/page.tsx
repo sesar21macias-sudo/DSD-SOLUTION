@@ -24,7 +24,7 @@ export default async function EditInventoryPage({
   return (
     <PageShell>
       <PageHeader title={item.name} subtitle={`Código NICE ${item.niceCode}`} />
-      <EditInventoryForm item={item} />
+      <EditInventoryForm item={item} discountPct={seller.distributorDiscountPct} />
     </PageShell>
   );
 }

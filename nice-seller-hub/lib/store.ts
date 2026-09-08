@@ -4,6 +4,8 @@ import { and, asc, desc, eq, gt, gte, like, lte, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { Seller } from "@/db/schema";
 import { stockStatus, type StockStatus } from "./inventory";
+import { getVisitorId, reservedByOthersSql } from "./reservations";
+import { outer } from "./sql-helpers";
 
 /**
  * Consultas de la tienda publica. Solo leen, solo devuelven lo que puede ver
@@ -27,7 +29,12 @@ export interface StoreProduct {
   categoryName: string | null;
   categorySlug: string | null;
   priceCents: number;
+  /** Las piezas que ella tiene fisicamente. */
   stock: number;
+  /** Las que alguien mas tiene apartadas en este momento. */
+  reserved: number;
+  /** Las que de verdad puede llevarse quien esta mirando. */
+  available: number;
   status: StockStatus;
 }
 
@@ -70,6 +77,15 @@ export async function listStoreProducts(
   if (filters.availability !== "all") {
     conditions.push(gt(schema.sellerInventory.stock, 0));
   }
+
+  // Quien pregunta. Sus propias reservas no le estorban: si no, su carrito le
+  // diria que la pieza que acaba de apartar esta agotada.
+  const visitorId = await getVisitorId();
+  const reservedSql = reservedByOthersSql(
+    sellerId,
+    outer("seller_inventory", "product_id"),
+    visitorId
+  );
   if (filters.category) {
     conditions.push(eq(schema.categories.slug, filters.category));
   }
@@ -126,6 +142,7 @@ export async function listStoreProducts(
       categorySlug: schema.categories.slug,
       priceCents: schema.sellerInventory.priceCents,
       stock: schema.sellerInventory.stock,
+      reserved: reservedSql.as("reserved"),
     })
     .from(schema.sellerInventory)
     .innerJoin(schema.products, eq(schema.products.id, schema.sellerInventory.productId))
@@ -133,7 +150,10 @@ export async function listStoreProducts(
     .where(and(...conditions))
     .orderBy(...orderBy);
 
-  return rows.map((r) => ({ ...r, status: stockStatus(r.stock, true) }));
+  return rows.map((r) => {
+    const available = Math.max(0, r.stock - (r.reserved ?? 0));
+    return { ...r, available, status: stockStatus(r.stock, true, available) };
+  });
 }
 
 /** Una pieza concreta de una tienda, buscada por su codigo NICE. */
@@ -142,6 +162,14 @@ export async function getStoreProduct(
   niceCode: string
 ): Promise<StoreProduct | null> {
   const db = await getDb();
+
+  const visitorId = await getVisitorId();
+  const reservedSql = reservedByOthersSql(
+    sellerId,
+    outer("seller_inventory", "product_id"),
+    visitorId
+  );
+
   const rows = await db
     .select({
       inventoryId: schema.sellerInventory.id,
@@ -158,6 +186,7 @@ export async function getStoreProduct(
       categorySlug: schema.categories.slug,
       priceCents: schema.sellerInventory.priceCents,
       stock: schema.sellerInventory.stock,
+      reserved: reservedSql.as("reserved"),
       isVisible: schema.sellerInventory.isVisible,
     })
     .from(schema.sellerInventory)
@@ -174,8 +203,10 @@ export async function getStoreProduct(
 
   const r = rows[0];
   if (!r) return null;
+
   const { isVisible, ...rest } = r;
-  return { ...rest, status: stockStatus(r.stock, isVisible) };
+  const available = Math.max(0, r.stock - (r.reserved ?? 0));
+  return { ...rest, available, status: stockStatus(r.stock, isVisible, available) };
 }
 
 export interface StoreCategory {

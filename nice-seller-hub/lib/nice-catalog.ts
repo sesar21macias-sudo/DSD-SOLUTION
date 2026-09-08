@@ -1,5 +1,7 @@
 import "server-only";
 
+import { baseCode, normalizeNiceCode } from "./nice-code";
+
 /**
  * Resuelve un Id Nice contra la tienda oficial de NICE (niceonline.com) para
  * traer la foto, el nombre, la descripción y el precio de catálogo de la pieza.
@@ -173,8 +175,16 @@ function sizedImage(url: string | null): string | null {
  * `sku`: es preferible dejarla sin resolver a ponerle la foto equivocada.
  */
 export async function lookupNiceProduct(code: string): Promise<NiceProduct | null> {
-  const upper = code.toUpperCase();
-  const wanted = new Set(codeVariants(upper));
+  const upper = normalizeNiceCode(code);
+
+  /**
+   * Los anillos llevan la talla pegada al codigo: "426307/6". La tienda de
+   * NICE lista el modelo, no cada talla, asi que se busca por el modelo y se
+   * acepta su `sku` como bueno — la foto, el nombre y el precio son los mismos
+   * para todas las tallas; lo unico que cambia es cual tiene ella en la mano.
+   */
+  const model = baseCode(upper);
+  const wanted = new Set([...codeVariants(upper), ...codeVariants(model)]);
 
   /**
    * Qué se le pregunta al buscador de NICE.
@@ -187,8 +197,9 @@ export async function lookupNiceProduct(code: string): Promise<NiceProduct | nul
    * una.
    */
   const queries = [upper];
-  if (upper.length > 4 && /[1IL0O]$/.test(upper)) {
-    queries.push(upper.slice(0, -1));
+  if (model !== upper) queries.push(model);
+  if (model.length > 4 && /[1IL0O]$/.test(model)) {
+    queries.push(model.slice(0, -1));
   }
 
   const seen = new Set<string>();

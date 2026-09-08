@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { saveInventoryItem, type ActionState } from "@/app/dashboard/actions";
-import { centsToPesosInput } from "@/lib/format";
+import { centsToPesosInput, pesosToCents } from "@/lib/format";
+import { costFromCatalog, marginPct, profitCents } from "@/lib/costing";
 import { Button, ErrorNote, Field, Input, LinkButton } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
@@ -14,6 +15,7 @@ import { useToast } from "@/components/Toast";
  */
 export function EditInventoryForm({
   item,
+  discountPct,
 }: {
   item: {
     inventoryId: number;
@@ -21,15 +23,34 @@ export function EditInventoryForm({
     name: string;
     imageUrl: string | null;
     priceCents: number;
+    costCents: number | null;
+    catalogPriceCents: number | null;
     stock: number;
     isVisible: boolean;
   };
+  /** Su descuento de distribuidora, para sugerir el costo. */
+  discountPct: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [state, action, pending] = useActionState<ActionState, FormData>(saveInventoryItem, {
     ok: false,
   });
+
+  const [price, setPrice] = useState(centsToPesosInput(item.priceCents));
+  const [cost, setCost] = useState(item.costCents !== null ? centsToPesosInput(item.costCents) : "");
+
+  // La sugerencia solo aparece cuando hay de donde sacarla y ella no ha escrito
+  // nada: proponerle un costo encima de uno que ya capturo seria discutirle.
+  const suggested =
+    item.catalogPriceCents && discountPct > 0
+      ? costFromCatalog(item.catalogPriceCents, discountPct)
+      : null;
+
+  const priceCents = pesosToCents(price) ?? 0;
+  const costCents = cost.trim() ? pesosToCents(cost) : null;
+  const margin = marginPct(priceCents, costCents);
+  const profit = profitCents(priceCents, costCents);
 
   useEffect(() => {
     if (state.ok && state.message) {
@@ -51,11 +72,48 @@ export function EditInventoryForm({
         />
       )}
 
+      <Field
+        label="Lo que te costó"
+        hint={
+          suggested !== null && !cost.trim()
+            ? `Con tu ${discountPct}% de descuento serían $${centsToPesosInput(suggested)}.`
+            : "Opcional. Es lo que hace que podamos calcular tu ganancia."
+        }
+      >
+        <div className="flex gap-2">
+          <Input
+            name="cost"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
+            placeholder="En pesos"
+            inputMode="decimal"
+            maxLength={12}
+          />
+          {suggested !== null && !cost.trim() && (
+            <button
+              type="button"
+              onClick={() => setCost(centsToPesosInput(suggested))}
+              className="h-[42px] shrink-0 rounded-xl border border-line-strong px-3 text-[13px] font-medium transition-colors hover:border-ink/25"
+            >
+              Usar
+            </button>
+          )}
+        </div>
+      </Field>
+
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Tu precio" hint="En pesos.">
+        <Field
+          label="Tu precio"
+          hint={
+            margin !== null && profit !== null
+              ? `Ganas $${centsToPesosInput(profit)} por pieza · ${margin}% de margen`
+              : "En pesos."
+          }
+        >
           <Input
             name="price"
-            defaultValue={centsToPesosInput(item.priceCents)}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             inputMode="decimal"
             required
             maxLength={12}

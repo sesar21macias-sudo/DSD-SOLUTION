@@ -3,6 +3,9 @@ import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { getD1, getDb, schema } from "@/db";
 import { dayKey } from "./format";
+import { discountFor } from "./loyalty-rules";
+import { holdForOrder, reservedByOthersSql } from "./reservations";
+import { outer } from "./sql-helpers";
 import type { OrderStatus } from "./order-status";
 
 export * from "./order-status";
@@ -54,8 +57,26 @@ export interface OrderProblem {
 }
 
 export type CreateOrderResult =
-  | { ok: true; orderId: number; orderNumber: string; totalCents: number }
+  | {
+      ok: true;
+      orderId: number;
+      orderNumber: string;
+      subtotalCents: number;
+      discountCents: number;
+      totalCents: number;
+    }
   | { ok: false; problems: OrderProblem[] };
+
+/**
+ * El cupon del club que la clienta eligio aplicar, ya validado contra la base.
+ * Llega resuelto —nunca como el codigo que escribio el navegador— porque el
+ * descuento es dinero y no puede depender de lo que mande el cliente.
+ */
+export interface OrderCoupon {
+  code: string;
+  kind: string;
+  value: number;
+}
 
 export interface OrderContact {
   name?: string | null;
@@ -75,7 +96,14 @@ export async function createOrder(
   sellerId: number,
   lines: CartLine[],
   contact: OrderContact = {},
-  customerId: number | null = null
+  customerId: number | null = null,
+  coupon: OrderCoupon | null = null,
+  /**
+   * Quien esta comprando. Sus propias piezas apartadas no le estorban, y al
+   * final del proceso esas reservas pasan de "carrito" a "pedido" para que la
+   * pieza siga retenida mientras la distribuidora contesta por WhatsApp.
+   */
+  visitorId: string | null = null
 ): Promise<CreateOrderResult> {
   const db = await getDb();
 
@@ -92,6 +120,11 @@ export async function createOrder(
       name: schema.products.name,
       priceCents: schema.sellerInventory.priceCents,
       stock: schema.sellerInventory.stock,
+      reserved: reservedByOthersSql(
+        sellerId,
+        outer("seller_inventory", "product_id"),
+        visitorId
+      ).as("reserved"),
       isVisible: schema.sellerInventory.isVisible,
     })
     .from(schema.sellerInventory)
@@ -120,6 +153,10 @@ export async function createOrder(
   for (const line of clean) {
     const inv = byCode.get(line.niceCode);
 
+    // Lo que de verdad puede llevarse: las piezas que hay menos las que otra
+    // persona tiene apartadas en este momento.
+    const free = inv ? Math.max(0, inv.stock - (inv.reserved ?? 0)) : 0;
+
     if (!inv || !inv.isVisible) {
       problems.push({
         niceCode: line.niceCode,
@@ -130,26 +167,32 @@ export async function createOrder(
       });
       continue;
     }
-    if (inv.stock <= 0) {
+    if (free <= 0) {
       problems.push({
         niceCode: line.niceCode,
         name: inv.name,
         available: 0,
         requested: line.quantity,
-        message: `${inv.name} se agotó.`,
+        // Se distingue agotada de apartada: son dos cosas distintas para quien
+        // la queria, y decir "se agotó" cuando volverá en diez minutos es una
+        // venta que se pierde por escribir mal un mensaje.
+        message:
+          inv.stock > 0
+            ? `${inv.name} la está comprando alguien más en este momento.`
+            : `${inv.name} se agotó.`,
       });
       continue;
     }
-    if (line.quantity > inv.stock) {
+    if (line.quantity > free) {
       problems.push({
         niceCode: line.niceCode,
         name: inv.name,
-        available: inv.stock,
+        available: free,
         requested: line.quantity,
         message:
-          inv.stock === 1
-            ? `Solo queda 1 pieza de ${inv.name}.`
-            : `Solo hay ${inv.stock} piezas de ${inv.name}.`,
+          free === 1
+            ? `Solo queda 1 pieza libre de ${inv.name}.`
+            : `Solo hay ${free} piezas libres de ${inv.name}.`,
       });
       continue;
     }
@@ -166,7 +209,16 @@ export async function createOrder(
 
   if (problems.length > 0) return { ok: false, problems };
 
-  const totalCents = items.reduce((sum, i) => sum + i.subtotalCents, 0);
+  const subtotalCents = items.reduce((sum, i) => sum + i.subtotalCents, 0);
+
+  // El descuento se calcula aqui, sobre los precios que acaba de leer la base.
+  // Si se confiara en un monto mandado por el navegador, cualquiera podria
+  // pedirse un descuento del tamaño que quisiera.
+  const discountCents = coupon
+    ? discountFor(coupon.kind, coupon.value, subtotalCents)
+    : 0;
+  const totalCents = subtotalCents - discountCents;
+
   const orderNumber = await nextOrderNumber();
 
   const inserted = await db
@@ -179,7 +231,9 @@ export async function createOrder(
       contactName: contact.name ?? null,
       contactPhone: contact.phone ?? null,
       note: contact.note ?? null,
-      subtotalCents: totalCents,
+      subtotalCents,
+      discountCents,
+      redemptionCode: coupon?.code ?? null,
       totalCents,
     })
     .returning({ id: schema.orders.id });
@@ -187,7 +241,24 @@ export async function createOrder(
   const orderId = inserted[0].id;
   await db.insert(schema.orderItems).values(items.map((i) => ({ ...i, orderId })));
 
-  return { ok: true, orderId, orderNumber, totalCents };
+  /**
+   * Las piezas quedan retenidas a nombre de este pedido.
+   *
+   * Aqui esta el hueco que el apartado de carrito no cubria: entre que alguien
+   * manda su pedido por WhatsApp y la distribuidora contesta pueden pasar
+   * horas, y en ese rato otra clienta puede pedir la misma ultima pieza. Un
+   * apartado de quince minutos no alcanza para eso; el del pedido dura un dia.
+   */
+  if (visitorId) {
+    await holdForOrder(
+      sellerId,
+      visitorId,
+      orderId,
+      items.map((i) => ({ productId: i.productId, quantity: i.quantity }))
+    );
+  }
+
+  return { ok: true, orderId, orderNumber, subtotalCents, discountCents, totalCents };
 }
 
 export interface OrderDetail {
@@ -197,6 +268,9 @@ export interface OrderDetail {
   contactName: string | null;
   contactPhone: string | null;
   note: string | null;
+  subtotalCents: number;
+  discountCents: number;
+  redemptionCode: string | null;
   totalCents: number;
   createdAt: string;
   sellerId: number;
@@ -240,6 +314,9 @@ export async function getOrderByNumber(
     contactName: order.contactName,
     contactPhone: order.contactPhone,
     note: order.note,
+    subtotalCents: order.subtotalCents,
+    discountCents: order.discountCents,
+    redemptionCode: order.redemptionCode,
     totalCents: order.totalCents,
     createdAt: order.createdAt,
     sellerId: order.sellerId,

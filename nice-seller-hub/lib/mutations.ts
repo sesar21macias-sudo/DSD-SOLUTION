@@ -1,9 +1,17 @@
 import "server-only";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { normalizePhone } from "./phone";
-import { awardPointsForSale } from "./loyalty";
+import {
+  awardPointsForSale,
+  discountFor,
+  findAvailableRedemption,
+  markRedemptionUsed,
+} from "./loyalty";
+import { MAX_DISCOUNT_PCT, costFromCatalog } from "./costing";
+import { releaseOrderHolds } from "./reservations";
+import { TEMPLATE_MAX_LENGTH } from "./message-templates";
 
 /**
  * Escrituras del panel. Igual que las lecturas, **todas** llevan `sellerId` en
@@ -22,6 +30,8 @@ import { awardPointsForSale } from "./loyalty";
 export interface AddToInventoryInput {
   productId: number;
   priceCents: number;
+  /** Lo que le costo. Null = no se sabe, y asi se reporta. */
+  costCents?: number | null;
   stock: number;
 }
 
@@ -52,6 +62,7 @@ export async function addToInventory(
       sellerId,
       productId: input.productId,
       priceCents: input.priceCents,
+      costCents: input.costCents ?? null,
       stock: input.stock,
       isVisible: true,
     })
@@ -72,6 +83,7 @@ export async function addToInventory(
 
 export interface UpdateInventoryInput {
   priceCents?: number;
+  costCents?: number | null;
   stock?: number;
   isVisible?: boolean;
   reason?: string;
@@ -100,6 +112,8 @@ export async function updateInventory(
 
   const next = {
     priceCents: input.priceCents ?? current.priceCents,
+    // `undefined` deja el costo como esta; `null` lo borra a proposito.
+    costCents: input.costCents === undefined ? current.costCents : input.costCents,
     stock: input.stock ?? current.stock,
     isVisible: input.isVisible ?? current.isVisible,
     updatedAt: new Date().toISOString(),
@@ -287,10 +301,26 @@ export interface RegisterSaleInput {
   customerPhone?: string | null;
   orderId?: number | null;
   note?: string | null;
+  /**
+   * Lo que paga en este momento. `null` significa que paga todo —que es el
+   * caso normal— y evita tener que mandar el total desde el navegador, donde
+   * podria venir mal.
+   */
+  paidCents?: number | null;
+  /** Fecha limite acordada, solo para ventas a abonos. */
+  dueDate?: string | null;
 }
 
 export type RegisterSaleResult =
-  | { ok: true; saleId: number; totalCents: number; pointsEarned: number }
+  | {
+      ok: true;
+      saleId: number;
+      totalCents: number;
+      discountCents: number;
+      paidCents: number;
+      balanceCents: number;
+      pointsEarned: number;
+    }
   | { ok: false; error: string };
 
 /**
@@ -320,6 +350,7 @@ export async function registerSale(
       name: schema.products.name,
       niceCode: schema.products.niceCode,
       priceCents: schema.sellerInventory.priceCents,
+      costCents: schema.sellerInventory.costCents,
       stock: schema.sellerInventory.stock,
     })
     .from(schema.sellerInventory)
@@ -334,6 +365,7 @@ export async function registerSale(
     codeSnapshot: string;
     quantity: number;
     unitPriceCents: number;
+    unitCostCents: number | null;
     subtotalCents: number;
     inventoryId: number;
     stockBefore: number;
@@ -359,19 +391,76 @@ export async function registerSale(
       codeSnapshot: inv.niceCode,
       quantity: line.quantity,
       unitPriceCents: inv.priceCents,
+      unitCostCents: inv.costCents,
       subtotalCents: inv.priceCents * line.quantity,
       inventoryId: inv.inventoryId,
       stockBefore: inv.stock,
     });
   }
 
-  const totalCents = items.reduce((s, i) => s + i.subtotalCents, 0);
+  const subtotalCents = items.reduce((s, i) => s + i.subtotalCents, 0);
+
+  /**
+   * Si la venta viene de un pedido que traia cupon, el descuento se aplica
+   * aqui tambien.
+   *
+   * Sin esto la venta cobraria el precio de lista y los puntos se calcularian
+   * sobre un dinero que nadie pago: la clienta ya vio su total con descuento
+   * en WhatsApp, y ese es el que vale. El valor del cupon sale de la base, no
+   * del pedido, para que un pedido viejo no pueda arrastrar un descuento que
+   * ya se uso.
+   */
+  let discountCents = 0;
+  let redemptionCode: string | null = null;
+
+  if (input.orderId) {
+    const orderRows = await db
+      .select({ redemptionCode: schema.orders.redemptionCode })
+      .from(schema.orders)
+      .where(and(eq(schema.orders.id, input.orderId), eq(schema.orders.sellerId, sellerId)))
+      .limit(1);
+
+    const code = orderRows[0]?.redemptionCode;
+    if (code) {
+      const redemption = await findAvailableRedemption(sellerId, code);
+      if (redemption) {
+        discountCents = discountFor(redemption.kind, redemption.value, subtotalCents);
+        redemptionCode = redemption.code;
+      }
+    }
+  }
+
+  const totalCents = subtotalCents - discountCents;
+
+  /**
+   * Cuanto queda pagado hoy.
+   *
+   * Una venta a abonos SI descuenta el inventario: la pieza ya se aparto y
+   * nadie mas se la puede llevar. Lo que queda abierto es el cobro, no la
+   * mercancia — y por eso el saldo vive en la venta y no en un apartado
+   * separado que habria que reconciliar despues.
+   */
+  const requestedPaid = input.paidCents;
+  const paidCents =
+    requestedPaid === undefined || requestedPaid === null
+      ? totalCents
+      : Math.min(totalCents, Math.max(0, Math.round(requestedPaid)));
+  const status = paidCents >= totalCents ? "paid" : "partial";
 
   let customerId: number | null = null;
   if (input.customerName?.trim() && input.customerPhone?.trim()) {
     const c = await findOrCreateCustomer(sellerId, input.customerName, input.customerPhone);
     if (!c.ok) return { ok: false, error: c.error };
     customerId = c.customerId;
+  }
+
+  // Una venta a abonos sin cliente identificado no se puede cobrar despues:
+  // no habria a quien buscar ni a que telefono escribirle.
+  if (status === "partial" && customerId === null) {
+    return {
+      ok: false,
+      error: "Para una venta a abonos necesitamos el nombre y el teléfono de tu clienta.",
+    };
   }
 
   // 1. Descontar. Es lo unico que no se puede repetir sin hacer daño.
@@ -406,7 +495,12 @@ export async function registerSale(
       sellerId,
       customerId,
       orderId: input.orderId ?? null,
+      discountCents,
+      redemptionCode,
       totalCents,
+      paidCents,
+      status,
+      dueDate: status === "partial" ? (input.dueDate ?? null) : null,
       paymentMethod: input.paymentMethod,
       note: input.note ?? null,
     })
@@ -422,9 +516,23 @@ export async function registerSale(
       codeSnapshot: i.codeSnapshot,
       quantity: i.quantity,
       unitPriceCents: i.unitPriceCents,
+      unitCostCents: i.unitCostCents,
       subtotalCents: i.subtotalCents,
     }))
   );
+
+  // 2b. El pago inicial queda escrito como abono, tambien cuando paga todo.
+  // Asi el detalle de una venta siempre cuadra con la suma de sus abonos, sin
+  // un caso especial para "el primero no cuenta".
+  if (paidCents > 0) {
+    await db.insert(schema.salePayments).values({
+      sellerId,
+      saleId,
+      amountCents: paidCents,
+      method: input.paymentMethod,
+      note: status === "partial" ? "Anticipo" : null,
+    });
+  }
 
   // 3. Historial de inventario.
   await db.insert(schema.inventoryMovements).values(
@@ -440,10 +548,23 @@ export async function registerSale(
     }))
   );
 
-  // 4. Puntos.
+  /**
+   * 4. Puntos — solo cuando la venta queda pagada.
+   *
+   * En una venta a abonos llegan al liquidar, no al apartar. Darlos por
+   * adelantado dejaria canjear una recompensa con el dinero de una compra que
+   * todavia no se termina de pagar —o que se cancela—, y quitarlos despues
+   * seria peor que no haberlos dado.
+   */
   let pointsEarned = 0;
-  if (customerId !== null) {
+  if (customerId !== null && status === "paid") {
     pointsEarned = await awardPointsForSale(sellerId, customerId, saleId, totalCents);
+    if (pointsEarned > 0) {
+      await db
+        .update(schema.sales)
+        .set({ pointsAwarded: pointsEarned })
+        .where(eq(schema.sales.id, saleId));
+    }
   }
 
   // 5. Si la venta vino de un pedido, el pedido queda entregado.
@@ -452,9 +573,277 @@ export async function registerSale(
       .update(schema.orders)
       .set({ status: "delivered", updatedAt: new Date().toISOString() })
       .where(and(eq(schema.orders.id, input.orderId), eq(schema.orders.sellerId, sellerId)));
+
+    // Y se sueltan sus reservas: el stock ya bajo de verdad, y seguir
+    // reteniendo las piezas seria descontarlas dos veces.
+    await releaseOrderHolds(input.orderId);
   }
 
-  return { ok: true, saleId, totalCents, pointsEarned };
+  // 6. El cupon se quema aqui y no al generar el pedido: un pedido es una
+  // intencion, y quemarlo ahi dejaria sin cupon a quien nunca llego a comprar.
+  // Cuando la venta existe, el descuento ya se dio.
+  if (redemptionCode) {
+    const redemption = await findAvailableRedemption(sellerId, redemptionCode);
+    if (redemption) await markRedemptionUsed(sellerId, redemption.id, input.orderId ?? null);
+  }
+
+  return {
+    ok: true,
+    saleId,
+    totalCents,
+    discountCents,
+    paidCents,
+    balanceCents: totalCents - paidCents,
+    pointsEarned,
+  };
+}
+
+// --- Abonos ----------------------------------------------------------------
+
+export type PaymentResult =
+  | { ok: true; paidCents: number; balanceCents: number; settled: boolean; pointsEarned: number }
+  | { ok: false; error: string };
+
+/**
+ * Registra un abono.
+ *
+ * El acumulado sube sobre la propia fila y el saldo siempre se deriva de ahi;
+ * no existe un campo "saldo" que alguien pueda dejar desfasado del detalle de
+ * abonos. Una clienta que pregunta cuanto lleva merece una respuesta que se
+ * pueda demostrar renglon por renglon.
+ *
+ * Cuando el abono liquida la venta, esa misma llamada otorga los puntos.
+ */
+export async function addSalePayment(
+  sellerId: number,
+  saleId: number,
+  amountCents: number,
+  method: string,
+  note?: string | null
+): Promise<PaymentResult> {
+  const db = await getDb();
+
+  const rows = await db
+    .select()
+    .from(schema.sales)
+    .where(and(eq(schema.sales.id, saleId), eq(schema.sales.sellerId, sellerId)))
+    .limit(1);
+
+  const sale = rows[0];
+  if (!sale) return { ok: false, error: "Esa venta no existe." };
+  if (sale.status === "cancelled") return { ok: false, error: "Esa venta está cancelada." };
+
+  const balance = sale.totalCents - sale.paidCents;
+  if (balance <= 0) return { ok: false, error: "Esta venta ya está pagada." };
+
+  const amount = Math.round(amountCents);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, error: "Escribe cuánto está abonando." };
+  }
+
+  // Un abono mayor al saldo casi siempre es un dedazo. Se acepta pero se topa
+  // al saldo: dejar escrito que cobro de mas seria peor que corregirlo.
+  const applied = Math.min(amount, balance);
+
+  const nextPaid = sale.paidCents + applied;
+  const settled = nextPaid >= sale.totalCents;
+
+  await db.insert(schema.salePayments).values({
+    sellerId,
+    saleId,
+    amountCents: applied,
+    method,
+    note: note?.trim().slice(0, 200) || null,
+  });
+
+  await db
+    .update(schema.sales)
+    .set({ paidCents: nextPaid, status: settled ? "paid" : "partial" })
+    .where(and(eq(schema.sales.id, saleId), eq(schema.sales.sellerId, sellerId)));
+
+  let pointsEarned = 0;
+  if (settled && sale.customerId !== null && sale.pointsAwarded === 0) {
+    // Solo quien gane este UPDATE otorga los puntos. Sin esta marca, dos
+    // abonos que liquiden casi al mismo tiempo los darian dos veces.
+    const claimed = await db
+      .update(schema.sales)
+      .set({ pointsAwarded: -1 })
+      .where(and(eq(schema.sales.id, saleId), eq(schema.sales.pointsAwarded, 0)))
+      .returning({ id: schema.sales.id });
+
+    if (claimed.length > 0) {
+      pointsEarned = await awardPointsForSale(
+        sellerId,
+        sale.customerId,
+        saleId,
+        sale.totalCents
+      );
+      await db
+        .update(schema.sales)
+        .set({ pointsAwarded: pointsEarned })
+        .where(eq(schema.sales.id, saleId));
+    }
+  }
+
+  return {
+    ok: true,
+    paidCents: nextPaid,
+    balanceCents: sale.totalCents - nextPaid,
+    settled,
+    pointsEarned,
+  };
+}
+
+/**
+ * Cancela una venta y devuelve las piezas al inventario.
+ *
+ * Existe sobre todo por los apartados: alguien aparta, deja un anticipo y no
+ * vuelve. Sin esto la pieza quedaria fuera del inventario para siempre y la
+ * tienda estaria mintiendo sobre lo que tiene.
+ *
+ * Los abonos NO se borran: quedan como constancia de que ese dinero entro. Que
+ * se hace con el —devolverlo, dejarlo a cuenta— es una conversacion entre ella
+ * y su clienta, no algo que este sistema deba decidir por su cuenta.
+ */
+export async function cancelSale(
+  sellerId: number,
+  saleId: number,
+  reason?: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const db = await getDb();
+
+  const rows = await db
+    .select()
+    .from(schema.sales)
+    .where(and(eq(schema.sales.id, saleId), eq(schema.sales.sellerId, sellerId)))
+    .limit(1);
+
+  const sale = rows[0];
+  if (!sale) return { ok: false, error: "Esa venta no existe." };
+  if (sale.status === "cancelled") return { ok: false, error: "Esa venta ya está cancelada." };
+
+  const items = await db
+    .select()
+    .from(schema.saleItems)
+    .where(eq(schema.saleItems.saleId, saleId));
+
+  for (const item of items) {
+    const inv = await db
+      .select({ id: schema.sellerInventory.id, stock: schema.sellerInventory.stock })
+      .from(schema.sellerInventory)
+      .where(
+        and(
+          eq(schema.sellerInventory.sellerId, sellerId),
+          eq(schema.sellerInventory.productId, item.productId)
+        )
+      )
+      .limit(1);
+
+    // Si la pieza ya se elimino del inventario no se recrea sola: seria
+    // resucitar algo que ella decidio quitar.
+    const line = inv[0];
+    if (!line) continue;
+
+    await db
+      .update(schema.sellerInventory)
+      .set({
+        stock: sql`${schema.sellerInventory.stock} + ${item.quantity}`,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.sellerInventory.id, line.id));
+
+    await db.insert(schema.inventoryMovements).values({
+      sellerId,
+      productId: item.productId,
+      type: "increase",
+      delta: item.quantity,
+      stockBefore: line.stock,
+      stockAfter: line.stock + item.quantity,
+      reason: reason?.trim().slice(0, 120) || "Venta cancelada",
+      referenceId: saleId,
+    });
+  }
+
+  await db
+    .update(schema.sales)
+    .set({ status: "cancelled" })
+    .where(and(eq(schema.sales.id, saleId), eq(schema.sales.sellerId, sellerId)));
+
+  return { ok: true };
+}
+
+/**
+ * Calcula el costo de las piezas que no lo tienen, con el descuento de la
+ * distribuidora.
+ *
+ * Existe por un hueco real: quien carga su inventario y **despues** escribe su
+ * descuento se queda con todo sin costear, y la unica salida era abrir pieza
+ * por pieza y tocar "Usar". Con cincuenta piezas eso no lo hace nadie, y sin
+ * costos no hay ganancia que calcular — que es justo lo que esta funcion
+ * existe para responder.
+ *
+ * Solo toca lo que esta vacio. Un costo que ella ya capturo es un dato suyo, y
+ * pisarlo con una estimacion seria cambiarle los numeros sin avisar.
+ */
+export async function fillMissingCosts(
+  sellerId: number
+): Promise<{ ok: true; filled: number } | { ok: false; error: string }> {
+  const db = await getDb();
+
+  const sellerRows = await db
+    .select({ discountPct: schema.sellers.distributorDiscountPct })
+    .from(schema.sellers)
+    .where(eq(schema.sellers.id, sellerId))
+    .limit(1);
+
+  const discountPct = sellerRows[0]?.discountPct ?? 0;
+  if (discountPct <= 0) {
+    return {
+      ok: false,
+      error: "Primero escribe tu descuento de distribuidora en Configuración.",
+    };
+  }
+
+  // Solo las que tienen precio de catalogo: sin ese numero no hay de donde
+  // sacar el costo, y inventarlo desde su propio precio de venta diria que
+  // gana cero.
+  const pending = await db
+    .select({
+      inventoryId: schema.sellerInventory.id,
+      catalogCents: schema.products.suggestedPriceCents,
+    })
+    .from(schema.sellerInventory)
+    .innerJoin(schema.products, eq(schema.products.id, schema.sellerInventory.productId))
+    .where(
+      and(
+        eq(schema.sellerInventory.sellerId, sellerId),
+        isNull(schema.sellerInventory.costCents),
+        isNotNull(schema.products.suggestedPriceCents)
+      )
+    );
+
+  if (pending.length === 0) return { ok: true, filled: 0 };
+
+  const nowIso = new Date().toISOString();
+  let filled = 0;
+
+  for (const row of pending) {
+    const cost = costFromCatalog(row.catalogCents ?? 0, discountPct);
+    if (cost <= 0) continue;
+
+    await db
+      .update(schema.sellerInventory)
+      .set({ costCents: cost, updatedAt: nowIso })
+      .where(
+        and(
+          eq(schema.sellerInventory.id, row.inventoryId),
+          eq(schema.sellerInventory.sellerId, sellerId)
+        )
+      );
+    filled++;
+  }
+
+  return { ok: true, filled };
 }
 
 // --- Perfil ----------------------------------------------------------------
@@ -468,9 +857,13 @@ export interface SellerProfileInput {
   instagram?: string | null;
   facebook?: string | null;
   profileImage?: string | null;
+  coverImage?: string | null;
+  tagline?: string | null;
   schedule?: string | null;
   deliveryMethods?: string | null;
   paymentMethods?: string | null;
+  /** Su descuento de distribuidora, en porcentaje entero. */
+  distributorDiscountPct?: number;
 }
 
 export async function updateSellerProfile(
@@ -492,12 +885,59 @@ export async function updateSellerProfile(
       instagram: input.instagram ?? null,
       facebook: input.facebook ?? null,
       profileImage: input.profileImage ?? null,
+      coverImage: input.coverImage ?? null,
+      tagline: input.tagline ?? null,
       schedule: input.schedule ?? null,
       deliveryMethods: input.deliveryMethods ?? null,
       paymentMethods: input.paymentMethods ?? null,
+      distributorDiscountPct: Math.min(
+        MAX_DISCOUNT_PCT,
+        Math.max(0, Math.round(input.distributorDiscountPct ?? 0))
+      ),
       updatedAt: new Date().toISOString(),
     })
     .where(eq(schema.sellers.id, sellerId));
 
   return { ok: true };
+}
+
+// --- Mensajes de WhatsApp ---------------------------------------------------
+
+export interface MessageTemplatesInput {
+  orderGreeting: string;
+  orderClosing: string;
+  shareMessage: string;
+  paymentReminder: string;
+  couponMessage: string;
+  pointsGreeting: string;
+  pointsClosing: string;
+}
+
+/**
+ * Guarda su version de cada mensaje.
+ *
+ * Un campo vacio se guarda como nulo, no como cadena vacia: nulo significa
+ * "usa el de siempre", y una cadena vacia mandaria un mensaje de WhatsApp en
+ * blanco. Es la misma regla que ya usan las condiciones del club.
+ */
+export async function updateMessageTemplates(
+  sellerId: number,
+  input: MessageTemplatesInput
+): Promise<void> {
+  const db = await getDb();
+  const clean = (v: string) => v.trim().slice(0, TEMPLATE_MAX_LENGTH) || null;
+
+  await db
+    .update(schema.sellers)
+    .set({
+      orderGreetingTemplate: clean(input.orderGreeting),
+      orderClosingTemplate: clean(input.orderClosing),
+      shareMessageTemplate: clean(input.shareMessage),
+      paymentReminderTemplate: clean(input.paymentReminder),
+      couponMessageTemplate: clean(input.couponMessage),
+      pointsGreetingTemplate: clean(input.pointsGreeting),
+      pointsClosingTemplate: clean(input.pointsClosing),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(schema.sellers.id, sellerId));
 }

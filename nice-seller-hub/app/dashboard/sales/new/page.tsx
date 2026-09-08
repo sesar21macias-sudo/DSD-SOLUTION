@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { requireSeller } from "@/lib/session";
 import { listInventory } from "@/lib/seller";
+import { findAvailableRedemption } from "@/lib/loyalty";
 import { PageHeader, PageShell } from "@/components/dashboard/PageHeader";
 import { SaleForm } from "@/components/dashboard/SaleForm";
 import { EmptyState, LinkButton } from "@/components/ui";
@@ -28,6 +29,7 @@ export default async function NewSalePage({
   let prefill: { inventoryId: number; quantity: number }[] = [];
   let orderId: number | null = null;
   let contact: { name: string; phone: string } | null = null;
+  let coupon: { code: string; name: string; kind: string; value: number } | null = null;
 
   const orderIdParam = Number(orderParam);
   if (Number.isFinite(orderIdParam) && orderIdParam > 0) {
@@ -47,6 +49,19 @@ export default async function NewSalePage({
         name: order.contactName ?? "",
         phone: order.contactPhone ?? "",
       };
+
+      // Solo si el cupon sigue vigente: uno ya usado no vuelve a descontar.
+      if (order.redemptionCode) {
+        const redemption = await findAvailableRedemption(seller.id, order.redemptionCode);
+        if (redemption) {
+          coupon = {
+            code: redemption.code,
+            name: redemption.nameSnapshot,
+            kind: redemption.kind,
+            value: redemption.value,
+          };
+        }
+      }
 
       const orderItems = await db
         .select()
@@ -81,7 +96,13 @@ export default async function NewSalePage({
           }
         />
       ) : (
-        <SaleForm items={items} prefill={prefill} orderId={orderId} contact={contact} />
+        <SaleForm
+          items={items}
+          prefill={prefill}
+          orderId={orderId}
+          contact={contact}
+          coupon={coupon}
+        />
       )}
     </PageShell>
   );

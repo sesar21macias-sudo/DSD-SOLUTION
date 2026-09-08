@@ -30,10 +30,24 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif;
 
+  /**
+   * La serif de los titulos.
+   *
+   * Es lo que separa "una tienda en linea" de "una joyeria": las mismas
+   * palabras en una serif de transicion se leen como una vitrina y no como un
+   * catalogo. Va con fuentes que ya estan en el sistema —Iowan en Apple,
+   * Palatino y Georgia en Windows— y no con una descarga: una fuente web son
+   * 40 KB mas y medio segundo de texto invisible en la primera pantalla, que
+   * es justo la que decide si alguien se queda.
+   */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+    Georgia, "Times New Roman", serif;
+
   --radius-xl2: 1.25rem;
 
   --shadow-card: 0 1px 2px rgb(15 15 20 / 0.04), 0 8px 24px -12px rgb(15 15 20 / 0.12);
   --shadow-lift: 0 2px 4px rgb(15 15 20 / 0.05), 0 18px 40px -16px rgb(15 15 20 / 0.22);
+  --shadow-glow: 0 0 0 1px rgb(176 141 87 / 0.18), 0 12px 40px -14px rgb(176 141 87 / 0.35);
 
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -181,3 +195,126 @@
 @media print {
   .no-print { display: none !important; }
 }
+
+
+/* --- Piezas de marca ------------------------------------------------------ */
+
+/**
+ * La tarjeta del club: negro profundo con una lamina dorada que la cruza.
+ *
+ * Es la unica superficie oscura del producto, y esa es la idea — se ve como la
+ * tarjeta de un joyero entre puras pantallas claras, y por eso se reconoce de
+ * un vistazo aunque este a media pagina.
+ */
+.card-foil {
+  background:
+    radial-gradient(120% 140% at 85% 0%, rgb(176 141 87 / 0.42) 0%, transparent 55%),
+    radial-gradient(90% 120% at 0% 100%, rgb(230 0 126 / 0.14) 0%, transparent 60%),
+    linear-gradient(160deg, #17161a 0%, #0a0a0b 60%, #121115 100%);
+}
+
+/* Una linea que se dibuja sola: separa sin pesar como una regla completa. */
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--color-gold) 0%,
+    var(--color-line-strong) 45%,
+    transparent 100%
+  );
+  transform-origin: left;
+  animation: nsh-draw 0.9s var(--ease-out-soft) both;
+}
+
+/* El texto con un barrido dorado, para una sola palabra. */
+.text-foil {
+  background: linear-gradient(100deg, #8a6d3f 0%, #d8bb84 40%, #8a6d3f 70%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: nsh-shimmer 6s ease-in-out infinite;
+}
+
+@keyframes nsh-draw {
+  from { transform: scaleX(0); }
+  to   { transform: none; }
+}
+
+@keyframes nsh-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+.animate-float { animation: nsh-float 7s ease-in-out infinite; }
+
+/**
+ * Aparecer al llegar.
+ *
+ * El estado inicial se aplica solo cuando hay JavaScript (`html.js`): sin esa
+ * condicion, un navegador con el script bloqueado dejaria media pagina
+ * invisible para siempre. Y con `prefers-reduced-motion` no se aplica nunca.
+ */
+.reveal { opacity: 1; }
+
+html.js .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s var(--ease-out-soft),
+    transform 0.7s var(--ease-out-soft);
+}
+
+html.js .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+html.reveal-all .reveal,
+html.js.reveal-all .reveal {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js .reveal { opacity: 1; transform: none; }
+}
+
+/* --- Documentos legales ---------------------------------------------------
+   Un aviso de privacidad se lee, no se recorre: medida corta, mucho aire entre
+   párrafos y jerarquía clara. Sin tarjetas ni adornos que compitan con el texto. */
+
+.legal h2 {
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.legal h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.legal p,
+.legal li {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-ink-soft);
+}
+
+.legal p { margin-bottom: 0.9rem; }
+
+.legal ul {
+  margin-bottom: 1.1rem;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
+.legal li { margin-bottom: 0.4rem; padding-left: 0.2rem; }
+.legal li::marker { color: var(--color-mute-soft); }
+.legal strong { color: var(--color-ink); font-weight: 600; }
+.legal a { color: var(--color-ink); }

@@ -8,6 +8,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { maskPhone } from "@/lib/phone";
 import { PageHeader, PageShell } from "@/components/dashboard/PageHeader";
 import { CustomerSearch } from "@/components/dashboard/CustomerSearch";
+import { ExportButton } from "@/components/dashboard/ExportButton";
 import { Badge, Card, EmptyState } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Clientes" };
@@ -33,6 +34,7 @@ export default async function CustomersPage({
       <PageHeader
         title="Clientes"
         subtitle={`${customers.length} ${customers.length === 1 ? "persona" : "personas"} en tu cartera`}
+        action={<ExportButton tipo="clientes" label="Excel" />}
       />
 
       <CustomerSearch initialQuery={q ?? ""} />
@@ -50,7 +52,7 @@ export default async function CustomersPage({
       ) : (
         <Card className="divide-y divide-line">
           {customers.map((c) => {
-            const tier = tierFor(c.points);
+            const tier = tierFor(c.lifetimePoints);
             return (
               <Link
                 key={c.id}
@@ -74,6 +76,7 @@ export default async function CustomersPage({
                   <p className="text-[14px] font-medium tabular-nums">
                     {formatMoney(c.spentCents)}
                   </p>
+                  <p className="mt-0.5 text-[11px] tabular-nums text-gold">{c.points} pts</p>
                   <Badge className={`${tier.className} mt-1`}>{tier.name}</Badge>
                 </div>
               </Link>

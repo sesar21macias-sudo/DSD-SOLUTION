@@ -58,7 +58,7 @@ export default async function StorePage({
           title={filters.q ? "No encontramos esa pieza" : "Esta tienda todavía no tiene piezas"}
           description={
             filters.q
-              ? `Nada coincide con "${filters.q}". Prueba con otro nombre o con el código NICE.`
+              ? `Nada coincide con "${filters.q}". Prueba con otro nombre o con el código de la pieza.`
               : `${seller.businessName} está preparando su inventario. Vuelve pronto.`
           }
         />

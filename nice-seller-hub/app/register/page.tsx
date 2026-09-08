@@ -16,7 +16,7 @@ export default function RegisterPage() {
       <h1 className="text-[28px] font-light leading-tight">
         Crea tu
         <br />
-        <span className="font-normal">tienda NICE.</span>
+        <span className="font-normal">tienda digital.</span>
       </h1>
       <p className="mt-3 text-[14px] leading-relaxed text-mute">
         En un minuto tienes tu enlace listo para compartir.

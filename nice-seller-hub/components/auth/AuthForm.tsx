@@ -158,6 +158,27 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             ? "Crear mi tienda"
             : "Entrar"}
       </Button>
+
+      {mode === "register" ? (
+        // El consentimiento va junto al boton que lo otorga, no escondido en el
+        // pie: es donde de verdad se lee.
+        <p className="text-center text-[12px] leading-relaxed text-mute">
+          Al crear tu tienda aceptas los{" "}
+          <a href="/terminos" target="_blank" className="underline underline-offset-2">
+            términos
+          </a>{" "}
+          y el{" "}
+          <a href="/privacidad" target="_blank" className="underline underline-offset-2">
+            aviso de privacidad
+          </a>
+          .
+        </p>
+      ) : (
+        <p className="text-center text-[12px] leading-relaxed text-mute">
+          ¿Olvidaste tu contraseña? Escríbele a quien administra la plataforma y te manda un
+          enlace para cambiarla.
+        </p>
+      )}
     </form>
   );
 }

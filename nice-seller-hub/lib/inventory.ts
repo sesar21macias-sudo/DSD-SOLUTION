@@ -5,15 +5,37 @@
  * esta. Lo unico que la distribuidora decide a mano es si la pieza se ve.
  */
 
-export type StockStatus = "available" | "last_pieces" | "sold_out" | "hidden";
+export type StockStatus =
+  | "available"
+  | "last_pieces"
+  | "reserved"
+  | "sold_out"
+  | "hidden";
 
 /** Al llegar a este numero o menos, la pieza se anuncia como "ultimas piezas". */
 export const LAST_PIECES_THRESHOLD = 2;
 
-export function stockStatus(stock: number, isVisible: boolean): StockStatus {
+/**
+ * `available` son las piezas libres para quien esta mirando: el stock menos lo
+ * que otra persona tiene apartado en este momento. Se pasa solo desde la tienda
+ * publica; en el panel la distribuidora quiere ver sus existencias reales, no
+ * las que le quedarian a una clienta.
+ *
+ * "Apartada" y "Agotado" se distinguen a proposito. Agotado significa que ya no
+ * hay; apartada significa "alguien la esta comprando, vuelve en un rato". Son
+ * dos cosas distintas para quien la queria.
+ */
+export function stockStatus(
+  stock: number,
+  isVisible: boolean,
+  available?: number
+): StockStatus {
   if (!isVisible) return "hidden";
   if (stock <= 0) return "sold_out";
-  if (stock <= LAST_PIECES_THRESHOLD) return "last_pieces";
+  if (available !== undefined && available <= 0) return "reserved";
+
+  const free = available ?? stock;
+  if (free <= LAST_PIECES_THRESHOLD) return "last_pieces";
   return "available";
 }
 
@@ -39,6 +61,12 @@ export const STATUS_LABELS: Record<StockStatus, StatusLabel> = {
     text: "text-amber-700",
     buyable: true,
   },
+  reserved: {
+    label: "Apartada",
+    dot: "bg-violet-400",
+    text: "text-violet-700",
+    buyable: false,
+  },
   sold_out: {
     label: "Agotado",
     dot: "bg-neutral-400",
@@ -59,6 +87,20 @@ export function stockHint(stock: number): string {
   if (stock === 1) return "Queda 1 pieza";
   if (stock <= LAST_PIECES_THRESHOLD) return `Quedan ${stock} piezas`;
   return `${stock} piezas disponibles`;
+}
+
+/**
+ * Lo que se le dice a quien llega y encuentra la pieza apartada.
+ *
+ * Nunca "agotado": es mentira y ademas la desanima de volver. Lo que hay que
+ * decirle es que alguien esta a media compra y que puede regresar.
+ */
+export function reservedHint(stock: number, available: number): string {
+  const taken = Math.max(0, stock - available);
+  if (stock === 1 || taken >= stock) {
+    return "Alguien la está comprando en este momento. Vuelve en unos minutos.";
+  }
+  return `Hay ${taken} apartadas en este momento. Vuelve en unos minutos.`;
 }
 
 /** Umbral para la alerta de "inventario bajo" del panel. */

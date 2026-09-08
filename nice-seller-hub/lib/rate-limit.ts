@@ -39,6 +39,18 @@ export async function rateLimit(
       .bind(key, windowStart)
       .first<{ hits: number }>();
 
+    // Barrido de contadores viejos.
+    //
+    // Cada (ambito, identificador, ventana) deja una fila que ya no sirve en
+    // cuanto pasa su ventana, y nadie las borraba: con trafico real la tabla
+    // crece para siempre. Se limpia aqui de pasada, no siempre —una de cada
+    // cien llamadas— porque un DELETE en cada request costaria mas que el
+    // problema que resuelve.
+    if (Math.random() < 0.01) {
+      const cutoff = nowSec - 86_400;
+      await db.prepare(`DELETE FROM rate_limits WHERE window_start < ?`).bind(cutoff).run();
+    }
+
     const hits = row?.hits ?? 1;
     return {
       ok: hits <= limit,

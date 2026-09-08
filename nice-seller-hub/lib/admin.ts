@@ -55,6 +55,9 @@ export async function getPlatformStats(): Promise<PlatformStats> {
 
 export interface SellerRow {
   id: number;
+  /** La cuenta que la administra: es a quien se le genera un enlace nuevo. */
+  userId: number;
+  whatsapp: string;
   slug: string;
   businessName: string;
   city: string | null;
@@ -70,6 +73,8 @@ export async function listSellers(): Promise<SellerRow[]> {
   return db
     .select({
       id: schema.sellers.id,
+      userId: schema.sellers.userId,
+      whatsapp: schema.sellers.whatsapp,
       slug: schema.sellers.slug,
       businessName: schema.sellers.businessName,
       city: schema.sellers.city,

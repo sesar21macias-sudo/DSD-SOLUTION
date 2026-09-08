@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Agregar pieza" };
 export const dynamic = "force-dynamic";
 
 export default async function NewInventoryPage() {
-  await requireSeller();
+  const { seller } = await requireSeller();
 
   const db = await getDb();
   const categories = await db
@@ -23,7 +23,7 @@ export default async function NewInventoryPage() {
         title="Agregar pieza"
         subtitle="Si el código NICE ya existe en el catálogo, reutilizamos sus datos."
       />
-      <ProductForm categories={categories} />
+      <ProductForm categories={categories} discountPct={seller.distributorDiscountPct} />
     </PageShell>
   );
 }

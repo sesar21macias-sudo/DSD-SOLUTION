@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getSellerBySlug } from "@/lib/store";
+import { getProgram } from "@/lib/loyalty";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { CartBar } from "@/components/store/CartBar";
@@ -20,10 +21,14 @@ export async function generateMetadata({
   const seller = await getSellerBySlug(slug);
   if (!seller) return { title: "Tienda no encontrada" };
 
-  const title = `${seller.businessName} | NICE Joyería`;
+  // El titulo es el nombre de su tienda y nada mas. Ponerle una marca que
+  // no es suya la anunciaba como sucursal de alguien mas.
+  const title = seller.tagline?.trim()
+    ? `${seller.businessName} · ${seller.tagline.trim()}`
+    : seller.businessName;
   const description =
     seller.description?.trim() ||
-    `Descubre la joyería NICE disponible con ${seller.businessName}${
+    `Descubre las piezas disponibles con ${seller.businessName}${
       seller.city ? ` en ${seller.city}` : ""
     }.`;
 
@@ -58,6 +63,10 @@ export default async function StoreLayout({
   const seller = await getSellerBySlug(slug);
   if (!seller) notFound();
 
+  // El club solo aparece en la tienda si esta encendido: un enlace a una
+  // pagina que dice "esta tienda no tiene club" no le sirve a nadie.
+  const program = await getProgram(seller.id);
+
   return (
     <CartProvider slug={slug}>
       <div className="min-h-dvh pb-28">
@@ -71,6 +80,10 @@ export default async function StoreLayout({
           whatsapp={seller.whatsapp}
           instagram={seller.instagram}
           facebook={seller.facebook}
+          tagline={seller.tagline}
+          coverImage={seller.coverImage}
+          clubName={program.enabled ? program.name : null}
+          shareMessageTemplate={seller.shareMessageTemplate}
         />
         {children}
       </div>

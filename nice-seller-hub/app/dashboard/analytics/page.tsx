@@ -6,6 +6,8 @@ import {
   getCategoryBreakdown,
   getDailyRevenue,
   getDashboardStats,
+  getInventoryValuation,
+  getProfitStats,
   getTopProducts,
   listOrders,
   rangeStart,
@@ -13,6 +15,9 @@ import {
 import { formatMoney, formatNumber } from "@/lib/format";
 import { PageHeader, PageShell } from "@/components/dashboard/PageHeader";
 import { RankBars, RevenueChart, StatCard } from "@/components/dashboard/Charts";
+import { InventoryValue } from "@/components/dashboard/InventoryValue";
+import { ProfitCompare } from "@/components/dashboard/ProfitCompare";
+import { ExportButton } from "@/components/dashboard/ExportButton";
 import { Card, SectionTitle } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Analytics" };
@@ -29,20 +34,26 @@ export default async function AnalyticsPage({
   const range = RANGES.find((r) => r.id === rangeParam)?.id ?? "30d";
   const since = rangeStart(range);
 
-  const [stats, revenue, top, categories, orders] = await Promise.all([
+  const [stats, revenue, top, categories, orders, profit, valuation] = await Promise.all([
     getDashboardStats(seller.id, since),
     getDailyRevenue(seller.id, since),
     getTopProducts(seller.id, since, 8),
     getCategoryBreakdown(seller.id, since),
     listOrders(seller.id),
+    getProfitStats(seller.id, since),
+    getInventoryValuation(seller.id),
   ]);
 
   const ordersInRange = orders.filter((o) => o.createdAt >= since);
-  const label = RANGES.find((r) => r.id === range)!.label;
+  const { label, sentence } = RANGES.find((r) => r.id === range)!;
 
   return (
     <PageShell>
-      <PageHeader title="Analytics" subtitle={`Tu negocio en los últimos ${label.toLowerCase()}`} />
+      <PageHeader
+        title="Analytics"
+        subtitle={`Tu negocio ${sentence}`}
+        action={<ExportButton tipo="ventas" rango={range} label="Descargar Excel" />}
+      />
 
       <div className="no-scrollbar -mx-5 mb-6 flex gap-2 overflow-x-auto px-5">
         {RANGES.map((r) => (
@@ -67,6 +78,59 @@ export default async function AnalyticsPage({
         <StatCard label="Pedidos" value={formatNumber(ordersInRange.length)} />
         <StatCard label="Clientes" value={formatNumber(stats.customers)} hint="Cartera total" />
       </div>
+
+      {/*
+        La ganancia va inmediatamente debajo de los ingresos porque es el
+        numero que de verdad contesta "como me fue": vender mucho y ganar poco
+        se ve igual en una grafica de ingresos.
+
+        Real y proyectada se enseñan juntas porque son la misma pregunta vista
+        desde dos lados: una es lo que ya cobraste, la otra es lo que tienes
+        guardado sin cobrar todavia. Compararlas es lo que dice si el negocio
+        vive de vender lo que ya tiene o de seguir recibiendo mercancia nueva.
+      */}
+      <section className="mt-6">
+        <SectionTitle>Ganancia: real vs. proyectada</SectionTitle>
+
+        {profit.unitsWithCost === 0 && valuation.piecesWithCost === 0 ? (
+          <Card className="p-5">
+            <p className="text-[13px] leading-relaxed text-mute">
+              Todavía no podemos calcularla: ninguna pieza tiene su costo capturado. Escribe tu
+              descuento de distribuidora en{" "}
+              <Link href="/dashboard/settings" className="font-medium text-ink underline-offset-4 hover:underline">
+                Configuración
+              </Link>{" "}
+              y el costo se llenará solo en tus próximas recepciones.
+            </p>
+          </Card>
+        ) : (
+          <>
+            <ProfitCompare
+              realCents={profit.profitCents}
+              projectedCents={valuation.projectedProfitCents}
+              rangeLabel={sentence}
+              hasRealData={profit.unitsWithCost > 0}
+              hasProjectedData={valuation.piecesWithCost > 0}
+            />
+
+            {profit.unitsWithCost > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
+                <StatCard label="Vendido (piezas costeadas)" value={formatMoney(profit.revenueCents)} />
+                <StatCard label="Te costó" value={formatMoney(profit.costCents)} />
+                <StatCard label="Ganancia real" value={formatMoney(profit.profitCents)} accent />
+              </div>
+            )}
+
+            {profit.unitsWithoutCost > 0 && (
+              <p className="mt-2.5 text-[12px] leading-relaxed text-mute">
+                Quedan fuera {formatNumber(profit.unitsWithoutCost)}{" "}
+                {profit.unitsWithoutCost === 1 ? "pieza vendida" : "piezas vendidas"} sin costo
+                capturado. La ganancia real es mayor que la de arriba.
+              </p>
+            )}
+          </>
+        )}
+      </section>
 
       <section className="mt-8">
         <SectionTitle>Ingresos por día</SectionTitle>
@@ -112,6 +176,29 @@ export default async function AnalyticsPage({
           <StatCard label="Agotadas" value={formatNumber(stats.soldOut)} />
           <StatCard label="Últimas piezas" value={formatNumber(stats.lowStock.length)} />
         </div>
+
+        {valuation.lines > 0 && (
+          <InventoryValue
+            valuation={valuation}
+            discountPct={seller.distributorDiscountPct}
+            className="mt-3"
+          />
+        )}
+      </section>
+
+      <section className="mt-8">
+        <SectionTitle>Descargar para Excel</SectionTitle>
+        <Card className="flex flex-wrap gap-2 p-5">
+          <ExportButton tipo="ventas" rango={range} label="Ventas" />
+          <ExportButton tipo="abonos" label="Abonos y saldos" />
+          <ExportButton tipo="inventario" label="Inventario" />
+          <ExportButton tipo="clientes" label="Clientes" />
+          <ExportButton tipo="pedidos" label="Pedidos" />
+        </Card>
+        <p className="mt-2 text-[12px] leading-relaxed text-mute">
+          Se descargan como archivo .csv, listo para abrirse en Excel o Google Sheets. Traen
+          nombres y teléfonos de tus clientas: guárdalos como guardarías tu libreta.
+        </p>
       </section>
     </PageShell>
   );

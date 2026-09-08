@@ -6,3 +6,7 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 .DS_Store
+
+# Respaldos de la base: traen nombres y telefonos de clientas reales.
+# Nunca van al repositorio.
+/backups/

@@ -40,6 +40,11 @@ export default async function OrderPage({
       unitPriceCents: i.unitPriceCents,
     })),
     totalCents: order.totalCents,
+    subtotalCents: order.subtotalCents,
+    discountCents: order.discountCents,
+    couponCode: order.redemptionCode,
+    greetingTemplate: seller.orderGreetingTemplate,
+    closingTemplate: seller.orderClosingTemplate,
     customerName: order.contactName,
     note: order.note,
   });
@@ -74,19 +79,36 @@ export default async function OrderPage({
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14px] font-medium">{i.name}</p>
-              <p className="text-[11px] tabular-nums text-mute">NICE {i.code}</p>
+              <p className="text-[11px] tabular-nums text-mute">Código {i.code}</p>
             </div>
             <span className="shrink-0 text-[14px] font-medium tabular-nums">
               {formatMoney(i.subtotalCents)}
             </span>
           </li>
         ))}
-        <li className="flex items-baseline justify-between bg-canvas px-4 py-4">
-          <span className="text-[15px] font-medium">Total</span>
-          <span className="text-[20px] font-medium tabular-nums">
-            {formatMoney(order.totalCents)}
-            <span className="ml-1 text-[12px] font-normal text-mute">MXN</span>
-          </span>
+        <li className="bg-canvas px-4 py-4">
+          {order.discountCents > 0 && (
+            <>
+              <div className="flex items-baseline justify-between text-[13px] text-mute">
+                <span>Subtotal</span>
+                <span className="tabular-nums">{formatMoney(order.subtotalCents)}</span>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between text-[13px] text-gold">
+                <span className="truncate pr-3">Cupón {order.redemptionCode}</span>
+                <span className="shrink-0 tabular-nums">
+                  −{formatMoney(order.discountCents)}
+                </span>
+              </div>
+              <div className="my-2.5 border-t border-line" />
+            </>
+          )}
+          <div className="flex items-baseline justify-between">
+            <span className="text-[15px] font-medium">Total</span>
+            <span className="text-[20px] font-medium tabular-nums">
+              {formatMoney(order.totalCents)}
+              <span className="ml-1 text-[12px] font-normal text-mute">MXN</span>
+            </span>
+          </div>
         </li>
       </ul>
 

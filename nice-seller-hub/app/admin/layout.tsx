@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/session";
 import { Logo } from "@/components/Logo";
 
-export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin NICE" } };
+export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin" } };
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

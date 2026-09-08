@@ -1,6 +1,13 @@
 /**
- * El logotipo. La palabra NICE con mucho tracking sobre un peso ligero: es lo
- * que separa una marca de joyeria de un logo de software.
+ * El logotipo de la plataforma: DSD.
+ *
+ * La marca de la plataforma y la de la joyeria son dos cosas distintas y no
+ * deben confundirse. Esto es DSD, el software; lo que se vende adentro es NICE
+ * —o manana otra marca— y esa palabra aparece donde de verdad corresponde: el
+ * codigo de la pieza, el catalogo, la tienda de cada distribuidora.
+ *
+ * Mucho tracking sobre un peso ligero: es lo que separa una marca de vitrina
+ * de un logo de software.
  */
 export function Logo({
   className = "",
@@ -15,8 +22,8 @@ export function Logo({
     lg: "text-[22px] tracking-[0.5em]",
   };
   return (
-    <span className={`font-light ${sizes[size]} ${className}`} aria-label="NICE">
-      NICE
+    <span className={`font-light ${sizes[size]} ${className}`} aria-label="DSD">
+      DSD
     </span>
   );
 }

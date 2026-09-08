@@ -1,14 +1,26 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, PackageX, Plus, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Clock,
+  PackageX,
+  Plus,
+  Sparkles,
+  Ticket,
+  TrendingUp,
+} from "lucide-react";
 import { requireSeller } from "@/lib/session";
 import {
   getCategoryBreakdown,
   getDailyRevenue,
   getDashboardStats,
+  getProfitStats,
+  getReceivables,
   getTopProducts,
   listOrders,
   rangeStart,
 } from "@/lib/seller";
+import { getProgram, listRedemptions } from "@/lib/loyalty";
 import { formatMoney, formatNumber, greeting } from "@/lib/format";
 import { firstName } from "@/lib/whatsapp";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_STYLES, type OrderStatus } from "@/lib/orders";
@@ -26,13 +38,23 @@ export default async function DashboardHome() {
   const { user, seller } = await requireSeller();
   const since = rangeStart("30d");
 
-  const [stats, revenue, top, categories, orders] = await Promise.all([
-    getDashboardStats(seller.id, since),
-    getDailyRevenue(seller.id, since),
-    getTopProducts(seller.id, since),
-    getCategoryBreakdown(seller.id, since),
-    listOrders(seller.id),
-  ]);
+  const [stats, revenue, top, categories, orders, program, profit, receivables] =
+    await Promise.all([
+      getDashboardStats(seller.id, since),
+      getDailyRevenue(seller.id, since),
+      getTopProducts(seller.id, since),
+      getCategoryBreakdown(seller.id, since),
+      listOrders(seller.id),
+      getProgram(seller.id),
+      getProfitStats(seller.id, since),
+      getReceivables(seller.id),
+    ]);
+
+  // Un cupon sin usar es alguien esperando un descuento: va con los avisos, no
+  // escondido en la pantalla del club.
+  const openCoupons = program.enabled
+    ? await listRedemptions(seller.id, "available")
+    : [];
 
   const pendingOrders = orders.filter((o) =>
     ["pending", "whatsapp_sent", "confirmed", "preparing"].includes(o.status)
@@ -53,7 +75,19 @@ export default async function DashboardHome() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Ventas" value={formatMoney(stats.revenueCents)} hint="Últimos 30 días" accent />
-        <StatCard label="Piezas vendidas" value={formatNumber(stats.unitsSold)} hint="Últimos 30 días" />
+        {/*
+          La ganancia ocupa el segundo lugar cuando ya se puede calcular: es el
+          numero que contesta "como me fue" mejor que las piezas vendidas.
+        */}
+        {profit.unitsWithCost > 0 ? (
+          <StatCard
+            label="Ganancia"
+            value={formatMoney(profit.profitCents)}
+            hint="Últimos 30 días"
+          />
+        ) : (
+          <StatCard label="Piezas vendidas" value={formatNumber(stats.unitsSold)} hint="Últimos 30 días" />
+        )}
         <StatCard label="Clientes" value={formatNumber(stats.customers)} hint="En tu cartera" />
         <StatCard
           label="Inventario"
@@ -62,8 +96,38 @@ export default async function DashboardHome() {
         />
       </div>
 
-      {(stats.lowStock.length > 0 || stats.soldOut > 0 || pendingOrders.length > 0) && (
+      {(stats.lowStock.length > 0 ||
+        stats.soldOut > 0 ||
+        pendingOrders.length > 0 ||
+        openCoupons.length > 0 ||
+        receivables.count > 0) && (
         <section className="mt-6 space-y-2.5">
+          {receivables.count > 0 && (
+            <Alert
+              href="/dashboard/sales?filtro=por-cobrar"
+              icon={<Clock size={16} strokeWidth={1.9} />}
+              tone="amber"
+              title={`Te deben ${formatMoney(receivables.totalCents)}`}
+              body={
+                receivables.overdue > 0
+                  ? `${receivables.count} ${receivables.count === 1 ? "venta" : "ventas"} a abonos · ${receivables.overdue} pasada${receivables.overdue === 1 ? "" : "s"} de fecha`
+                  : `${receivables.count} ${receivables.count === 1 ? "venta" : "ventas"} a abonos por cobrar`
+              }
+            />
+          )}
+          {openCoupons.length > 0 && (
+            <Alert
+              href="/dashboard/loyalty"
+              icon={<Ticket size={16} strokeWidth={1.9} />}
+              tone="gold"
+              title={
+                openCoupons.length === 1
+                  ? "1 cupón del club sin usar"
+                  : `${openCoupons.length} cupones del club sin usar`
+              }
+              body="Cuando te enseñen el código, márcalo como usado."
+            />
+          )}
           {pendingOrders.length > 0 && (
             <Alert
               href="/dashboard/orders"
@@ -151,6 +215,30 @@ export default async function DashboardHome() {
         </section>
       </div>
 
+      {!program.enabled && (
+        <section className="mt-8">
+          <Link
+            href="/dashboard/loyalty"
+            className="card-foil group flex items-center gap-4 overflow-hidden rounded-[22px] p-6 text-white shadow-lift transition-transform duration-300 hover:-translate-y-0.5"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/10 text-gold">
+              <Sparkles size={19} strokeWidth={1.7} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium">Activa tu club de puntos</span>
+              <span className="mt-0.5 block text-[13px] leading-relaxed text-white/60">
+                Tus clientas acumulan puntos con cada compra y los cambian por lo que tú decidas.
+              </span>
+            </span>
+            <ArrowRight
+              size={17}
+              strokeWidth={1.8}
+              className="shrink-0 text-white/40 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-white"
+            />
+          </Link>
+        </section>
+      )}
+
       {orders.length > 0 && (
         <section className="mt-8">
           <SectionTitle
@@ -201,6 +289,7 @@ export default async function DashboardHome() {
 const TONES = {
   ink: "border-ink/12 bg-ink/[0.03] text-ink",
   amber: "border-amber-200 bg-amber-50/70 text-amber-900",
+  gold: "border-gold/30 bg-gold-soft/60 text-ink",
   neutral: "border-line bg-surface text-ink-soft",
 };
 

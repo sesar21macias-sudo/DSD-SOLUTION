@@ -4,6 +4,9 @@ import { createOrder, getOrderByNumber } from "@/lib/orders";
 import { buildOrderMessage, firstName, waLink } from "@/lib/whatsapp";
 import { normalizePhone } from "@/lib/phone";
 import { findOrCreateCustomer } from "@/lib/mutations";
+import { getMember } from "@/lib/member";
+import { findAvailableRedemption } from "@/lib/loyalty";
+import { ensureVisitorId } from "@/lib/reservations";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 /**
@@ -24,6 +27,7 @@ interface Body {
   name?: unknown;
   phone?: unknown;
   note?: unknown;
+  couponCode?: unknown;
 }
 
 export async function POST(
@@ -92,11 +96,40 @@ export async function POST(
     }
   }
 
+  // Si tiene sesion del club, el pedido queda ligado a su cuenta aunque no
+  // haya escrito nada en los campos de contacto.
+  const member = await getMember(seller.id);
+  if (member && customerId === null) {
+    customerId = member.customer.id;
+    contactPhone = contactPhone ?? member.customer.phone;
+  }
+
+  /**
+   * El cupon se resuelve contra la base y solo para esta tienda. Del navegador
+   * llega un codigo, nada mas: el tipo de descuento y su valor salen de la
+   * fila, nunca del cliente. Y tiene que ser suyo — un codigo ajeno, aunque
+   * sea valido, no aplica.
+   */
+  let coupon = null;
+  const couponCode = str(body.couponCode, 24);
+  if (couponCode && member) {
+    const found = await findAvailableRedemption(seller.id, couponCode);
+    if (found && found.customerId === member.customer.id) {
+      coupon = { code: found.code, kind: found.kind, value: found.value };
+    }
+  }
+
+  // Quien esta comprando. Sus piezas ya apartadas no le estorban, y al crear
+  // el pedido esas reservas pasan a durar un dia en vez de quince minutos.
+  const visitorId = await ensureVisitorId();
+
   const result = await createOrder(
     seller.id,
     lines,
     { name: contactName, phone: contactPhone, note },
-    customerId
+    customerId,
+    coupon,
+    visitorId
   );
 
   if (!result.ok) {
@@ -130,7 +163,12 @@ export async function POST(
       unitPriceCents: i.unitPriceCents,
     })),
     totalCents: order.totalCents,
-    customerName: contactName,
+    subtotalCents: order.subtotalCents,
+    discountCents: order.discountCents,
+    couponCode: order.redemptionCode,
+    greetingTemplate: seller.orderGreetingTemplate,
+    closingTemplate: seller.orderClosingTemplate,
+    customerName: contactName ?? member?.customer.name ?? null,
     note,
   });
 

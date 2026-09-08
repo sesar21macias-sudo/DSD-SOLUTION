@@ -6,7 +6,8 @@ import { Minus, Plus, Search, X } from "lucide-react";
 import { createSale, type ActionState } from "@/app/dashboard/actions";
 import { PAYMENT_METHODS } from "@/lib/payments";
 import type { InventoryItem } from "@/lib/seller";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, pesosToCents } from "@/lib/format";
+import { discountFor } from "@/lib/loyalty-rules";
 import { Button, ErrorNote, Field, Input, Select, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
@@ -24,11 +25,14 @@ export function SaleForm({
   prefill,
   orderId,
   contact,
+  coupon,
 }: {
   items: InventoryItem[];
   prefill: { inventoryId: number; quantity: number }[];
   orderId: number | null;
   contact: { name: string; phone: string } | null;
+  /** El cupon que traia el pedido, si traia uno. */
+  coupon: { code: string; name: string; kind: string; value: number } | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -38,6 +42,8 @@ export function SaleForm({
     Object.fromEntries(prefill.map((p) => [p.inventoryId, p.quantity]))
   );
   const [query, setQuery] = useState("");
+  const [payMode, setPayMode] = useState<"completo" | "abonos">("completo");
+  const [downPayment, setDownPayment] = useState("");
 
   useEffect(() => {
     if (state.ok && state.message) {
@@ -52,7 +58,19 @@ export function SaleForm({
     .map(([id, qty]) => ({ item: byId.get(Number(id))!, quantity: qty }))
     .filter((l) => l.item && l.quantity > 0);
 
-  const totalCents = chosen.reduce((s, l) => s + l.item.priceCents * l.quantity, 0);
+  const subtotalCents = chosen.reduce((s, l) => s + l.item.priceCents * l.quantity, 0);
+
+  // El descuento se enseña aqui, pero el que se cobra lo vuelve a calcular el
+  // servidor con el cupon leido de la base.
+  const discountCents = coupon
+    ? discountFor(coupon.kind, coupon.value, subtotalCents)
+    : 0;
+  const totalCents = subtotalCents - discountCents;
+
+  // El saldo se enseña mientras escribe el anticipo. El que vale lo calcula el
+  // servidor con el total que él mismo armó.
+  const downCents = pesosToCents(downPayment) ?? 0;
+  const balanceCents = payMode === "abonos" ? Math.max(0, totalCents - downCents) : 0;
 
   const results = query.trim()
     ? items.filter((i) => {
@@ -185,20 +203,113 @@ export function SaleForm({
         </ul>
       </section>
 
-      <div className="flex items-baseline justify-between rounded-2xl bg-ink px-5 py-4 text-white">
-        <span className="text-[14px]">Total de la venta</span>
-        <span className="text-[22px] font-medium tabular-nums">{formatMoney(totalCents)}</span>
+      <div className="rounded-2xl bg-ink px-5 py-4 text-white">
+        {discountCents > 0 && (
+          <>
+            <div className="flex items-baseline justify-between text-[13px] text-white/60">
+              <span>Subtotal</span>
+              <span className="tabular-nums">{formatMoney(subtotalCents)}</span>
+            </div>
+            <div className="mt-1 flex items-baseline justify-between text-[13px] text-gold">
+              <span className="truncate pr-3">
+                Cupón {coupon?.code} · {coupon?.name}
+              </span>
+              <span className="shrink-0 tabular-nums">−{formatMoney(discountCents)}</span>
+            </div>
+            <div className="my-3 border-t border-white/10" />
+          </>
+        )}
+        <div className="flex items-baseline justify-between">
+          <span className="text-[14px]">Total de la venta</span>
+          <span className="text-[22px] font-medium tabular-nums">{formatMoney(totalCents)}</span>
+        </div>
+
+        {balanceCents > 0 && (
+          <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3 text-[13px]">
+            <span className="text-white/60">Queda debiendo</span>
+            <span className="font-medium tabular-nums text-amber-300">
+              {formatMoney(balanceCents)}
+            </span>
+          </div>
+        )}
       </div>
+
+      {/*
+        Cómo se está pagando.
+
+        Un apartado descuenta el inventario igual que una venta —la pieza ya se
+        guardó para esa clienta y nadie más se la puede llevar—; lo que queda
+        abierto es el cobro. Por eso es un modo de la misma pantalla y no un
+        formulario aparte: para ella es la misma operación.
+      */}
+      <section>
+        <div className="mb-3 flex overflow-hidden rounded-xl border border-line-strong">
+          {(
+            [
+              ["completo", "Paga todo"],
+              ["abonos", "A abonos"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setPayMode(mode)}
+              className={`h-11 flex-1 text-[14px] font-medium transition-colors ${
+                payMode === mode ? "bg-ink text-white" : "text-ink-soft hover:bg-canvas"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <input type="hidden" name="payMode" value={payMode} />
+
+        {payMode === "abonos" && (
+          <div className="animate-fade-up space-y-4 rounded-2xl border border-line bg-surface p-4 shadow-card">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                label="Anticipo"
+                hint={
+                  balanceCents > 0
+                    ? `Le quedan ${formatMoney(balanceCents)} por pagar.`
+                    : "Lo que te deja hoy."
+                }
+              >
+                <Input
+                  name="downPayment"
+                  value={downPayment}
+                  onChange={(e) => setDownPayment(e.target.value)}
+                  placeholder="0"
+                  inputMode="decimal"
+                  maxLength={12}
+                />
+              </Field>
+              <Field label="Fecha límite" hint="Opcional, para acordarte de cobrar.">
+                <Input name="dueDate" type="date" />
+              </Field>
+            </div>
+            <p className="text-[12px] leading-relaxed text-mute">
+              Las piezas salen de tu inventario desde ahora: quedan apartadas. Los puntos se le
+              abonan cuando termine de pagar.
+            </p>
+          </div>
+        )}
+      </section>
 
       <section className="space-y-4">
         <Field
           label="Cliente"
-          hint="Opcional. Si lo registras, acumula puntos y aparece en tu cartera."
+          hint={
+            payMode === "abonos"
+              ? "Obligatorio en una venta a abonos: es a quien vas a cobrarle."
+              : "Opcional. Si lo registras, acumula puntos y aparece en tu cartera."
+          }
         >
           <Input
             name="customerName"
             placeholder="María López"
             defaultValue={contact?.name ?? ""}
+            required={payMode === "abonos"}
             maxLength={80}
           />
         </Field>
@@ -209,11 +320,12 @@ export function SaleForm({
             placeholder="656 123 4567"
             inputMode="tel"
             defaultValue={contact?.phone ?? ""}
+            required={payMode === "abonos"}
             maxLength={20}
           />
         </Field>
 
-        <Field label="Forma de pago">
+        <Field label={payMode === "abonos" ? "Cómo te dejó el anticipo" : "Forma de pago"}>
           <Select name="paymentMethod" defaultValue="efectivo">
             {PAYMENT_METHODS.map((m) => (
               <option key={m.id} value={m.id}>
@@ -231,7 +343,11 @@ export function SaleForm({
       {state.error && <ErrorNote>{state.error}</ErrorNote>}
 
       <Button type="submit" size="lg" disabled={pending || chosen.length === 0} className="w-full">
-        {pending ? "Registrando…" : "Registrar venta"}
+        {pending
+          ? "Registrando…"
+          : payMode === "abonos"
+            ? "Registrar apartado"
+            : "Registrar venta"}
       </Button>
     </form>
   );
