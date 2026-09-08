@@ -75,8 +75,12 @@ export default async function AdminSellersPage() {
         {sellers.map((s) => {
           const badge = planBadge(s.planStatus, s.planPaidUntil);
           return (
-            <div key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-4">
-              <div className="min-w-0 flex-1">
+            <div key={s.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center">
+              {/* `flex-col` a fuerzas en celular: con una sola fila `flex-wrap`,
+                  el bloque `min-w-0 flex-1` del nombre se dejaba aplastar por
+                  los botones en vez de bajar a su propio renglón — un nombre
+                  largo se veía como "M...". Apilado no tiene ese problema. */}
+              <div className="min-w-0 sm:flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
                     href={`/${s.slug}`}
@@ -101,7 +105,7 @@ export default async function AdminSellersPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-5 text-right text-[12px] tabular-nums text-mute">
+              <div className="flex items-center gap-5 text-[12px] tabular-nums text-mute sm:text-right">
                 <span>
                   <span className="block text-[14px] font-medium text-ink">
                     {formatNumber(s.products)}
@@ -122,46 +126,48 @@ export default async function AdminSellersPage() {
                 </span>
               </div>
 
-              <form action={markPaid} className="shrink-0">
-                <input type="hidden" name="sellerId" value={s.id} />
-                <button
-                  type="submit"
-                  className="h-9 rounded-lg border border-line-strong px-3 text-[13px] font-medium text-ink-soft transition-colors hover:border-emerald-300 hover:text-emerald-700"
-                >
-                  Ya me pagó
-                </button>
-              </form>
+              <div className="flex flex-wrap items-center gap-2">
+                <form action={markPaid} className="shrink-0">
+                  <input type="hidden" name="sellerId" value={s.id} />
+                  <button
+                    type="submit"
+                    className="h-9 rounded-lg border border-line-strong px-3 text-[13px] font-medium text-ink-soft transition-colors hover:border-emerald-300 hover:text-emerald-700"
+                  >
+                    Ya me pagó
+                  </button>
+                </form>
 
-              <div className="shrink-0">
-                <ImpersonateButton sellerId={s.id} />
+                <div className="shrink-0">
+                  <ImpersonateButton sellerId={s.id} />
+                </div>
+
+                <div className="shrink-0">
+                  <ResetLinkButton
+                    userId={s.userId}
+                    businessName={s.businessName}
+                    whatsapp={s.whatsapp}
+                  />
+                </div>
+
+                <form action={toggle} className="shrink-0">
+                  <input type="hidden" name="sellerId" value={s.id} />
+                  <input
+                    type="hidden"
+                    name="status"
+                    value={s.status === "active" ? "suspended" : "active"}
+                  />
+                  <button
+                    type="submit"
+                    className={`h-9 rounded-lg border px-3.5 text-[13px] font-medium transition-colors ${
+                      s.status === "active"
+                        ? "border-line-strong text-ink-soft hover:border-red-300 hover:text-red-600"
+                        : "border-ink bg-ink text-white"
+                    }`}
+                  >
+                    {s.status === "active" ? "Suspender" : "Activar"}
+                  </button>
+                </form>
               </div>
-
-              <div className="shrink-0">
-                <ResetLinkButton
-                  userId={s.userId}
-                  businessName={s.businessName}
-                  whatsapp={s.whatsapp}
-                />
-              </div>
-
-              <form action={toggle} className="shrink-0">
-                <input type="hidden" name="sellerId" value={s.id} />
-                <input
-                  type="hidden"
-                  name="status"
-                  value={s.status === "active" ? "suspended" : "active"}
-                />
-                <button
-                  type="submit"
-                  className={`h-9 rounded-lg border px-3.5 text-[13px] font-medium transition-colors ${
-                    s.status === "active"
-                      ? "border-line-strong text-ink-soft hover:border-red-300 hover:text-red-600"
-                      : "border-ink bg-ink text-white"
-                  }`}
-                >
-                  {s.status === "active" ? "Suspender" : "Activar"}
-                </button>
-              </form>
             </div>
           );
         })}
