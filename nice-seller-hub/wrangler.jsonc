@@ -16,5 +16,11 @@
       "migrations_dir": "migrations"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "nice-seller-hub-media"
+    }
+  ],
   "observability": { "enabled": true }
 }
