@@ -126,7 +126,7 @@ export default async function HomePage() {
 
           <div className="animate-fade-up mt-9 flex flex-wrap gap-3">
             <LinkButton href="/register" size="lg">
-              Crear mi tienda
+              Quiero mi tienda
               <ArrowRight size={17} strokeWidth={1.8} />
             </LinkButton>
             <LinkButton href="/login" size="lg" variant="secondary">

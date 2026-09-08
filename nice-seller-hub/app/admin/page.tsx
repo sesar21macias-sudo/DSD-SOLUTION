@@ -14,12 +14,17 @@ export default async function AdminHome() {
       <p className="mt-1 text-[13px] text-mute">Todo lo que pasa en DSD Seller Hub.</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="Ventas totales" value={formatMoney(stats.salesCents)} accent />
+        <StatCard label="Tu ingreso mensual" value={formatMoney(stats.mrrCents)} accent />
         <StatCard
           label="Distribuidoras"
           value={formatNumber(stats.sellers)}
-          hint={`${stats.activeSellers} activas`}
+          hint={
+            stats.overdueSellers > 0
+              ? `${stats.overdueSellers} con el pago vencido`
+              : `${stats.activeSellers} activas`
+          }
         />
+        <StatCard label="Ventas de todas ellas" value={formatMoney(stats.salesCents)} />
         <StatCard label="Clientes" value={formatNumber(stats.customers)} />
         <StatCard label="Piezas en catálogo" value={formatNumber(stats.products)} />
         <StatCard label="Pedidos" value={formatNumber(stats.orders)} />

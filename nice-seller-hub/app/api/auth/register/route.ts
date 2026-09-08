@@ -10,8 +10,9 @@ import {
   signSession,
 } from "@/lib/auth";
 import { getSessionSecret } from "@/lib/secret";
+import { requireAdmin } from "@/lib/session";
 import { normalizePhone } from "@/lib/phone";
-import { slugify } from "@/lib/format";
+import { RESERVED_SLUGS, slugify } from "@/lib/format";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 /**
@@ -19,15 +20,21 @@ import { clientIp, rateLimit } from "@/lib/rate-limit";
  * Una cuenta sin tienda no serviria de nada, y pedir dos formularios seguidos
  * es la forma mas facil de perder a alguien antes de que suba su primer
  * producto.
+ *
+ * El registro publico esta cerrado: solo el admin da de alta cuentas nuevas,
+ * desde /admin/sellers/new, una vez que alguien ya pago. Este endpoint sigue
+ * existiendo porque el formulario de alta (AuthForm) ya sabe validar todo
+ * esto, pero ahora exige sesion de admin — nadie mas puede llegar aqui.
  */
 
-const RESERVED = new Set([
-  "admin", "dashboard", "login", "register", "api", "logout", "settings",
-  "about", "help", "soporte", "nice", "_next", "favicon.ico", "sitemap.xml",
-  "robots.txt", "checkout", "cart", "order", "product",
-]);
 
 export async function POST(req: Request) {
+  try {
+    await requireAdmin();
+  } catch {
+    return bad("El registro está cerrado. Pide tu cuenta a quien administra la plataforma.", 403);
+  }
+
   const limit = await rateLimit("register", clientIp(req), 5, 900);
   if (!limit.ok) {
     return bad("Demasiados intentos. Espera unos minutos.", 429);
@@ -58,7 +65,7 @@ export async function POST(req: Request) {
 
   const slug = slugify(requestedSlug || name);
   if (slug.length < 3) return bad("El enlace de tu tienda necesita al menos 3 letras.");
-  if (RESERVED.has(slug)) return bad("Ese enlace está reservado. Elige otro.");
+  if (RESERVED_SLUGS.has(slug)) return bad("Ese enlace está reservado. Elige otro.");
 
   const db = await getDb();
 

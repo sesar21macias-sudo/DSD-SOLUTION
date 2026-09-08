@@ -31,7 +31,7 @@ export default function LoginPage() {
       <p className="mt-8 text-center text-[13px] text-mute">
         ¿Todavía no tienes tienda?{" "}
         <Link href="/register" className="font-medium text-ink underline underline-offset-4">
-          Crear una
+          Contáctanos
         </Link>
       </p>
     </main>

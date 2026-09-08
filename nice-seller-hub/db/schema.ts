@@ -110,6 +110,19 @@ export const sellers = sqliteTable(
     paymentMethods: text("payment_methods"),
     /** "active" | "suspended" — solo el admin la cambia. */
     status: text("status").notNull().default("active"),
+    /**
+     * Lo que ESTA distribuidora te paga a ti por usar el sistema — no tiene
+     * nada que ver con lo que ella les cobra a sus clientas.
+     *
+     * "trial" | "active" | "overdue" | "cancelled". Se cambia solo a mano,
+     * desde /admin/sellers: aqui no hay cobro automatico, es el admin quien
+     * decide y quien marca cuando alguien le pagó.
+     */
+    planStatus: text("plan_status").notNull().default("trial"),
+    /** Lo que le cobras al mes, en centavos. 0 = todavia no se ha fijado. */
+    planPriceCents: integer("plan_price_cents").notNull().default(0),
+    /** Fecha (ISO, solo dia) hasta la que tiene pagado. Null = nunca pagó. */
+    planPaidUntil: text("plan_paid_until"),
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
   },

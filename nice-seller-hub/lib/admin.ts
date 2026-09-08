@@ -17,6 +17,10 @@ export interface PlatformStats {
   products: number;
   orders: number;
   salesCents: number;
+  /** Lo que te pagan al mes las distribuidoras al corriente. */
+  mrrCents: number;
+  /** Cuántas ya vencieron su fecha de pago. */
+  overdueSellers: number;
 }
 
 export async function getPlatformStats(): Promise<PlatformStats> {
@@ -43,6 +47,14 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     .select({ total: sql<number>`coalesce(sum(${schema.sales.totalCents}), 0)` })
     .from(schema.sales);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const [billing] = await db
+    .select({
+      mrr: sql<number>`coalesce(sum(case when plan_paid_until >= ${today} then plan_price_cents else 0 end), 0)`,
+      overdue: sql<number>`sum(case when plan_paid_until is not null and plan_paid_until < ${today} then 1 else 0 end)`,
+    })
+    .from(schema.sellers);
+
   return {
     sellers: sellers?.total ?? 0,
     activeSellers: sellers?.active ?? 0,
@@ -50,6 +62,8 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     products: products?.total ?? 0,
     orders: orders?.total ?? 0,
     salesCents: sales?.total ?? 0,
+    mrrCents: billing?.mrr ?? 0,
+    overdueSellers: billing?.overdue ?? 0,
   };
 }
 
@@ -66,6 +80,10 @@ export interface SellerRow {
   products: number;
   customers: number;
   salesCents: number;
+  /** Lo que te paga a ti — no lo que ella cobra a sus clientas. */
+  planStatus: string;
+  planPriceCents: number;
+  planPaidUntil: string | null;
 }
 
 export async function listSellers(): Promise<SellerRow[]> {
@@ -80,6 +98,9 @@ export async function listSellers(): Promise<SellerRow[]> {
       city: schema.sellers.city,
       status: schema.sellers.status,
       createdAt: schema.sellers.createdAt,
+      planStatus: schema.sellers.planStatus,
+      planPriceCents: schema.sellers.planPriceCents,
+      planPaidUntil: schema.sellers.planPaidUntil,
       products: sql<number>`(select count(*) from seller_inventory where seller_id = ${outer("sellers", "id")})`.as("products"),
       customers: sql<number>`(select count(*) from seller_customers where seller_id = ${outer("sellers", "id")})`.as("customers"),
       salesCents: sql<number>`(select coalesce(sum(total_cents), 0) from sales where seller_id = ${outer("sellers", "id")})`.as("sales_cents"),

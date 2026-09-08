@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { requireSeller } from "@/lib/session";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
+import { AdminReturnBanner } from "@/components/dashboard/AdminReturnBanner";
+import { ADMIN_RETURN_COOKIE } from "@/lib/auth";
 
 export const metadata: Metadata = { title: { default: "Panel", template: "%s · Panel" } };
 export const dynamic = "force-dynamic";
@@ -32,14 +35,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login?volver=/dashboard");
   }
 
+  const impersonating = !!(await cookies()).get(ADMIN_RETURN_COOKIE)?.value;
+
   return (
-    <div className="min-h-dvh lg:flex">
-      <DashboardNav
-        businessName={session.seller.businessName}
-        slug={session.seller.slug}
-        profileImage={session.seller.profileImage}
-      />
-      <div className="flex-1 pb-24 lg:pb-0">{children}</div>
+    <div className={impersonating ? "pt-10" : ""}>
+      {impersonating && <AdminReturnBanner businessName={session.seller.businessName} />}
+      <div className="min-h-dvh lg:flex">
+        <DashboardNav
+          businessName={session.seller.businessName}
+          slug={session.seller.slug}
+          profileImage={session.seller.profileImage}
+        />
+        <div className="flex-1 pb-24 lg:pb-0">{children}</div>
+      </div>
     </div>
   );
 }

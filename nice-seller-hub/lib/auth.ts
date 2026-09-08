@@ -10,6 +10,12 @@ export const MEMBER_COOKIE = "nsh_member";
 export const MEMBER_DAYS = 180;
 
 /**
+ * Cuando el admin entra a una tienda como soporte, su propia sesion se guarda
+ * aqui en vez de perderse — es lo que permite el boton "Volver a admin".
+ */
+export const ADMIN_RETURN_COOKIE = "nsh_admin_return";
+
+/**
  * PBKDF2-SHA256. No es Argon2, pero es lo que ofrece WebCrypto en el runtime
  * de Workers sin meter una dependencia nativa; con sal por usuario cumple para
  * este caso.

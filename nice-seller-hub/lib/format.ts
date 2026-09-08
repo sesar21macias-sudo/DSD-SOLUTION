@@ -107,6 +107,13 @@ export function greeting(date = new Date()): string {
  */
 const DIACRITICS = new RegExp("[̀-ͯ]", "g");
 
+/** Enlaces que chocarían con una ruta real de la app — nadie puede quedarse con estos. */
+export const RESERVED_SLUGS = new Set([
+  "admin", "dashboard", "login", "register", "api", "logout", "settings",
+  "about", "help", "soporte", "nice", "_next", "favicon.ico", "sitemap.xml",
+  "robots.txt", "checkout", "cart", "order", "product",
+]);
+
 export function slugify(input: string): string {
   return input
     .normalize("NFD")
