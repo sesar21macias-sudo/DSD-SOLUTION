@@ -6,6 +6,7 @@ import { saveInventoryItem, type ActionState } from "@/app/dashboard/actions";
 import { centsToPesosInput, pesosToCents } from "@/lib/format";
 import { costFromCatalog, marginPct, profitCents } from "@/lib/costing";
 import { Button, ErrorNote, Field, Input, LinkButton } from "@/components/ui";
+import { ImageUploadField } from "@/components/dashboard/ImageUploadField";
 import { useToast } from "@/components/Toast";
 
 /**
@@ -19,6 +20,7 @@ export function EditInventoryForm({
 }: {
   item: {
     inventoryId: number;
+    productId: number;
     niceCode: string;
     name: string;
     imageUrl: string | null;
@@ -62,15 +64,14 @@ export function EditInventoryForm({
   return (
     <form action={action} className="max-w-lg space-y-5">
       <input type="hidden" name="inventoryId" value={item.inventoryId} />
+      <input type="hidden" name="productId" value={item.productId} />
 
-      {item.imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.imageUrl}
-          alt=""
-          className="h-28 w-28 rounded-2xl border border-line object-cover"
-        />
-      )}
+      <Field
+        label="Foto"
+        hint="Es la foto del código NICE: si la cambias, se actualiza para cualquiera que también tenga esta pieza."
+      >
+        <ImageUploadField name="imageUrl" defaultValue={item.imageUrl ?? ""} />
+      </Field>
 
       <Field
         label="Lo que te costó"

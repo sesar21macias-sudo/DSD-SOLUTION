@@ -14,6 +14,7 @@ import {
   removeFromInventory,
   updateInventory,
   updateMessageTemplates,
+  updateProductImage,
   updateSellerProfile,
 } from "@/lib/mutations";
 import { formatMoney, pesosToCents } from "@/lib/format";
@@ -72,6 +73,15 @@ export async function saveInventoryItem(
   });
 
   if (!res.ok) return { ok: false, error: res.error };
+
+  // La foto es del código NICE en el catálogo global, no de esta fila de
+  // inventario — por eso se guarda aparte, contra `productId` y no contra
+  // `inventoryId`.
+  const productId = Number(form.get("productId"));
+  if (Number.isFinite(productId) && productId > 0 && form.has("imageUrl")) {
+    const imgRes = await updateProductImage(seller.id, productId, String(form.get("imageUrl") ?? ""));
+    if (!imgRes.ok) return { ok: false, error: imgRes.error };
+  }
 
   revalidatePath("/dashboard/inventory");
   revalidatePath(`/${seller.slug}`);

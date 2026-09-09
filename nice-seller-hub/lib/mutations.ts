@@ -247,6 +247,47 @@ export async function findOrCreateProduct(
   return { id: inserted[0].id, created: true };
 }
 
+/**
+ * Pone o cambia la foto de una pieza del catálogo global.
+ *
+ * La foto es del código NICE, no de la distribuidora que la trae: si ella
+ * sube la foto real de una pieza que NICE ya no tiene en su tienda en línea
+ * (o que el catálogo trajo sin foto), la ven todas las que después reciban
+ * el mismo código — es la misma pieza para todas.
+ *
+ * Cualquier distribuidora con esa pieza en su inventario puede ponerle foto:
+ * no hace falta que sea quien la dio de alta primero.
+ */
+export async function updateProductImage(
+  sellerId: number,
+  productId: number,
+  imageUrl: string
+): Promise<{ ok: boolean; error?: string }> {
+  const db = await getDb();
+
+  // Confirma que la pieza este de verdad en el inventario de esta
+  // distribuidora antes de tocar un dato que comparten todas.
+  const owns = await db
+    .select({ id: schema.sellerInventory.id })
+    .from(schema.sellerInventory)
+    .where(
+      and(
+        eq(schema.sellerInventory.productId, productId),
+        eq(schema.sellerInventory.sellerId, sellerId)
+      )
+    )
+    .limit(1);
+
+  if (!owns[0]) return { ok: false, error: "Esa pieza no está en tu inventario." };
+
+  await db
+    .update(schema.products)
+    .set({ imageUrl: imageUrl.trim() || null })
+    .where(eq(schema.products.id, productId));
+
+  return { ok: true };
+}
+
 // --- Clientes --------------------------------------------------------------
 
 /**
