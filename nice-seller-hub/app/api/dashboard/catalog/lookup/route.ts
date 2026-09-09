@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { requireSeller } from "@/lib/session";
-import { lookupNiceProduct } from "@/lib/nice-catalog";
+import { guessCategorySlug, lookupNiceProduct } from "@/lib/nice-catalog";
 import { findSiblingSize } from "@/lib/sibling-size";
 import { NICE_CODE_RE } from "@/lib/nice-code";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -90,6 +90,19 @@ export async function GET(req: Request) {
     );
   }
 
+  // Del nombre que trae NICE se adivina la categoría — la misma regla que usa
+  // la recepción por foto. Antes esto se dejaba en null aquí y solo funcionaba
+  // del lado de la recepción, así que ninguna pieza nueva traía categoría sola
+  // al darla de alta a mano.
+  const slug = guessCategorySlug(found.name);
+  const category = slug
+    ? await db
+        .select({ id: schema.categories.id })
+        .from(schema.categories)
+        .where(eq(schema.categories.slug, slug))
+        .limit(1)
+    : [];
+
   return NextResponse.json({
     ok: true,
     source: "nice",
@@ -99,7 +112,7 @@ export async function GET(req: Request) {
       description: found.description,
       imageUrl: found.imageUrl,
       suggestedPriceCents: found.priceCents,
-      categoryId: null,
+      categoryId: category[0]?.id ?? null,
     },
   });
 }

@@ -142,13 +142,43 @@ function firstString(v: unknown): string | null {
   return null;
 }
 
+/** Los `offers` de una ficha, siempre como arreglo. */
+function offerList(ld: Record<string, unknown>): Record<string, unknown>[] {
+  const offers = ld.offers;
+  const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
+  return list.filter((o): o is Record<string, unknown> => !!o && typeof o === "object");
+}
+
+function priceCentsOf(offer: Record<string, unknown>): number | null {
+  const price = Number(offer.price);
+  return Number.isFinite(price) && price > 0 ? Math.round(price * 100) : null;
+}
+
 /** El precio del primer Offer, en centavos. */
 function offerPriceCents(ld: Record<string, unknown>): number | null {
-  const offers = ld.offers;
-  const first = Array.isArray(offers) ? offers[0] : offers;
-  if (!first || typeof first !== "object") return null;
-  const price = Number((first as Record<string, unknown>).price);
-  return Number.isFinite(price) && price > 0 ? Math.round(price * 100) : null;
+  const first = offerList(ld)[0];
+  return first ? priceCentsOf(first) : null;
+}
+
+/**
+ * Un anillo con varias tallas trae una oferta por talla, cada una con su
+ * propio `sku` — el `sku` de arriba de la ficha es solo el de la primera
+ * talla que NICE decidio mostrar. Buscar solo ahi dejaba sin encontrar
+ * cualquier otra talla del mismo modelo, aunque la ficha ya la tuviera.
+ */
+function findMatchingOffer(
+  ld: Record<string, unknown>,
+  wanted: Set<string>
+): { sku: string; offer: Record<string, unknown> | null } | null {
+  const topSku = firstString(ld.sku)?.trim().toUpperCase();
+  if (topSku && wanted.has(topSku)) return { sku: topSku, offer: null };
+
+  for (const offer of offerList(ld)) {
+    const sku = firstString(offer.sku)?.trim().toUpperCase();
+    if (sku && wanted.has(sku)) return { sku, offer };
+  }
+
+  return null;
 }
 
 /**
@@ -219,18 +249,18 @@ export async function lookupNiceProduct(code: string): Promise<NiceProduct | nul
       const ld = findProductLd(page);
       if (!ld) continue;
 
-      const sku = firstString(ld.sku)?.trim().toUpperCase();
-      if (!sku || !wanted.has(sku)) continue;
+      const match = findMatchingOffer(ld, wanted);
+      if (!match) continue;
 
       const name = firstString(ld.name)?.trim();
       if (!name) continue;
 
       return {
-        sku,
+        sku: match.sku,
         name: name.slice(0, 160),
         description: firstString(ld.description)?.trim().slice(0, 600) ?? null,
         imageUrl: sizedImage(firstString(ld.image)),
-        priceCents: offerPriceCents(ld),
+        priceCents: match.offer ? priceCentsOf(match.offer) : offerPriceCents(ld),
         sourceUrl: url,
       };
     }
@@ -274,11 +304,23 @@ const CATEGORY_BY_FIRST_WORD: Record<string, string> = {
 };
 
 export function guessCategorySlug(name: string): string | null {
-  const first = name
+  const clean = name
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(new RegExp("[̀-ͯ]", "g"), "")
-    .split(/\s+/)[0];
+    .replace(new RegExp("[̀-ͯ]", "g"), "");
+
+  /**
+   * "Caballero" no siempre es la primera palabra ("Collar Caballero D643"),
+   * asi que se busca en todo el nombre y gana sobre el tipo de pieza: una
+   * cadena de caballero es ante todo de caballero, no una cadena mas.
+   *
+   * No es infalible — hay piezas de hombre que NICE nombra sin decir
+   * "caballero" ("diseño figura masculina")— pero cubre la mayoria y deja el
+   * resto a un cambio de categoria de un toque, igual que cualquier otra.
+   */
+  if (/\bcaballero(s)?\b/.test(clean)) return "caballero";
+
+  const first = clean.split(/\s+/)[0];
   return CATEGORY_BY_FIRST_WORD[first] ?? null;
 }
