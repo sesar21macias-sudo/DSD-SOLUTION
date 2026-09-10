@@ -359,6 +359,8 @@ export interface RegisterSaleInput {
    * total final todavia contra que descontarlos.
    */
   usePoints?: number | null;
+  /** Un descuento a mano, en centavos — precio de amiga, pieza con detalle, etc. */
+  manualDiscountCents?: number | null;
 }
 
 export type RegisterSaleResult =
@@ -500,6 +502,18 @@ export async function registerSale(
    * pantalla mostraba pudo quedar viejo mientras ella armaba la venta.
    */
   const isFullPayment = input.paidCents === undefined || input.paidCents === null;
+
+  // Un descuento a mano — precio de amiga, pieza con un detalle, lo que sea.
+  // Se topa contra lo que queda despues del cupon: nunca deja el total en
+  // negativo, sin importar lo que alguien haya escrito.
+  const manualDiscountCents = Math.max(
+    0,
+    Math.min(
+      Math.floor(Number(input.manualDiscountCents ?? 0)),
+      Math.max(0, subtotalCents - couponDiscountCents)
+    )
+  );
+
   const requestedPoints = Math.floor(Number(input.usePoints ?? 0));
   let usedPoints = 0;
   let pointsDiscountCents = 0;
@@ -508,7 +522,7 @@ export async function registerSale(
     const program = await getProgram(sellerId);
     if (program.enabled) {
       const account = await getAccount(sellerId, customerId);
-      const remainingAfterCoupon = Math.max(0, subtotalCents - couponDiscountCents);
+      const remainingAfterCoupon = Math.max(0, subtotalCents - couponDiscountCents - manualDiscountCents);
       const maxByBalance = Math.min(requestedPoints, account.points);
       const maxByTotal = Math.floor(remainingAfterCoupon / Math.max(1, program.centsPerPoint));
       usedPoints = Math.max(0, Math.min(maxByBalance, maxByTotal));
@@ -516,7 +530,7 @@ export async function registerSale(
     }
   }
 
-  const discountCents = couponDiscountCents + pointsDiscountCents;
+  const discountCents = couponDiscountCents + manualDiscountCents + pointsDiscountCents;
   const totalCents = subtotalCents - discountCents;
 
   /**
@@ -657,9 +671,21 @@ export async function registerSale(
 
   // 5. Si la venta vino de un pedido, el pedido queda entregado.
   if (input.orderId) {
+    // Si el pedido no traia nombre o telefono —no todas las clientas los
+    // dejan al pedir por WhatsApp— y aqui si se capturaron, se guardan
+    // tambien en el pedido: sin esto, uno que ella completaba a mano en la
+    // venta se quedaba "Cliente sin nombre" en la lista de Pedidos para
+    // siempre, aunque la venta ya tuviera a quien pertenecia.
+    const contactUpdate: { contactName?: string; contactPhone?: string } = {};
+    if (input.customerName?.trim()) contactUpdate.contactName = input.customerName.trim();
+    if (input.customerPhone?.trim()) {
+      const normalized = normalizePhone(input.customerPhone);
+      if (normalized.ok) contactUpdate.contactPhone = normalized.value;
+    }
+
     await db
       .update(schema.orders)
-      .set({ status: "delivered", updatedAt: new Date().toISOString() })
+      .set({ status: "delivered", updatedAt: new Date().toISOString(), ...contactUpdate })
       .where(and(eq(schema.orders.id, input.orderId), eq(schema.orders.sellerId, sellerId)));
 
     // Y se sueltan sus reservas: el stock ya bajo de verdad, y seguir

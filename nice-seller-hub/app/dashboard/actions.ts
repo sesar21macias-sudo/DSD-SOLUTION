@@ -19,6 +19,7 @@ import {
 } from "@/lib/mutations";
 import { formatMoney, pesosToCents } from "@/lib/format";
 import { NICE_CODE_RE_LOOSE, normalizeNiceCode } from "@/lib/nice-code";
+import { normalizePhone } from "@/lib/phone";
 import { isOrderStatus } from "@/lib/orders";
 import { releaseOrderHolds } from "@/lib/reservations";
 
@@ -230,6 +231,41 @@ export async function setOrderStatus(orderId: number, status: string): Promise<A
   return OK;
 }
 
+/**
+ * Pone o corrige a mano el nombre y teléfono de un pedido.
+ *
+ * Existe porque no todas las clientas los dejan al pedir por WhatsApp, y
+ * hasta ahora la única forma de escribirlos era dentro de "Registrar venta"
+ * —donde se guardan en la venta, no en el pedido—: si ella no llegaba a
+ * terminar esa venta, o solo quería anotar quién es mientras decide, el
+ * pedido se quedaba "Cliente sin nombre" para siempre.
+ */
+export async function updateOrderContact(
+  orderId: number,
+  name: string,
+  phone: string
+): Promise<ActionState> {
+  const { seller } = await requireSeller();
+
+  const cleanName = name.trim().slice(0, 80);
+  if (!cleanName) return { ok: false, error: "Escribe un nombre." };
+
+  const normalized = normalizePhone(phone);
+  if (!normalized.ok) return { ok: false, error: normalized.error ?? "Ese teléfono no se ve válido." };
+
+  const db = await getDb();
+  const res = await db
+    .update(schema.orders)
+    .set({ contactName: cleanName, contactPhone: normalized.value, updatedAt: new Date().toISOString() })
+    .where(and(eq(schema.orders.id, orderId), eq(schema.orders.sellerId, seller.id)))
+    .returning({ id: schema.orders.id });
+
+  if (res.length === 0) return { ok: false, error: "Ese pedido no es tuyo." };
+
+  revalidatePath("/dashboard/orders");
+  return { ok: true, message: "Cliente actualizado" };
+}
+
 // --- Ventas ----------------------------------------------------------------
 
 export async function createSale(_prev: ActionState, form: FormData): Promise<ActionState> {
@@ -263,6 +299,8 @@ export async function createSale(_prev: ActionState, form: FormData): Promise<Ac
     return { ok: false, error: "Escribe cuánto te está dejando de anticipo." };
   }
 
+  const manualDiscountCents = pesosToCents(String(form.get("manualDiscount") ?? "")) ?? 0;
+
   const res = await registerSale(seller.id, {
     lines,
     paymentMethod: String(form.get("paymentMethod") ?? "efectivo"),
@@ -273,6 +311,7 @@ export async function createSale(_prev: ActionState, form: FormData): Promise<Ac
     paidCents: isLayaway ? downPayment : null,
     dueDate: isLayaway ? str(form.get("dueDate"), 10) : null,
     usePoints: isLayaway ? null : numOrNull(form.get("usePoints")),
+    manualDiscountCents,
   });
 
   if (!res.ok) return { ok: false, error: res.error };
@@ -287,7 +326,7 @@ export async function createSale(_prev: ActionState, form: FormData): Promise<Ac
 
   const parts = [res.balanceCents > 0 ? "Apartado registrado" : "Venta registrada"];
   if (res.pointsSpent > 0) parts.push(`−${res.pointsSpent} puntos usados`);
-  else if (res.discountCents > 0) parts.push("cupón aplicado");
+  else if (res.discountCents > 0) parts.push(`descuento ${formatMoney(res.discountCents)}`);
   if (res.balanceCents > 0) parts.push(`saldo ${formatMoney(res.balanceCents)}`);
   if (res.pointsEarned > 0) parts.push(`+${res.pointsEarned} puntos`);
 

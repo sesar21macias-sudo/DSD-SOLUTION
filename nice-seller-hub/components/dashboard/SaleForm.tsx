@@ -52,6 +52,7 @@ export function SaleForm({
   } | null>(null);
   const [usePoints, setUsePoints] = useState(false);
   const [pointsToUse, setPointsToUse] = useState("");
+  const [manualDiscount, setManualDiscount] = useState("");
 
   useEffect(() => {
     if (state.ok && state.message) {
@@ -101,6 +102,13 @@ export function SaleForm({
     ? discountFor(coupon.kind, coupon.value, subtotalCents)
     : 0;
 
+  // Un descuento a mano — precio de amiga, pieza con un detalle. Se topa
+  // contra lo que queda: nunca deja el total en negativo.
+  const manualDiscountCents = Math.max(
+    0,
+    Math.min(pesosToCents(manualDiscount) ?? 0, Math.max(0, subtotalCents - couponDiscountCents))
+  );
+
   // Usar puntos solo aplica en pago completo: en abonos el servidor los
   // ignora, así que aquí tampoco se ofrecen — mostrarlos sería prometer algo
   // que no va a pasar.
@@ -108,7 +116,10 @@ export function SaleForm({
   const maxUsablePoints = canUsePoints
     ? Math.min(
         pointsBalance!.points,
-        Math.floor(Math.max(0, subtotalCents - couponDiscountCents) / Math.max(1, pointsBalance!.centsPerPoint))
+        Math.floor(
+          Math.max(0, subtotalCents - couponDiscountCents - manualDiscountCents) /
+            Math.max(1, pointsBalance!.centsPerPoint)
+        )
       )
     : 0;
   const appliedPoints =
@@ -117,7 +128,7 @@ export function SaleForm({
       : 0;
   const pointsDiscountCents = appliedPoints * (pointsBalance?.centsPerPoint ?? 0);
 
-  const discountCents = couponDiscountCents + pointsDiscountCents;
+  const discountCents = couponDiscountCents + manualDiscountCents + pointsDiscountCents;
   const totalCents = subtotalCents - discountCents;
 
   // El saldo se enseña mientras escribe el anticipo. El que vale lo calcula el
@@ -282,6 +293,19 @@ export function SaleForm({
         </ul>
       </section>
 
+      {chosen.length > 0 && (
+        <Field label="Descuento" hint="Opcional. Precio de amiga, pieza con un detalle, lo que sea.">
+          <Input
+            name="manualDiscount"
+            value={manualDiscount}
+            onChange={(e) => setManualDiscount(e.target.value)}
+            placeholder="0"
+            inputMode="decimal"
+            maxLength={12}
+          />
+        </Field>
+      )}
+
       <div className="rounded-2xl bg-ink px-5 py-4 text-white">
         {discountCents > 0 && (
           <>
@@ -295,6 +319,12 @@ export function SaleForm({
                   Cupón {coupon?.code} · {coupon?.name}
                 </span>
                 <span className="shrink-0 tabular-nums">−{formatMoney(couponDiscountCents)}</span>
+              </div>
+            )}
+            {manualDiscountCents > 0 && (
+              <div className="mt-1 flex items-baseline justify-between text-[13px] text-gold">
+                <span>Descuento</span>
+                <span className="tabular-nums">−{formatMoney(manualDiscountCents)}</span>
               </div>
             )}
             {pointsDiscountCents > 0 && (
