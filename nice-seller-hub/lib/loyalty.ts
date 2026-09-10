@@ -3,11 +3,13 @@ import "server-only";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { LoyaltyProgram, LoyaltyReward } from "@/db/schema";
+import { normalizePhone } from "./phone";
 import {
   DEFAULT_CENTS_PER_POINT,
   MAX_CENTS_PER_POINT,
   MIN_CENTS_PER_POINT,
   pointsForSale,
+  tierFor,
   type RewardKind,
 } from "./loyalty-rules";
 
@@ -204,7 +206,7 @@ export async function getAccount(
  * El acumulado historico solo sube: es lo que define el nivel, y bajarlo al
  * canjear haria que una clienta perdiera su nivel justo por usar el club.
  */
-async function movePoints(
+export async function movePoints(
   accountId: number,
   delta: number,
   type: string,
@@ -280,6 +282,99 @@ export async function awardWelcomePoints(sellerId: number, customerId: number): 
 
   await movePoints(account.id, program.welcomePoints, "welcome", "Puntos de bienvenida");
   return program.welcomePoints;
+}
+
+/**
+ * Cuánto tiene acumulado un teléfono con esta tienda, para verlo mientras se
+ * registra una venta — antes de que exista una cuenta que consultar por id.
+ *
+ * `null` cuando no hay nada que ofrecer (club apagado, telefono nuevo, o
+ * cuenta en cero): la pantalla que lo usa no tiene por que distinguir esos
+ * tres casos, en los tres se ve igual — sin puntos que usar.
+ */
+export async function getPointsBalanceByPhone(
+  sellerId: number,
+  phone: string
+): Promise<{ points: number; tierName: string; centsPerPoint: number } | null> {
+  const program = await getProgram(sellerId);
+  if (!program.enabled) return null;
+
+  const normalized = normalizePhone(phone);
+  if (!normalized.ok) return null;
+
+  const db = await getDb();
+  const customerRows = await db
+    .select({ id: schema.customers.id })
+    .from(schema.customers)
+    .where(eq(schema.customers.phone, normalized.value))
+    .limit(1);
+
+  const customerId = customerRows[0]?.id;
+  if (!customerId) return null;
+
+  const account = await db
+    .select({ points: schema.loyaltyAccounts.points, lifetimePoints: schema.loyaltyAccounts.lifetimePoints })
+    .from(schema.loyaltyAccounts)
+    .where(
+      and(eq(schema.loyaltyAccounts.sellerId, sellerId), eq(schema.loyaltyAccounts.customerId, customerId))
+    )
+    .limit(1);
+
+  const acc = account[0];
+  if (!acc || acc.points <= 0) return null;
+
+  return { points: acc.points, tierName: tierFor(acc.lifetimePoints).name, centsPerPoint: program.centsPerPoint };
+}
+
+/**
+ * Usa puntos como si fueran pesos, al mismo tipo de cambio con el que se
+ * ganan (`centsPerPoint`) — sin pasar por una recompensa ni emitir un cupón.
+ *
+ * Existe aparte de `redeemReward` porque es otra decision: una recompensa es
+ * algo que la distribuidora ofrece y la clienta canjea sola desde su enlace;
+ * esto es la distribuidora, cobrando en persona, restando puntos del total
+ * ahi mismo. La comprobacion de saldo va en el mismo UPDATE que lo descuenta
+ * por la misma razon que en `redeemReward`: entre leer el saldo y descontarlo
+ * no puede colarse otra cosa que lo gaste primero.
+ */
+export async function spendPointsAsCash(
+  sellerId: number,
+  customerId: number,
+  points: number,
+  saleId: number | null
+): Promise<{ ok: true; discountCents: number } | { ok: false; error: string }> {
+  if (points <= 0) return { ok: false, error: "Escribe cuántos puntos usar." };
+
+  const program = await getProgram(sellerId);
+  if (!program.enabled) return { ok: false, error: "Este club no está activo." };
+
+  const db = await getDb();
+  const account = await getAccount(sellerId, customerId);
+  if (account.id === 0 || account.points < points) {
+    return { ok: false, error: "No tiene suficientes puntos." };
+  }
+
+  const updated = await db
+    .update(schema.loyaltyAccounts)
+    .set({ points: sql`${schema.loyaltyAccounts.points} - ${points}`, updatedAt: new Date().toISOString() })
+    .where(
+      and(eq(schema.loyaltyAccounts.id, account.id), sql`${schema.loyaltyAccounts.points} >= ${points}`)
+    )
+    .returning({ id: schema.loyaltyAccounts.id });
+
+  if (updated.length === 0) {
+    return { ok: false, error: "Sus puntos cambiaron. Vuelve a intentarlo." };
+  }
+
+  await db.insert(schema.loyaltyTransactions).values({
+    accountId: account.id,
+    type: "spend",
+    points: -points,
+    description: "Usados como pago",
+    referenceId: saleId,
+  });
+
+  return { ok: true, discountCents: points * program.centsPerPoint };
 }
 
 /** Ajuste a mano desde el panel: un regalo, una correccion, una disculpa. */

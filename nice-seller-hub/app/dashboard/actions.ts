@@ -272,6 +272,7 @@ export async function createSale(_prev: ActionState, form: FormData): Promise<Ac
     orderId: numOrNull(form.get("orderId")),
     paidCents: isLayaway ? downPayment : null,
     dueDate: isLayaway ? str(form.get("dueDate"), 10) : null,
+    usePoints: isLayaway ? null : numOrNull(form.get("usePoints")),
   });
 
   if (!res.ok) return { ok: false, error: res.error };
@@ -285,7 +286,8 @@ export async function createSale(_prev: ActionState, form: FormData): Promise<Ac
   revalidatePath("/dashboard/loyalty");
 
   const parts = [res.balanceCents > 0 ? "Apartado registrado" : "Venta registrada"];
-  if (res.discountCents > 0) parts.push("cupón aplicado");
+  if (res.pointsSpent > 0) parts.push(`−${res.pointsSpent} puntos usados`);
+  else if (res.discountCents > 0) parts.push("cupón aplicado");
   if (res.balanceCents > 0) parts.push(`saldo ${formatMoney(res.balanceCents)}`);
   if (res.pointsEarned > 0) parts.push(`+${res.pointsEarned} puntos`);
 

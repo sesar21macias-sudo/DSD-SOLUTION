@@ -44,6 +44,14 @@ export function SaleForm({
   const [query, setQuery] = useState("");
   const [payMode, setPayMode] = useState<"completo" | "abonos">("completo");
   const [downPayment, setDownPayment] = useState("");
+  const [customerPhone, setCustomerPhone] = useState(contact?.phone ?? "");
+  const [pointsBalance, setPointsBalance] = useState<{
+    points: number;
+    tierName: string;
+    centsPerPoint: number;
+  } | null>(null);
+  const [usePoints, setUsePoints] = useState(false);
+  const [pointsToUse, setPointsToUse] = useState("");
 
   useEffect(() => {
     if (state.ok && state.message) {
@@ -51,6 +59,33 @@ export function SaleForm({
       router.push("/dashboard/sales");
     }
   }, [state, router, toast]);
+
+  // Se busca el saldo mientras escribe el teléfono, para poder ofrecer "usar
+  // puntos" sin que ella tenga que ir primero a buscarla en Clientes.
+  useEffect(() => {
+    const phone = customerPhone.trim();
+    if (phone.length < 8) {
+      setPointsBalance(null);
+      return;
+    }
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/dashboard/customers/points?phone=${encodeURIComponent(phone)}`);
+        const data = (await res.json()) as { ok: boolean; balance: typeof pointsBalance };
+        setPointsBalance(data.ok ? data.balance : null);
+      } catch {
+        setPointsBalance(null);
+      }
+    }, 500);
+    return () => clearTimeout(id);
+  }, [customerPhone]);
+
+  useEffect(() => {
+    if (!pointsBalance) {
+      setUsePoints(false);
+      setPointsToUse("");
+    }
+  }, [pointsBalance]);
 
   const byId = useMemo(() => new Map(items.map((i) => [i.inventoryId, i])), [items]);
 
@@ -62,9 +97,27 @@ export function SaleForm({
 
   // El descuento se enseña aqui, pero el que se cobra lo vuelve a calcular el
   // servidor con el cupon leido de la base.
-  const discountCents = coupon
+  const couponDiscountCents = coupon
     ? discountFor(coupon.kind, coupon.value, subtotalCents)
     : 0;
+
+  // Usar puntos solo aplica en pago completo: en abonos el servidor los
+  // ignora, así que aquí tampoco se ofrecen — mostrarlos sería prometer algo
+  // que no va a pasar.
+  const canUsePoints = payMode === "completo" && !!pointsBalance;
+  const maxUsablePoints = canUsePoints
+    ? Math.min(
+        pointsBalance!.points,
+        Math.floor(Math.max(0, subtotalCents - couponDiscountCents) / Math.max(1, pointsBalance!.centsPerPoint))
+      )
+    : 0;
+  const appliedPoints =
+    canUsePoints && usePoints
+      ? Math.max(0, Math.min(maxUsablePoints, Math.floor(Number(pointsToUse) || 0)))
+      : 0;
+  const pointsDiscountCents = appliedPoints * (pointsBalance?.centsPerPoint ?? 0);
+
+  const discountCents = couponDiscountCents + pointsDiscountCents;
   const totalCents = subtotalCents - discountCents;
 
   // El saldo se enseña mientras escribe el anticipo. El que vale lo calcula el
@@ -109,6 +162,19 @@ export function SaleForm({
               >
                 <input type="hidden" name="inventoryId" value={item.inventoryId} />
                 <input type="hidden" name="quantity" value={quantity} />
+
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="h-11 w-11 shrink-0 rounded-lg border border-line object-cover"
+                  />
+                ) : (
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-dashed border-line-strong text-[9px] text-mute-soft">
+                    Sin foto
+                  </span>
+                )}
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-medium">{item.name}</p>
@@ -183,6 +249,19 @@ export function SaleForm({
                   disabled={already >= item.stock}
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-line/50 disabled:opacity-40"
                 >
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="h-9 w-9 shrink-0 rounded-lg border border-line object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-dashed border-line-strong text-[8px] text-mute-soft">
+                      Sin foto
+                    </span>
+                  )}
+
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-medium">{item.name}</p>
                     <p className="text-[11px] tabular-nums text-mute">
@@ -210,12 +289,20 @@ export function SaleForm({
               <span>Subtotal</span>
               <span className="tabular-nums">{formatMoney(subtotalCents)}</span>
             </div>
-            <div className="mt-1 flex items-baseline justify-between text-[13px] text-gold">
-              <span className="truncate pr-3">
-                Cupón {coupon?.code} · {coupon?.name}
-              </span>
-              <span className="shrink-0 tabular-nums">−{formatMoney(discountCents)}</span>
-            </div>
+            {couponDiscountCents > 0 && (
+              <div className="mt-1 flex items-baseline justify-between text-[13px] text-gold">
+                <span className="truncate pr-3">
+                  Cupón {coupon?.code} · {coupon?.name}
+                </span>
+                <span className="shrink-0 tabular-nums">−{formatMoney(couponDiscountCents)}</span>
+              </div>
+            )}
+            {pointsDiscountCents > 0 && (
+              <div className="mt-1 flex items-baseline justify-between text-[13px] text-gold">
+                <span>{appliedPoints} puntos usados</span>
+                <span className="tabular-nums">−{formatMoney(pointsDiscountCents)}</span>
+              </div>
+            )}
             <div className="my-3 border-t border-white/10" />
           </>
         )}
@@ -319,11 +406,64 @@ export function SaleForm({
             name="customerPhone"
             placeholder="656 123 4567"
             inputMode="tel"
-            defaultValue={contact?.phone ?? ""}
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
             required={payMode === "abonos"}
             maxLength={20}
           />
         </Field>
+
+        {canUsePoints && (
+          <div className="rounded-xl border border-gold/30 bg-gold-soft p-4">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={usePoints}
+                onChange={(e) => {
+                  setUsePoints(e.target.checked);
+                  if (e.target.checked && !pointsToUse) {
+                    setPointsToUse(String(maxUsablePoints));
+                  }
+                }}
+                className="mt-0.5 h-4 w-4 accent-gold"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-medium">
+                  Usar puntos como pago — tiene {pointsBalance!.points} ({pointsBalance!.tierName})
+                </span>
+                <span className="block text-[12px] text-mute">
+                  Cada punto vale lo mismo que cuando lo ganó. Puede usar hasta{" "}
+                  {formatMoney(maxUsablePoints * pointsBalance!.centsPerPoint)} de esta compra.
+                </span>
+              </span>
+            </label>
+
+            {usePoints && (
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  name="usePoints"
+                  type="number"
+                  min={0}
+                  max={maxUsablePoints}
+                  value={pointsToUse}
+                  onChange={(e) => setPointsToUse(e.target.value)}
+                  inputMode="numeric"
+                  className="h-10 w-28 rounded-lg border border-line-strong bg-surface px-3 text-[14px] tabular-nums focus:border-ink focus:outline-none"
+                />
+                <span className="text-[13px] text-mute">
+                  puntos · {formatMoney(pointsDiscountCents)} de descuento
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPointsToUse(String(maxUsablePoints))}
+                  className="ml-auto text-[12px] font-medium text-ink-soft underline underline-offset-2"
+                >
+                  Usar el máximo
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <Field label={payMode === "abonos" ? "Cómo te dejó el anticipo" : "Forma de pago"}>
           <Select name="paymentMethod" defaultValue="efectivo">

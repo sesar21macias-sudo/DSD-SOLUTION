@@ -461,6 +461,13 @@ export async function getCategoryBreakdown(
 
 // --- Pedidos ---------------------------------------------------------------
 
+export interface OrderItemSummary {
+  name: string;
+  code: string;
+  imageUrl: string | null;
+  quantity: number;
+}
+
 export interface OrderSummary {
   id: number;
   orderNumber: string;
@@ -470,6 +477,7 @@ export interface OrderSummary {
   totalCents: number;
   createdAt: string;
   itemCount: number;
+  items: OrderItemSummary[];
 }
 
 export async function listOrders(sellerId: number, status?: string): Promise<OrderSummary[]> {
@@ -477,7 +485,7 @@ export async function listOrders(sellerId: number, status?: string): Promise<Ord
   const conditions = [eq(schema.orders.sellerId, sellerId)];
   if (status) conditions.push(eq(schema.orders.status, status));
 
-  return db
+  const orders = await db
     .select({
       id: schema.orders.id,
       orderNumber: schema.orders.orderNumber,
@@ -492,6 +500,38 @@ export async function listOrders(sellerId: number, status?: string): Promise<Ord
     .where(and(...conditions))
     .orderBy(desc(schema.orders.createdAt))
     .limit(100);
+
+  if (orders.length === 0) return [];
+
+  // La foto es la de hoy en el catálogo, no la que tenía cuando se hizo el
+  // pedido: si se corrigió después de estar mal o sin ella, aquí ya se ve
+  // bien — es la misma pieza física.
+  const orderIds = orders.map((o) => o.id);
+  const itemRows = await db
+    .select({
+      orderId: schema.orderItems.orderId,
+      quantity: schema.orderItems.quantity,
+      nameSnapshot: schema.orderItems.nameSnapshot,
+      codeSnapshot: schema.orderItems.codeSnapshot,
+      imageUrl: schema.products.imageUrl,
+    })
+    .from(schema.orderItems)
+    .leftJoin(schema.products, eq(schema.products.id, schema.orderItems.productId))
+    .where(inArray(schema.orderItems.orderId, orderIds));
+
+  const itemsByOrder = new Map<number, OrderItemSummary[]>();
+  for (const row of itemRows) {
+    const list = itemsByOrder.get(row.orderId) ?? [];
+    list.push({
+      name: row.nameSnapshot,
+      code: row.codeSnapshot,
+      imageUrl: row.imageUrl,
+      quantity: row.quantity,
+    });
+    itemsByOrder.set(row.orderId, list);
+  }
+
+  return orders.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] }));
 }
 
 // --- Ventas ----------------------------------------------------------------

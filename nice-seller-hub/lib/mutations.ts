@@ -7,7 +7,10 @@ import {
   awardPointsForSale,
   discountFor,
   findAvailableRedemption,
+  getAccount,
+  getProgram,
   markRedemptionUsed,
+  spendPointsAsCash,
 } from "./loyalty";
 import { MAX_DISCOUNT_PCT, costFromCatalog } from "./costing";
 import { releaseOrderHolds } from "./reservations";
@@ -350,6 +353,12 @@ export interface RegisterSaleInput {
   paidCents?: number | null;
   /** Fecha limite acordada, solo para ventas a abonos. */
   dueDate?: string | null;
+  /**
+   * Puntos que quiere usar como pago, al tipo de cambio del club
+   * (`centsPerPoint`). Solo aplica en pago completo: en abonos no hay un
+   * total final todavia contra que descontarlos.
+   */
+  usePoints?: number | null;
 }
 
 export type RegisterSaleResult =
@@ -361,6 +370,7 @@ export type RegisterSaleResult =
       paidCents: number;
       balanceCents: number;
       pointsEarned: number;
+      pointsSpent: number;
     }
   | { ok: false; error: string };
 
@@ -451,7 +461,7 @@ export async function registerSale(
    * del pedido, para que un pedido viejo no pueda arrastrar un descuento que
    * ya se uso.
    */
-  let discountCents = 0;
+  let couponDiscountCents = 0;
   let redemptionCode: string | null = null;
 
   if (input.orderId) {
@@ -465,12 +475,48 @@ export async function registerSale(
     if (code) {
       const redemption = await findAvailableRedemption(sellerId, code);
       if (redemption) {
-        discountCents = discountFor(redemption.kind, redemption.value, subtotalCents);
+        couponDiscountCents = discountFor(redemption.kind, redemption.value, subtotalCents);
         redemptionCode = redemption.code;
       }
     }
   }
 
+  // El cliente se resuelve antes del total porque usar puntos como pago
+  // depende de saber a quien pertenecen — y de paso queda listo para
+  // acumular los que gane esta misma compra.
+  let customerId: number | null = null;
+  if (input.customerName?.trim() && input.customerPhone?.trim()) {
+    const c = await findOrCreateCustomer(sellerId, input.customerName, input.customerPhone);
+    if (!c.ok) return { ok: false, error: c.error };
+    customerId = c.customerId;
+  }
+
+  /**
+   * Puntos usados como pago, al tipo de cambio del club — solo en pago
+   * completo: en abonos no hay un total final todavia contra que
+   * descontarlos, y ademas se puede cancelar antes de terminar de pagar.
+   *
+   * El saldo se vuelve a leer y a topar aqui, en el servidor: lo que la
+   * pantalla mostraba pudo quedar viejo mientras ella armaba la venta.
+   */
+  const isFullPayment = input.paidCents === undefined || input.paidCents === null;
+  const requestedPoints = Math.floor(Number(input.usePoints ?? 0));
+  let usedPoints = 0;
+  let pointsDiscountCents = 0;
+
+  if (isFullPayment && requestedPoints > 0 && customerId !== null) {
+    const program = await getProgram(sellerId);
+    if (program.enabled) {
+      const account = await getAccount(sellerId, customerId);
+      const remainingAfterCoupon = Math.max(0, subtotalCents - couponDiscountCents);
+      const maxByBalance = Math.min(requestedPoints, account.points);
+      const maxByTotal = Math.floor(remainingAfterCoupon / Math.max(1, program.centsPerPoint));
+      usedPoints = Math.max(0, Math.min(maxByBalance, maxByTotal));
+      pointsDiscountCents = usedPoints * program.centsPerPoint;
+    }
+  }
+
+  const discountCents = couponDiscountCents + pointsDiscountCents;
   const totalCents = subtotalCents - discountCents;
 
   /**
@@ -487,13 +533,6 @@ export async function registerSale(
       ? totalCents
       : Math.min(totalCents, Math.max(0, Math.round(requestedPaid)));
   const status = paidCents >= totalCents ? "paid" : "partial";
-
-  let customerId: number | null = null;
-  if (input.customerName?.trim() && input.customerPhone?.trim()) {
-    const c = await findOrCreateCustomer(sellerId, input.customerName, input.customerPhone);
-    if (!c.ok) return { ok: false, error: c.error };
-    customerId = c.customerId;
-  }
 
   // Una venta a abonos sin cliente identificado no se puede cobrar despues:
   // no habria a quien buscar ni a que telefono escribirle.
@@ -598,7 +637,15 @@ export async function registerSale(
    * seria peor que no haberlos dado.
    */
   let pointsEarned = 0;
+  let pointsSpent = 0;
   if (customerId !== null && status === "paid") {
+    // El descuento ya se calculo arriba; aqui se descuenta de verdad, con el
+    // mismo candado de `redeemReward` contra usarlo dos veces.
+    if (usedPoints > 0) {
+      const spent = await spendPointsAsCash(sellerId, customerId, usedPoints, saleId);
+      if (spent.ok) pointsSpent = usedPoints;
+    }
+
     pointsEarned = await awardPointsForSale(sellerId, customerId, saleId, totalCents);
     if (pointsEarned > 0) {
       await db
@@ -636,6 +683,7 @@ export async function registerSale(
     paidCents,
     balanceCents: totalCents - paidCents,
     pointsEarned,
+    pointsSpent,
   };
 }
 
@@ -809,6 +857,73 @@ export async function cancelSale(
     .update(schema.sales)
     .set({ status: "cancelled" })
     .where(and(eq(schema.sales.id, saleId), eq(schema.sales.sellerId, sellerId)));
+
+  /**
+   * Puntos: deshacer tanto lo que ganó como lo que gastó en ella.
+   *
+   * Antes esto no pasaba — cancelar una venta pagada dejaba a la clienta con
+   * puntos de una compra que ya no existe, o sin los que uso como pago en una
+   * venta que ya no se cobro. Se revierte aparte de `movePoints`: lo ganado
+   * tambien tiene que bajar del acumulado historico —la venta nunca paso—,
+   * cosa que `movePoints` deliberadamente no hace al restar puntos; y lo
+   * gastado se devuelve sin tocar el acumulado, porque nunca se le quito de
+   * ahi al gastarlo.
+   */
+  if (sale.customerId) {
+    const account = await getAccount(sellerId, sale.customerId);
+
+    if (account.id !== 0 && sale.pointsAwarded > 0) {
+      await db
+        .update(schema.loyaltyAccounts)
+        .set({
+          points: sql`max(0, ${schema.loyaltyAccounts.points} - ${sale.pointsAwarded})`,
+          lifetimePoints: sql`max(0, ${schema.loyaltyAccounts.lifetimePoints} - ${sale.pointsAwarded})`,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(schema.loyaltyAccounts.id, account.id));
+
+      await db.insert(schema.loyaltyTransactions).values({
+        accountId: account.id,
+        type: "adjust",
+        points: -sale.pointsAwarded,
+        description: "Venta cancelada",
+        referenceId: saleId,
+      });
+    }
+
+    if (account.id !== 0) {
+      const spentRows = await db
+        .select({ points: schema.loyaltyTransactions.points })
+        .from(schema.loyaltyTransactions)
+        .where(
+          and(
+            eq(schema.loyaltyTransactions.accountId, account.id),
+            eq(schema.loyaltyTransactions.type, "spend"),
+            eq(schema.loyaltyTransactions.referenceId, saleId)
+          )
+        );
+      // Los puntos gastados se guardan en negativo; sumarlos da lo que se usó.
+      const spent = -spentRows.reduce((s, r) => s + r.points, 0);
+
+      if (spent > 0) {
+        await db
+          .update(schema.loyaltyAccounts)
+          .set({
+            points: sql`${schema.loyaltyAccounts.points} + ${spent}`,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(schema.loyaltyAccounts.id, account.id));
+
+        await db.insert(schema.loyaltyTransactions).values({
+          accountId: account.id,
+          type: "adjust",
+          points: spent,
+          description: "Venta cancelada — puntos devueltos",
+          referenceId: saleId,
+        });
+      }
+    }
+  }
 
   return { ok: true };
 }

@@ -67,9 +67,6 @@ export function OrdersList({ orders }: { orders: OrderSummary[] }) {
                 <p className="mt-0.5 text-[11px] tabular-nums text-mute">
                   {o.orderNumber} · {formatDateTime(o.createdAt)}
                 </p>
-                <p className="mt-0.5 text-[12px] text-mute">
-                  {o.itemCount} {o.itemCount === 1 ? "pieza" : "piezas"}
-                </p>
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-[17px] font-medium tabular-nums">{formatMoney(o.totalCents)}</p>
@@ -82,6 +79,33 @@ export function OrdersList({ orders }: { orders: OrderSummary[] }) {
                 </span>
               </div>
             </div>
+
+            {/* Las fotos son para encontrar la pieza física rápido, no para
+                lucir bonitas — por eso van chicas y en fila, como una lista de
+                empaque, en vez de una galería. */}
+            <ul className="mt-3 space-y-1.5">
+              {o.items.map((it, i) => (
+                <li key={i} className="flex items-center gap-2.5">
+                  {it.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={it.imageUrl}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-lg border border-line object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-dashed border-line-strong text-[9px] text-mute-soft">
+                      Sin foto
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px]">{it.name}</p>
+                    <p className="text-[11px] tabular-nums text-mute">{it.code}</p>
+                  </div>
+                  <span className="shrink-0 text-[12px] tabular-nums text-mute">×{it.quantity}</span>
+                </li>
+              ))}
+            </ul>
 
             <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-line pt-3.5">
               <select
