@@ -14,6 +14,7 @@ import {
   removeFromInventory,
   updateInventory,
   updateMessageTemplates,
+  updateOrderItems,
   updateProductImage,
   updateSellerProfile,
 } from "@/lib/mutations";
@@ -264,6 +265,25 @@ export async function updateOrderContact(
 
   revalidatePath("/dashboard/orders");
   return { ok: true, message: "Cliente actualizado" };
+}
+
+/**
+ * Cambia las piezas de un pedido antes de convertirlo en venta: agregar,
+ * quitar, cambiar cantidades. El pedido no descuenta inventario, así que
+ * editarlo tampoco lo toca.
+ */
+export async function updateOrderItemsAction(
+  orderId: number,
+  lines: { inventoryId: number; quantity: number }[]
+): Promise<ActionState> {
+  const { seller } = await requireSeller();
+
+  const res = await updateOrderItems(seller.id, orderId, lines);
+  if (!res.ok) return { ok: false, error: res.error };
+
+  revalidatePath("/dashboard/orders");
+  revalidatePath(`/dashboard/orders/${orderId}`);
+  return { ok: true, message: "Pedido actualizado" };
 }
 
 // --- Ventas ----------------------------------------------------------------

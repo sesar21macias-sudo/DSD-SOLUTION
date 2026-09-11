@@ -331,6 +331,108 @@ export async function findOrCreateCustomer(
   return { ok: true, customerId };
 }
 
+// --- Pedidos -----------------------------------------------------------------
+
+export interface OrderLine {
+  inventoryId: number;
+  quantity: number;
+}
+
+/**
+ * Cambia las piezas de un pedido antes de convertirlo en venta.
+ *
+ * Un pedido no mueve inventario —es una intencion, no un compromiso—, asi que
+ * editarlo no toca existencias ni apartados: solo corrige lo que va a ver la
+ * distribuidora cuando lo confirme o registre la venta. Si el pedido traia un
+ * cupon vigente, el descuento se vuelve a calcular sobre el nuevo subtotal.
+ *
+ * Un pedido ya entregado o cancelado no se toca: ese ya se cerro.
+ */
+export async function updateOrderItems(
+  sellerId: number,
+  orderId: number,
+  lines: OrderLine[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const db = await getDb();
+
+  const orderRows = await db
+    .select()
+    .from(schema.orders)
+    .where(and(eq(schema.orders.id, orderId), eq(schema.orders.sellerId, sellerId)))
+    .limit(1);
+
+  const order = orderRows[0];
+  if (!order) return { ok: false, error: "Ese pedido no es tuyo." };
+  if (order.status === "delivered" || order.status === "cancelled") {
+    return { ok: false, error: "Ese pedido ya se cerró y no se puede editar." };
+  }
+
+  const cleanLines = lines
+    .map((l) => ({ inventoryId: Number(l.inventoryId), quantity: Math.floor(Number(l.quantity)) }))
+    .filter((l) => l.inventoryId > 0 && l.quantity > 0);
+
+  if (cleanLines.length === 0) return { ok: false, error: "El pedido necesita al menos una pieza." };
+
+  const inv = await db
+    .select({
+      inventoryId: schema.sellerInventory.id,
+      productId: schema.products.id,
+      name: schema.products.name,
+      code: schema.products.niceCode,
+      priceCents: schema.sellerInventory.priceCents,
+    })
+    .from(schema.sellerInventory)
+    .innerJoin(schema.products, eq(schema.products.id, schema.sellerInventory.productId))
+    .where(eq(schema.sellerInventory.sellerId, sellerId));
+
+  const byId = new Map(inv.map((i) => [i.inventoryId, i]));
+
+  const items: {
+    productId: number;
+    nameSnapshot: string;
+    codeSnapshot: string;
+    quantity: number;
+    unitPriceCents: number;
+    subtotalCents: number;
+  }[] = [];
+
+  for (const line of cleanLines) {
+    const item = byId.get(line.inventoryId);
+    if (!item) continue; // Pieza que ya no esta en su inventario: se omite sola.
+    const quantity = Math.min(line.quantity, 99);
+    items.push({
+      productId: item.productId,
+      nameSnapshot: item.name,
+      codeSnapshot: item.code,
+      quantity,
+      unitPriceCents: item.priceCents,
+      subtotalCents: item.priceCents * quantity,
+    });
+  }
+
+  if (items.length === 0) return { ok: false, error: "Ninguna de esas piezas sigue en tu inventario." };
+
+  const subtotalCents = items.reduce((s, i) => s + i.subtotalCents, 0);
+
+  let discountCents = 0;
+  if (order.redemptionCode) {
+    const redemption = await findAvailableRedemption(sellerId, order.redemptionCode);
+    if (redemption) discountCents = discountFor(redemption.kind, redemption.value, subtotalCents);
+  }
+
+  const totalCents = subtotalCents - discountCents;
+
+  await db.delete(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
+  await db.insert(schema.orderItems).values(items.map((i) => ({ orderId, ...i })));
+
+  await db
+    .update(schema.orders)
+    .set({ subtotalCents, discountCents, totalCents, updatedAt: new Date().toISOString() })
+    .where(eq(schema.orders.id, orderId));
+
+  return { ok: true };
+}
+
 // --- Ventas ----------------------------------------------------------------
 
 export interface SaleLine {

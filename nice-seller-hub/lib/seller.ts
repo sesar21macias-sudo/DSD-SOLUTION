@@ -534,6 +534,80 @@ export async function listOrders(sellerId: number, status?: string): Promise<Ord
   return orders.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] }));
 }
 
+export interface OrderDetail {
+  id: number;
+  orderNumber: string;
+  status: string;
+  contactName: string | null;
+  contactPhone: string | null;
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
+  createdAt: string;
+  items: {
+    /** Null cuando la pieza ya no está en su inventario — no se puede editar, solo ver. */
+    inventoryId: number | null;
+    name: string;
+    code: string;
+    imageUrl: string | null;
+    quantity: number;
+  }[];
+}
+
+/** El detalle de un pedido para editarlo, acotado a esta tienda. */
+export async function getOrderDetail(sellerId: number, orderId: number): Promise<OrderDetail | null> {
+  const db = await getDb();
+
+  const rows = await db
+    .select({
+      id: schema.orders.id,
+      orderNumber: schema.orders.orderNumber,
+      status: schema.orders.status,
+      contactName: schema.orders.contactName,
+      contactPhone: schema.orders.contactPhone,
+      subtotalCents: schema.orders.subtotalCents,
+      discountCents: schema.orders.discountCents,
+      totalCents: schema.orders.totalCents,
+      createdAt: schema.orders.createdAt,
+    })
+    .from(schema.orders)
+    .where(and(eq(schema.orders.id, orderId), eq(schema.orders.sellerId, sellerId)))
+    .limit(1);
+
+  const order = rows[0];
+  if (!order) return null;
+
+  const itemRows = await db
+    .select({
+      inventoryId: schema.sellerInventory.id,
+      quantity: schema.orderItems.quantity,
+      nameSnapshot: schema.orderItems.nameSnapshot,
+      codeSnapshot: schema.orderItems.codeSnapshot,
+      imageUrl: schema.products.imageUrl,
+    })
+    .from(schema.orderItems)
+    .leftJoin(schema.products, eq(schema.products.id, schema.orderItems.productId))
+    .leftJoin(
+      schema.sellerInventory,
+      and(
+        eq(schema.sellerInventory.productId, schema.orderItems.productId),
+        eq(schema.sellerInventory.sellerId, sellerId)
+      )
+    )
+    .where(eq(schema.orderItems.orderId, orderId));
+
+  return {
+    ...order,
+    items: itemRows.map((r) => ({
+      inventoryId: r.inventoryId,
+      name: r.nameSnapshot,
+      code: r.codeSnapshot,
+      imageUrl: r.imageUrl,
+      quantity: r.quantity,
+    })),
+  };
+}
+
 // --- Ventas ----------------------------------------------------------------
 
 export interface SaleSummary {

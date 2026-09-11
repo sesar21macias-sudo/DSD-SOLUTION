@@ -223,9 +223,20 @@ function OrderCard({
           </a>
         )}
 
+        {o.status !== "delivered" && o.status !== "cancelled" && (
+          <Link
+            href={`/dashboard/orders/${o.id}`}
+            className="ml-auto inline-flex h-9 items-center rounded-lg border border-line-strong px-3.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-ink/25"
+          >
+            Editar pedido
+          </Link>
+        )}
+
         <Link
           href={`/dashboard/sales/new?order=${o.id}`}
-          className="ml-auto inline-flex h-9 items-center rounded-lg bg-ink px-3.5 text-[13px] font-medium text-white transition-transform active:scale-[0.98]"
+          className={`inline-flex h-9 items-center rounded-lg bg-ink px-3.5 text-[13px] font-medium text-white transition-transform active:scale-[0.98] ${
+            o.status === "delivered" || o.status === "cancelled" ? "ml-auto" : ""
+          }`}
         >
           Registrar venta
         </Link>
