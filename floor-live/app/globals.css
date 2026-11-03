@@ -1,0 +1,416 @@
+@import "tailwindcss";
+@import "./tv.css";
+@import "./brand.css";
+
+/*
+ * Beaufort Floor Live — pantallas de planta.
+ * Dos escenas: (1) una tele en la pared del piso de producción, leída a 4-6 m
+ * de distancia en 5 segundos, con luz de fábrica encima; (2) el panel donde el
+ * gerente de planta sube el Excel y escribe avisos desde la laptop o el teléfono.
+ * Negro profundo (chroma 0) para que el rojo sea la única luz de la sala.
+ * El semáforo (verde/ámbar/rojo) siempre va con palabra e ícono, nunca solo color.
+ */
+@theme {
+  --color-bg: oklch(0.118 0 0);
+  --color-surface: oklch(0.158 0 0);
+  --color-surface-2: oklch(0.198 0 0);
+  --color-surface-3: oklch(0.245 0 0);
+  --color-line: oklch(1 0 0 / 0.075);
+  --color-line-strong: oklch(1 0 0 / 0.15);
+
+  --color-ink: oklch(0.975 0 0);
+  --color-ink-soft: oklch(0.82 0 0);
+  --color-ink-faint: oklch(0.66 0 0);
+
+  /* Rojo: relleno (botones, barras) y texto sobre negro. */
+  --color-red: oklch(0.565 0.215 26);
+  --color-red-hover: oklch(0.61 0.22 26);
+  --color-red-text: oklch(0.72 0.17 24);
+  --color-red-wash: oklch(0.565 0.215 26 / 0.14);
+
+  --color-amber: oklch(0.83 0.13 78);
+  --color-amber-wash: oklch(0.83 0.13 78 / 0.12);
+
+  /* Semáforo. "bad" es un rojo más claro que el de marca para leerse sobre negro. */
+  --color-good: oklch(0.8 0.17 152);
+  --color-good-wash: oklch(0.8 0.17 152 / 0.13);
+  --color-warn: oklch(0.85 0.15 85);
+  --color-warn-wash: oklch(0.85 0.15 85 / 0.13);
+  --color-bad: oklch(0.68 0.21 25);
+  --color-bad-wash: oklch(0.68 0.21 25 / 0.15);
+
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  --font-display: var(--font-instrument), "New York", Georgia, serif;
+  --font-board: var(--font-shoulders), "Arial Narrow", sans-serif;
+  --font-stencil: var(--font-stencil-face), var(--font-shoulders), "Arial Narrow", sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --z-sticky: 10;
+    --z-nav: 20;
+    --z-modal: 40;
+    --z-toast: 50;
+  }
+
+  html {
+    background: var(--color-bg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+
+  ::selection { background: oklch(0.565 0.215 26 / 0.45); color: white; }
+
+  :focus-visible {
+    outline: 2px solid var(--color-red-text);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  input, textarea, select, button { font: inherit; color: inherit; }
+
+  /* Sin el destello gris de iOS al tocar; el estado :active ya da respuesta. */
+  a, button, label, summary { -webkit-tap-highlight-color: transparent; }
+}
+
+/* ---------- Luz ambiente ---------- */
+
+.ambient {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(60rem 28rem at 12% -12%, oklch(0.5 0.2 26 / 0.22), transparent 70%),
+    radial-gradient(40rem 22rem at 100% 0%, oklch(0.45 0.16 20 / 0.08), transparent 70%);
+}
+
+/*
+ * Paneles iluminados: un reflejo suave sigue al cursor (lib/useSpotlight).
+ * Solo con puntero fino; en touch no hay cursor que seguir.
+ */
+.panel {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  isolation: isolate;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lit::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 300ms var(--ease-out-quart);
+    background: radial-gradient(
+      22rem circle at var(--mx, 50%) var(--my, 50%),
+      oklch(1 0 0 / 0.045),
+      transparent 60%
+    );
+  }
+  .lit::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms var(--ease-out-quart);
+    padding: 1px;
+    background: radial-gradient(
+      16rem circle at var(--mx, 50%) var(--my, 50%),
+      oklch(0.7 0.19 25 / 0.55),
+      transparent 70%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+  .lit:hover::before,
+  .lit:hover::after { opacity: 1; }
+}
+
+/* ---------- Barras de avance ---------- */
+
+.bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: oklch(1 0 0 / 0.08);
+  overflow: hidden;
+}
+.bar-lg { height: 10px; }
+
+.bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--color-red);
+  box-shadow: 0 0 14px oklch(0.6 0.22 26 / 0.55);
+  transition: width 900ms var(--ease-out-expo);
+  animation: bar-grow 1100ms var(--ease-out-expo) both;
+}
+.bar-fill[data-done="true"] {
+  background: var(--color-ink);
+  box-shadow: 0 0 14px oklch(1 0 0 / 0.25);
+}
+@keyframes bar-grow { from { width: 0; } }
+
+/* Línea de producción: segmentos por estado. */
+.line {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: oklch(1 0 0 / 0.06);
+}
+.line > span {
+  height: 100%;
+  transform-origin: left;
+  animation: seg-in 900ms var(--ease-out-expo) both;
+}
+@keyframes seg-in { from { transform: scaleX(0); opacity: 0; } }
+
+/* ---------- Anillo ---------- */
+
+.ring-track { stroke: oklch(1 0 0 / 0.07); }
+.ring-value {
+  stroke: var(--color-red);
+  filter: drop-shadow(0 0 10px oklch(0.6 0.22 26 / 0.65));
+  transition: stroke-dashoffset 1200ms var(--ease-out-expo);
+  animation: ring-draw 1400ms var(--ease-out-expo) both;
+}
+@keyframes ring-draw { from { stroke-dashoffset: var(--circ); } }
+
+/* ---------- Estado vivo ---------- */
+
+.live-dot {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-red);
+  flex: none;
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 1.5px solid var(--color-red);
+  animation: live 2.2s var(--ease-out-quart) infinite;
+}
+@keyframes live {
+  0% { transform: scale(0.5); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ---------- Controles ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  transition: background-color 160ms var(--ease-out-quart), transform 160ms var(--ease-out-quart),
+    opacity 160ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--color-red); color: white; }
+.btn-primary:hover:not(:disabled) { background: var(--color-red-hover); }
+.btn-light { background: var(--color-ink); color: var(--color-bg); }
+.btn-light:hover:not(:disabled) { background: oklch(0.9 0 0); }
+.btn-quiet { background: var(--color-surface-2); color: var(--color-ink); }
+.btn-quiet:hover:not(:disabled) { background: var(--color-surface-3); }
+.btn-ghost { color: var(--color-ink-soft); }
+.btn-ghost:hover:not(:disabled) { background: var(--color-surface-2); color: var(--color-ink); }
+.btn-danger { color: var(--color-red-text); }
+.btn-danger:hover:not(:disabled) { background: var(--color-red-wash); }
+.btn-sm { height: 2rem; padding: 0 0.8rem; font-size: 0.8125rem; }
+
+.field {
+  width: 100%;
+  border-radius: 12px;
+  background: var(--color-surface-2);
+  border: 1px solid transparent;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.9375rem;
+  transition: border-color 160ms, background-color 160ms;
+}
+.field::placeholder { color: var(--color-ink-faint); }
+.field:hover { background: oklch(0.215 0 0); }
+.field:focus { outline: none; border-color: var(--color-red-text); background: var(--color-surface-2); }
+.field[aria-invalid="true"] { border-color: var(--color-red-text); }
+textarea.field { resize: vertical; min-height: 5.5rem; line-height: 1.5; }
+/* iOS les pone sombra interior y esquinas propias a los campos de texto. */
+input.field:not([type="date"]), textarea.field { -webkit-appearance: none; appearance: none; }
+/* En iOS un campo de fecha vacío se encoge y centra el texto: lo igualamos a los demás. */
+input[type="date"].field { min-height: 2.9rem; text-align: left; display: block; }
+input[type="date"].field::-webkit-date-and-time-value { text-align: left; }
+/*
+ * Safari en iPhone hace zoom a toda la página al enfocar un campo con letra
+ * menor a 16px. En pantallas táctiles los campos van a 16px.
+ */
+@media (pointer: coarse) {
+  .field { font-size: 16px; }
+}
+select.field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23a3a3a3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  padding-right: 2.2rem;
+}
+input[type="date"].field::-webkit-calendar-picker-indicator { filter: invert(0.75); }
+
+.label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 520;
+  color: var(--color-ink-soft);
+  margin-bottom: 0.4rem;
+}
+
+/* Slider de avance: rojo hasta el pulgar. */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  --p: 0%;
+}
+.range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-red) var(--p), oklch(1 0 0 / 0.1) var(--p));
+}
+.range::-moz-range-track { height: 6px; border-radius: 999px; background: oklch(1 0 0 / 0.1); }
+.range::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--color-red); }
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.5);
+}
+.range::-moz-range-thumb { width: 22px; height: 22px; border: 0; border-radius: 999px; background: white; }
+
+/* ---------- Hoja (dialog nativo) ---------- */
+
+.sheet {
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 92dvh;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+.sheet::backdrop {
+  background: oklch(0 0 0 / 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade-in 220ms var(--ease-out-quart);
+}
+.sheet-panel {
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line-strong);
+  border-radius: 20px 20px 0 0;
+  padding: 0.75rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  animation: sheet-up 380ms var(--ease-out-expo);
+}
+.sheet-handle {
+  width: 36px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-surface-3);
+  margin: 0 auto 0.75rem;
+}
+@media (min-width: 768px) {
+  .sheet { margin: auto; max-width: 34rem; }
+  .sheet-panel {
+    border: 1px solid var(--color-line-strong);
+    border-radius: 20px;
+    padding: 1.5rem;
+    animation: sheet-pop 320ms var(--ease-out-expo);
+  }
+  .sheet-handle { display: none; }
+}
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-pop { from { transform: translateY(12px) scale(0.98); opacity: 0; } }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* Visor de fotos */
+.viewer { margin: auto; padding: 0; border: 0; background: transparent; max-width: 100vw; max-height: 100dvh; }
+.viewer::backdrop { background: oklch(0 0 0 / 0.92); animation: fade-in 200ms; }
+.viewer img { animation: sheet-pop 320ms var(--ease-out-expo); }
+
+/* ---------- Entradas ---------- */
+
+.rise { animation: rise 600ms var(--ease-out-expo) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+.toast {
+  animation: toast-in 420ms var(--ease-out-expo);
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(0.96); filter: blur(4px); } }
+
+/* Barra de pestañas del teléfono: el blur aquí sí tiene propósito (contenido debajo). */
+.tabbar {
+  background: oklch(0.118 0 0 / 0.78);
+  backdrop-filter: saturate(160%) blur(20px);
+  -webkit-backdrop-filter: saturate(160%) blur(20px);
+}
+
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+.scroll-x { scrollbar-width: none; }
+.scroll-x::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .live-dot::after { display: none; }
+}

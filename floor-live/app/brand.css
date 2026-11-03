@@ -1,0 +1,144 @@
+/* =====================================================================
+ * Intro de marca Beaufort (components/tv/BrandMotion.tsx)
+ * Medidas en --u (1% del escenario de la tele). Curvas: expo para lo que
+ * "llega" (rápido y se asienta), in-out para el trazo de los anillos.
+ * Todo es transform / opacity / filter / stroke-dashoffset: nada de layout.
+ * ===================================================================== */
+
+.brand-stage {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u, 1vw) * 3.2);
+}
+
+.brand-halo {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: calc(var(--u, 1vw) * 70);
+  height: calc(var(--u, 1vw) * 40);
+  translate: -50% -50%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, oklch(0.68 0.13 225 / 0.22), oklch(0.68 0.13 225 / 0.06) 55%, transparent);
+  animation: brand-halo 2600ms var(--ease-out-expo) 150ms both;
+}
+@keyframes brand-halo {
+  from { opacity: 0; transform: scale(0.8); }
+  45% { opacity: 1; }
+  to { opacity: 0.7; transform: scale(1); }
+}
+
+.brand-logo {
+  position: relative;
+  width: calc(var(--u, 1vw) * 62);
+}
+.brand-svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+/* La "o": empieza al centro del logo y 2.3× más grande, luego viaja a su lugar. */
+.brand-mark {
+  transform-box: view-box;
+  transform-origin: 1479px 258px;
+  animation: brand-mark-home 1150ms var(--ease-out-expo) 1450ms both;
+}
+@keyframes brand-mark-home {
+  from { transform: translate(-479px, -67px) scale(2.3); }
+}
+
+/* Cada anillo gira desde su propio ángulo, alternando sentido, y encaja. */
+.brand-ring {
+  transform-box: view-box;
+  transform-origin: 1479px 258px;
+  animation: brand-ring-in 1700ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--k) * 130ms + 150ms);
+}
+.brand-ring-outer { --from: -150deg; }
+.brand-ring-middle { --from: 120deg; }
+.brand-ring-inner { --from: -210deg; }
+@keyframes brand-ring-in {
+  from { transform: rotate(var(--from)) scale(0.92); opacity: 0; }
+  25% { opacity: 1; }
+}
+
+/* El trazo que "dibuja" cada anillo (máscara). */
+.brand-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: brand-draw 1350ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation-delay: calc(var(--k) * 130ms + 150ms);
+}
+@keyframes brand-draw { to { stroke-dashoffset: 0; } }
+
+/* Las letras se abren desde la "o" hacia afuera. */
+.brand-wipe {
+  transform-box: view-box;
+  animation: brand-wipe 1050ms var(--ease-out-expo) 1700ms both;
+}
+.brand-wipe-l { transform-origin: 1352px 0; }
+.brand-wipe-r { transform-origin: 1606px 0; }
+@keyframes brand-wipe { from { transform: scaleX(0); } }
+
+.brand-letters { animation: brand-letters 1100ms var(--ease-out-expo) 1650ms both; }
+@keyframes brand-letters { from { opacity: 0; filter: blur(14px); } }
+
+/* Un solo destello que cruza el logo ya armado. */
+.brand-shine {
+  position: absolute;
+  inset: -10% -4%;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background: linear-gradient(105deg, transparent 38%, oklch(1 0 0 / 0.85) 50%, transparent 62%);
+  transform: translateX(-110%);
+  animation: brand-shine 1300ms var(--ease-out-quart) 2650ms both;
+}
+@keyframes brand-shine { to { transform: translateX(110%); } }
+
+/* Línea "Beaufort Texas" bajo el logo. */
+.brand-tag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--u, 1vw) * 1.1);
+}
+.brand-rule {
+  width: calc(var(--u, 1vw) * 16);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-red), transparent);
+  transform-origin: center;
+  animation: brand-rule 900ms var(--ease-out-expo) 2700ms both;
+}
+@keyframes brand-rule { from { transform: scaleX(0); opacity: 0; } }
+.brand-tag-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u, 1vw) * 1.2);
+  animation: brand-rise 800ms var(--ease-out-expo) 2850ms both;
+}
+.brand-line {
+  font-family: var(--font-display);
+  font-size: calc(var(--u, 1vw) * 3.4);
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+}
+.brand-sub {
+  font-family: var(--font-stencil);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: calc(var(--u, 1vw) * 1.35);
+  color: var(--color-ink-faint);
+  animation: brand-rise 800ms var(--ease-out-expo) 3000ms both;
+}
+@keyframes brand-rise { from { opacity: 0; transform: translateY(calc(var(--u, 1vw) * 1)); filter: blur(4px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-halo, .brand-mark, .brand-ring, .brand-draw, .brand-wipe, .brand-letters,
+  .brand-shine, .brand-rule, .brand-tag-row, .brand-sub {
+    animation: none !important;
+  }
+  .brand-draw { stroke-dashoffset: 0; }
+  .brand-shine { display: none; }
+}

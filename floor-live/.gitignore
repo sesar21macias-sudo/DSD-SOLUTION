@@ -1,0 +1,12 @@
+node_modules
+.next
+.open-next
+.wrangler
+.env
+.env.local
+.dev.vars
+next-env.d.ts
+*.tsbuildinfo
+.DS_Store
+*.local.sql
+CLAVE-INSTALACION.local.txt

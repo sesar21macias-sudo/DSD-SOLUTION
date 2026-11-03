@@ -1,0 +1,270 @@
+/* ---------- Semáforo (panel y tele) ---------- */
+
+.tone-good { color: var(--color-good); }
+.tone-warn { color: var(--color-warn); }
+.tone-bad { color: var(--color-bad); }
+.tone-none { color: var(--color-ink-faint); }
+.chip-good { background: var(--color-good-wash); color: var(--color-good); }
+.chip-warn { background: var(--color-warn-wash); color: var(--color-warn); }
+.chip-bad { background: var(--color-bad-wash); color: var(--color-bad); }
+.chip-none { background: var(--color-surface-2); color: var(--color-ink-faint); }
+
+.font-board { font-family: var(--font-board); font-optical-sizing: auto; }
+.font-stencil { font-family: var(--font-stencil); }
+
+/* =====================================================================
+ * TELE
+ * Un escenario 16:9 que llena cualquier pantalla. Todas las medidas salen
+ * de --u (1% del ancho del escenario), así la misma lámina se ve igual en
+ * una tele de 32" que en una de 75" o en la laptop del gerente.
+ * ===================================================================== */
+
+.tv {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #050505;
+  color: var(--color-ink);
+  overflow: hidden;
+  cursor: none;
+}
+.tv[data-cursor="true"] { cursor: default; }
+
+.tv-stage {
+  --u: min(1vw, 1.7778vh);
+  position: relative;
+  width: calc(var(--u) * 100);
+  height: calc(var(--u) * 56.25);
+  overflow: hidden;
+  background: var(--color-bg);
+  isolation: isolate;
+  font-size: calc(var(--u) * 1.6);
+}
+
+/* Luz roja que respira detrás de todo y deriva despacio. */
+.tv-glow {
+  position: absolute;
+  inset: -20%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 18% 0%, oklch(0.5 0.21 26 / 0.34), transparent 70%),
+    radial-gradient(35% 45% at 95% 105%, oklch(0.45 0.18 22 / 0.22), transparent 70%);
+  animation: glow-drift 28s ease-in-out infinite alternate;
+}
+@keyframes glow-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.85; }
+  50% { opacity: 1; }
+  100% { transform: translate3d(4%, 3%, 0) scale(1.06); opacity: 0.9; }
+}
+
+/* Grano de película: quita lo "digital plano" a la tele. */
+.tv-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Barrido de luz cada que entra una lámina. */
+.tv-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, oklch(1 0 0 / 0.05) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: sweep 1600ms var(--ease-out-quart) 200ms both;
+}
+@keyframes sweep { to { transform: translateX(100%); } }
+
+.tv-header {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: calc(var(--u) * 6.4);
+  padding: 0 calc(var(--u) * 3);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.6);
+  border-bottom: 1px solid var(--color-line);
+  z-index: 3;
+}
+
+.tv-body {
+  position: absolute;
+  top: calc(var(--u) * 6.4);
+  bottom: calc(var(--u) * 4.4);
+  left: 0;
+  right: 0;
+}
+
+.tv-footer {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: calc(var(--u) * 4.4);
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--color-line);
+  background: oklch(0.09 0 0 / 0.8);
+  z-index: 3;
+  overflow: hidden;
+}
+
+/* Cinta de avisos que corre de derecha a izquierda. */
+.ticker {
+  display: flex;
+  gap: calc(var(--u) * 5);
+  white-space: nowrap;
+  padding-left: 100%;
+  animation: ticker var(--ticker-s, 60s) linear infinite;
+  will-change: transform;
+}
+@keyframes ticker { to { transform: translateX(-100%); } }
+
+/* Cuánto le queda a la lámina. */
+.slide-timer {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--u) * 4.4);
+  height: 3px;
+  width: 100%;
+  transform-origin: left;
+  background: var(--color-red);
+  box-shadow: 0 0 12px oklch(0.6 0.22 26 / 0.8);
+  animation: timer linear both;
+  z-index: 3;
+}
+@keyframes timer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Entrada de lámina: cada pieza con su retraso (--i). */
+.slide {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--u) * 2.4) calc(var(--u) * 3);
+}
+.slide [data-in] {
+  animation: slide-in 900ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 110ms + 120ms);
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(calc(var(--u) * 1.6)); filter: blur(8px); }
+}
+.slide-exit { animation: slide-out 500ms var(--ease-out-quart) both; }
+@keyframes slide-out { to { opacity: 0; transform: translateY(calc(var(--u) * -0.8)); filter: blur(6px); } }
+
+.tv-kicker {
+  font-family: var(--font-stencil);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-red-text);
+  font-size: calc(var(--u) * 1.5);
+}
+
+.tv-title {
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 4.2);
+  line-height: 0.95;
+  letter-spacing: -0.015em;
+}
+
+.tv-card {
+  position: relative;
+  border-radius: calc(var(--u) * 1.4);
+  background: linear-gradient(180deg, oklch(0.17 0 0 / 0.92), oklch(0.13 0 0 / 0.92));
+  border: 1px solid var(--color-line);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
+  overflow: hidden;
+}
+/* Filo de color arriba de la tarjeta, según el semáforo. */
+.tv-card[data-tone]::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: calc(var(--u) * 0.35);
+  background: currentColor;
+  box-shadow: 0 0 calc(var(--u) * 2) currentColor;
+}
+
+.tv-num {
+  font-family: var(--font-board);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.82;
+  letter-spacing: -0.01em;
+}
+
+/* Medidor con bandera de meta. */
+.meter {
+  position: relative;
+  flex: none;
+  height: calc(var(--u) * 1.3);
+  border-radius: 999px;
+  background: oklch(1 0 0 / 0.08);
+}
+.meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: currentColor;
+  box-shadow: 0 0 calc(var(--u) * 1.4) currentColor;
+  transform-origin: left;
+  animation: meter-grow 1400ms var(--ease-out-expo) 400ms both;
+}
+@keyframes meter-grow { from { transform: scaleX(0); } }
+.meter-goal {
+  position: absolute;
+  top: calc(var(--u) * -0.7);
+  bottom: calc(var(--u) * -0.7);
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--color-ink);
+  border-radius: 2px;
+}
+
+/* Contador de seguridad: dígitos tipo LED rojo. */
+.led {
+  font-family: var(--font-board);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.8;
+  color: oklch(0.66 0.24 27);
+  text-shadow:
+    0 0 calc(var(--u) * 1) oklch(0.6 0.24 27 / 0.9),
+    0 0 calc(var(--u) * 4) oklch(0.55 0.24 27 / 0.6);
+  animation: led-flicker 6s steps(1) infinite;
+}
+@keyframes led-flicker {
+  0%, 97%, 100% { opacity: 1; }
+  98% { opacity: 0.86; }
+}
+
+/* Foto a pantalla completa con movimiento lento (Ken Burns). */
+.kenburns { animation: kenburns var(--kb-s, 16s) ease-out both; }
+@keyframes kenburns {
+  from { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+  to { transform: scale(1) translate3d(0, 0, 0); }
+}
+
+/* Barras de la tendencia. */
+.trend-bar {
+  transform-origin: bottom;
+  animation: trend-grow 1100ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 300ms);
+}
+@keyframes trend-grow { from { transform: scaleY(0); } }
+
+.rank-bar {
+  transform-origin: left;
+  animation: meter-grow 1200ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 300ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-glow, .ticker, .kenburns, .led, .tv-sweep { animation: none !important; }
+  .ticker { padding-left: 0; }
+}
