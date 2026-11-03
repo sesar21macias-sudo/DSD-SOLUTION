@@ -89,6 +89,12 @@ export function AccountsManager({ accounts, teams, meId }: { accounts: AccountRo
   const [error, setError] = useState<string | null>(null);
   const [secret, setSecret] = useState<{ who: string; password: string } | null>(null);
   const teamName = (id: number | null) => teams.find((t) => t.id === id)?.name ?? "—";
+  const label = (u: AccountRow) =>
+    u.display_only
+      ? d.teams.screenOf(u.team_id ? teamName(u.team_id) : d.common.wholePlant)
+      : u.role === "admin"
+        ? d.common.admin
+        : `${d.common.leader} · ${teamName(u.team_id)}`;
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -145,32 +151,7 @@ export function AccountsManager({ accounts, teams, meId }: { accounts: AccountRo
 
       <ul className="panel divide-y divide-line">
         {accounts.map((u) => (
-          <li key={u.id} className={cx("flex flex-wrap items-center gap-3 px-4 py-3", !u.active && "opacity-50")}>
-            <Avatar name={u.name} size={34} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">
-                {u.name} {u.id === meId && <span className="text-ink-faint">({d.teams.you})</span>}
-              </div>
-              <div className="truncate text-xs text-ink-faint">
-                <span className="font-mono">{u.username}</span> ·{" "}
-                {u.display_only
-                  ? d.teams.screenOf(u.team_id ? teamName(u.team_id) : d.common.wholePlant)
-                  : u.role === "admin"
-                    ? d.common.admin
-                    : `${d.common.leader} · ${teamName(u.team_id)}`}
-              </div>
-            </div>
-            {u.id !== meId && (
-              <div className="flex gap-1">
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => act(u, "reset")}>
-                  {d.teams.resetPassword}
-                </button>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => act(u, u.active ? "deactivate" : "activate")}>
-                  {u.active ? d.teams.deactivate : d.teams.reactivate}
-                </button>
-              </div>
-            )}
-          </li>
+          <AccountItem key={u.id} u={u} teams={teams} meId={meId} onAct={act} label={label(u)} />
         ))}
       </ul>
 
@@ -254,6 +235,122 @@ export function AccountsManager({ accounts, teams, meId }: { accounts: AccountRo
         </button>
       )}
     </div>
+  );
+}
+
+/** Una cuenta en la lista; "Editar" abre nombre, permiso y equipo en el mismo renglón. */
+function AccountItem({
+  u,
+  teams,
+  meId,
+  onAct,
+  label,
+}: {
+  u: AccountRow;
+  teams: Team[];
+  meId: number;
+  onAct: (u: AccountRow, action: "reset" | "deactivate" | "activate") => void;
+  label: string;
+}) {
+  const d = useDict();
+  const router = useRouter();
+  const kindOf = (x: AccountRow): "admin" | "leader" | "screen" => (x.display_only ? "screen" : x.role === "admin" ? "admin" : "leader");
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({ name: u.name, role: kindOf(u), teamId: u.team_id ?? 0 });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      await send(`/api/usuarios/${u.id}`, "PATCH", { action: "update", name: f.name, role: f.role, teamId: f.teamId || null });
+      toast(d.content.saved);
+      setEdit(false);
+      router.refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li className={cx("flex flex-col gap-3 px-4 py-3", !u.active && "opacity-50")}>
+      <div className="flex flex-wrap items-center gap-3">
+        <Avatar name={u.name} size={34} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">
+            {u.name} {u.id === meId && <span className="text-ink-faint">({d.teams.you})</span>}
+          </div>
+          <div className="truncate text-xs text-ink-faint">
+            <span className="font-mono">{u.username}</span> · {label}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit((x) => !x)}>
+            {d.common.edit}
+          </button>
+          {u.id !== meId && (
+            <>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => onAct(u, "reset")}>
+                {d.teams.resetPassword}
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => onAct(u, u.active ? "deactivate" : "activate")}>
+                {u.active ? d.teams.deactivate : d.teams.reactivate}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {edit && (
+        <div className="grid gap-3 rounded-xl bg-surface-2/60 p-3 sm:grid-cols-3">
+          <div>
+            <label className="label" htmlFor={`n${u.id}`}>{d.teams.personName}</label>
+            <input id={`n${u.id}`} className="field" maxLength={60} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          </div>
+          <div>
+            <label className="label" htmlFor={`r${u.id}`}>{d.teams.role}</label>
+            <select
+              id={`r${u.id}`}
+              className="field"
+              value={f.role}
+              disabled={u.id === meId}
+              onChange={(e) => {
+                const role = e.target.value === "admin" ? "admin" : e.target.value === "screen" ? "screen" : "leader";
+                setF({ ...f, role, teamId: role === "leader" ? f.teamId || teams[0]?.id || 0 : role === "admin" ? 0 : f.teamId });
+              }}
+            >
+              <option value="leader">{d.common.leader}</option>
+              <option value="screen">{d.common.screenAccount}</option>
+              <option value="admin">{d.common.admin}</option>
+            </select>
+          </div>
+          {f.role !== "admin" && (
+            <div>
+              <label className="label" htmlFor={`t${u.id}`}>{f.role === "screen" ? d.teams.shows : d.teams.team}</label>
+              <select id={`t${u.id}`} className="field" value={f.teamId} onChange={(e) => setF({ ...f, teamId: Number(e.target.value) })}>
+                {f.role === "screen" && <option value={0}>{d.common.wholePlant}</option>}
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {error && <p role="alert" className="text-sm text-red-text sm:col-span-3">{error}</p>}
+          <div className="flex justify-end gap-2 sm:col-span-3">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(false)}>
+              {d.common.cancel}
+            </button>
+            <button type="button" className="btn btn-light btn-sm" disabled={busy} onClick={save}>
+              {busy ? d.common.saving : d.common.save}
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 

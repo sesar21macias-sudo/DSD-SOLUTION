@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ImportPanel } from "@/components/admin/ImportPanel";
 import { PageHead } from "@/components/admin/Kpi";
 import { RelTime } from "@/components/client";
+import { UndoImport } from "@/components/admin/UndoImport";
 import { aiAvailable } from "@/lib/ai";
 import { all } from "@/lib/db";
 import { getDict } from "@/lib/i18n/server";
@@ -62,6 +63,7 @@ export default async function DataPage() {
                     <div className="text-xs text-ink-soft">
                       {d.data.rows(h.rows_in)} · {d.data.done(h.rows_new, h.rows_updated).replace(/^[^:]+:\s*/, "")}
                     </div>
+                    <UndoImport id={h.id} />
                   </li>
                 ))}
               </ul>

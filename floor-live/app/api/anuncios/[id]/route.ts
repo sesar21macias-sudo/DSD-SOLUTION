@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { first, run } from "@/lib/db";
-import { announcementInput } from "@/lib/announce-input";
+import { announcementInput, targetTeam } from "@/lib/announce-input";
 import { body, handler, idParam, notFound } from "@/lib/http";
 import { requireScope } from "@/lib/session";
 
@@ -15,12 +15,15 @@ async function load(id: number) {
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   const id = idParam((await params).id);
   const row = await load(id);
-  // El anuncio se queda en su equipo: un líder no puede moverlo a la planta.
+  // Un líder no puede moverlo de su equipo; el admin sí puede cambiarlo de pantalla.
   const me = await requireScope(row.team_id);
-  const f = await announcementInput(await body<Record<string, unknown>>(req), row.team_id, me);
+  const b = await body<Record<string, unknown>>(req);
+  const teamId = await targetTeam(b, me, row.team_id);
+  const f = await announcementInput(b, teamId, me);
   await run(
-    `UPDATE announcements SET kind = ?, title_en = ?, body_en = ?, title_es = ?, body_es = ?, media_id = ?, starts_at = ?, ends_at = ?
+    `UPDATE announcements SET team_id = ?, kind = ?, title_en = ?, body_en = ?, title_es = ?, body_es = ?, media_id = ?, starts_at = ?, ends_at = ?
       WHERE id = ?`,
+    teamId,
     f.kind,
     f.title_en,
     f.body_en,

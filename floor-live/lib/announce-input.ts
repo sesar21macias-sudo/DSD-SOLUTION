@@ -26,3 +26,16 @@ export async function announcementInput(b: Record<string, unknown>, teamId: numb
   }
   return fields;
 }
+
+/**
+ * Mover algo ya creado a otra pantalla: solo el admin. Devuelve el equipo destino
+ * (null = planta) o `keep` si no se pidió cambio o quien pide no es admin.
+ */
+export async function targetTeam(b: Record<string, unknown>, me: User, keep: number | null): Promise<number | null> {
+  if (me.role !== "admin" || !("team_id" in b)) return keep;
+  const raw = b.team_id;
+  if (raw === null || raw === "" || raw === undefined) return null;
+  const t = await first<{ id: number }>("SELECT id FROM teams WHERE id = ?", Number(raw));
+  if (!t) bad("teamRequired");
+  return t.id;
+}

@@ -6,6 +6,7 @@ import { getEnv } from "@/lib/env";
 import { bad, body, handler, idParam, localDateTimeOrNull, notFound, text } from "@/lib/http";
 import { deletePhoto } from "@/lib/media";
 import { HttpError, canView, getCurrentUser, requireScope } from "@/lib/session";
+import { targetTeam } from "@/lib/announce-input";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -54,13 +55,15 @@ export const GET = handler(async (_req: Request, { params }: Ctx) => {
 
 export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   const row = await load(idParam((await params).id));
-  await requireScope(row.team_id);
-  const b = await body<{ caption: string; in_rotation: boolean; starts_at: string | null; ends_at: string | null }>(req);
+  const me = await requireScope(row.team_id);
+  const b = await body<{ caption: string; in_rotation: boolean; starts_at: string | null; ends_at: string | null; team_id?: number | null }>(req);
+  const teamId = await targetTeam(b as Record<string, unknown>, me, row.team_id);
   const startsAt = localDateTimeOrNull(b.starts_at);
   const endsAt = localDateTimeOrNull(b.ends_at);
   if (startsAt && endsAt && endsAt <= startsAt) bad("endsBeforeStarts");
   await run(
-    "UPDATE media SET caption = ?, in_rotation = ?, starts_at = ?, ends_at = ? WHERE id = ?",
+    "UPDATE media SET team_id = ?, caption = ?, in_rotation = ?, starts_at = ?, ends_at = ? WHERE id = ?",
+    teamId,
     text(b.caption, 140),
     b.in_rotation === false ? 0 : 1,
     startsAt,

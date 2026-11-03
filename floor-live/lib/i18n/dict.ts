@@ -115,6 +115,10 @@ const es = {
     summary: "Resumen de la semana",
     summaryBy: { claude: "Escrito por Claude", rules: "Resumen automático" },
     regenerate: "Volver a escribir",
+    editSummary: "Editar",
+    summaryEs: "Frase en español",
+    summaryEn: "Frase en inglés",
+    summarySaved: "Resumen guardado",
     regenerating: "Escribiendo…",
     regenerated: "Resúmenes actualizados",
     safety: "Días sin accidente",
@@ -155,6 +159,9 @@ const es = {
     howFpy: "Calidad (FPY) = piezas que pasaron a la primera ÷ piezas inspeccionadas.",
     howEff: "Eficiencia = horas estimadas ÷ horas reales. Más de 100% = más rápido que el estándar.",
     howSum: "Se suman todas las piezas y horas de la semana: un trabajo grande pesa más que uno chico.",
+    undo: "Borrar subida",
+    undoConfirm: "Se quitan de las pantallas los trabajos de esta subida.",
+    undone: (n: number) => `Se quitaron ${n} ${plural(n, "trabajo", "trabajos")}`,
   },
 
   content: {
@@ -488,6 +495,10 @@ const en = {
     summary: "This week in short",
     summaryBy: { claude: "Written by Claude", rules: "Automatic summary" },
     regenerate: "Rewrite",
+    editSummary: "Edit",
+    summaryEs: "Sentence in Spanish",
+    summaryEn: "Sentence in English",
+    summarySaved: "Summary saved",
     regenerating: "Writing…",
     regenerated: "Summaries updated",
     safety: "Days without accident",
@@ -528,6 +539,9 @@ const en = {
     howFpy: "Quality (FPY) = units that passed the first time ÷ units inspected.",
     howEff: "Efficiency = estimated hours ÷ actual hours. Over 100% = faster than standard.",
     howSum: "All units and hours in the week are added up: a big job counts more than a small one.",
+    undo: "Delete upload",
+    undoConfirm: "The jobs from this upload come off the screens.",
+    undone: (n: number) => `${n} ${plural(n, "job", "jobs")} removed`,
   },
 
   content: {

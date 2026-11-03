@@ -199,7 +199,7 @@ function AnnouncementForm({
 
   return (
     <form onSubmit={save} className="flex flex-col gap-4">
-      {!initial && scopes.length > 1 && (
+      {scopes.length > 1 && (
         <div>
           <label className="label" htmlFor="where">{d.content.where}</label>
           <select
@@ -420,7 +420,7 @@ function PhotoSection({ media, scopes, where }: { media: Media[]; scopes: ScopeO
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2">
           {media.map((m) => (
-            <PhotoCard key={m.id} m={m} where={where(m.team_id)} />
+            <PhotoCard key={m.id} m={m} where={where(m.team_id)} scopes={scopes} />
           ))}
         </div>
       )}
@@ -428,7 +428,7 @@ function PhotoSection({ media, scopes, where }: { media: Media[]; scopes: ScopeO
   );
 }
 
-function PhotoCard({ m, where }: { m: Media; where: string }) {
+function PhotoCard({ m, where, scopes }: { m: Media; where: string; scopes: ScopeOption[] }) {
   const d = useDict();
   const router = useRouter();
   const [caption, setCaption] = useState(m.caption);
@@ -436,15 +436,18 @@ function PhotoCard({ m, where }: { m: Media; where: string }) {
   const [confirm, setConfirm] = useState(false);
   const [schedule, setSchedule] = useState<Schedule>({ starts_at: m.starts_at ?? "", ends_at: m.ends_at ?? "" });
   const [editSchedule, setEditSchedule] = useState(false);
+  const [teamId, setTeamId] = useState<number | null>(m.team_id);
 
-  const save = async (next: { caption?: string; in_rotation?: boolean; schedule?: Schedule }): Promise<boolean> => {
+  const save = async (next: { caption?: string; in_rotation?: boolean; schedule?: Schedule; team?: number | null }): Promise<boolean> => {
     const sch = next.schedule ?? schedule;
+    const team = next.team !== undefined ? next.team : teamId;
     try {
       await send(`/api/media/${m.id}`, "PATCH", {
         caption: next.caption ?? caption,
         in_rotation: next.in_rotation ?? rotation,
         starts_at: sch.starts_at || null,
         ends_at: sch.ends_at || null,
+        team_id: team,
       });
       return true;
     } catch (e) {
@@ -473,6 +476,27 @@ function PhotoCard({ m, where }: { m: Media; where: string }) {
           onChange={(e) => setCaption(e.target.value)}
           onBlur={() => caption !== m.caption && save({ caption })}
         />
+        {scopes.length > 1 && (
+          <select
+            className="field py-1.5 text-sm"
+            aria-label={d.content.where}
+            value={teamId === null ? "" : String(teamId)}
+            onChange={async (e) => {
+              const next = e.target.value === "" ? null : Number(e.target.value);
+              setTeamId(next);
+              if (await save({ team: next })) {
+                toast(d.content.saved);
+                router.refresh();
+              }
+            }}
+          >
+            {scopes.map((s) => (
+              <option key={s.id ?? "plant"} value={s.id === null ? "" : String(s.id)}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="text-[0.7rem] text-ink-faint">
           <ScheduleText startsAt={m.starts_at} endsAt={m.ends_at} />
         </div>

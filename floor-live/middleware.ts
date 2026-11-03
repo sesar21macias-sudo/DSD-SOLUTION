@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, readSession } from "@/lib/auth";
 import { getSessionSecret } from "@/lib/secret";
+import { LANG_COOKIE, errorText, isLang, langFromHeader } from "@/lib/i18n/dict";
 
 /*
  * Next.js 16 renombró "middleware" a "proxy", pero proxy solo corre en el
@@ -29,7 +30,9 @@ export async function middleware(req: NextRequest) {
         }
       }
       if (!sameSite) {
-        return NextResponse.json({ error: "Request rejected." }, { status: 403 });
+        const c = req.cookies.get(LANG_COOKIE)?.value;
+        const lang = isLang(c) ? c : langFromHeader(req.headers.get("accept-language"));
+        return NextResponse.json({ error: errorText(lang, "badOrigin") }, { status: 403 });
       }
     }
     return NextResponse.next();

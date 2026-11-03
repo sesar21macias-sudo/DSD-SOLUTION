@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { run } from "@/lib/db";
 import { bad, handler, localDateTimeOrNull, text } from "@/lib/http";
 import { MAX_PHOTO_BYTES, putPhoto, sniffImage } from "@/lib/media";
-import { requireScope } from "@/lib/session";
+import { requireEditor, requireScope } from "@/lib/session";
 
 /** Sube una foto (ya reducida en el navegador). multipart: file, team_id, caption, width, height. */
 export const POST = handler(async (req: Request) => {
+  // Sesión primero: sin ella, ni se lee el archivo.
+  await requireEditor();
   const len = Number(req.headers.get("content-length") ?? 0);
   if (len > MAX_PHOTO_BYTES + 64_000) bad("photoTooBig");
-  const form = await req.formData();
+  const form = await req.formData().catch(() => bad("photoType"));
   const rawTeam = form.get("team_id");
   const parsed = rawTeam && rawTeam !== "" ? Number(rawTeam) : null;
   const teamId = parsed !== null && Number.isInteger(parsed) ? parsed : null;

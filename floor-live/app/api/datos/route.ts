@@ -185,3 +185,19 @@ export const POST = handler(async (req: Request) => {
 
   return NextResponse.json({ ok: true, importId, created: isNew, updated: rows.length - isNew, newTeams });
 });
+
+/**
+ * Deshacer una subida (?id=N): quita los trabajos que esa subida dejó guardados.
+ * Si un trabajo se volvió a subir después, pertenece a la subida más nueva y se queda.
+ */
+export const DELETE = handler(async (req: Request) => {
+  await requireAdmin();
+  const id = Number(new URL(req.url).searchParams.get("id"));
+  if (!Number.isInteger(id) || id <= 0) bad("notFound");
+  const res = await run("DELETE FROM jobs WHERE import_id = ?", id);
+  await run("DELETE FROM imports WHERE id = ?", id);
+  // Los resúmenes viejos ya no cuadran con los números: se borran y la tele usa las reglas
+  // hasta que alguien pida "Volver a escribir" o suba otro Excel.
+  await run("DELETE FROM insights");
+  return NextResponse.json({ ok: true, removed: res.meta.changes ?? 0 });
+});

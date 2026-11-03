@@ -28,17 +28,22 @@ export default async function PanelPage() {
 
   const scopeCode = isAdmin ? "plant" : myTeam?.code ?? "plant";
   const stats = data ? (isAdmin || !myTeam ? statsFor(data, "all") : statsFor(data, [myTeam.code])) : null;
-  const insightRow =
-    data && stats
-      ? await first<{ text: string }>(
-          "SELECT text FROM insights WHERE scope = ? AND year = ? AND week = ? AND lang = ?",
-          scopeCode,
-          data.year,
-          data.week,
-          lang
-        )
-      : null;
-  const insight = stats ? insightRow?.text ?? ruleSummary(stats, s, lang, isAdmin ? (lang === "en" ? "The plant" : "La planta") : myTeam?.name ?? "") : null;
+  // La frase en los dos idiomas (la que se ve y la otra, para poder editarlas juntas).
+  const who = (l: "es" | "en") => (isAdmin ? (l === "en" ? "The plant" : "La planta") : myTeam?.name ?? "");
+  const texts = { es: null as string | null, en: null as string | null };
+  if (data && stats) {
+    for (const l of ["es", "en"] as const) {
+      const row = await first<{ text: string }>(
+        "SELECT text FROM insights WHERE scope = ? AND year = ? AND week = ? AND lang = ?",
+        scopeCode,
+        data.year,
+        data.week,
+        l
+      );
+      texts[l] = row?.text ?? ruleSummary(stats, s, l, who(l));
+    }
+  }
+  const insight = texts[lang];
 
   const screens = isAdmin
     ? await first<{ n: number; online: number | null }>(
@@ -123,7 +128,7 @@ export default async function PanelPage() {
             </div>
           </div>
 
-          <InsightCard text={insight} canRegenerate={isAdmin} />
+          <InsightCard text={insight} texts={texts} scope={scopeCode} canEdit={isAdmin} />
 
           {isAdmin && (
             <section className="mt-6">

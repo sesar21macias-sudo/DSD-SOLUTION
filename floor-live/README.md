@@ -62,3 +62,17 @@ existe una cuenta). `npm run create-admin` crea otro admin desde la terminal si 
   o a una tele autorizada, con `sandbox` y `nosniff`. No hay bucket público.
 - El Excel se lee sin librerías externas (el paquete `xlsx` de npm tiene vulnerabilidades sin parche).
 - SQL siempre con parámetros. Todo texto se pinta con React (escapado), nunca como HTML.
+
+## Pendientes
+
+- **Carga automática del Excel semanal.** Hoy alguien lo sube a mano en **Datos**. Opciones,
+  de más fácil a más completa: (1) correo propio de la app que recibe el Excel y lo carga solo
+  (Cloudflare Email Routing → Worker; requiere un lector de .xlsx que corra en el servidor);
+  (2) carpeta de OneDrive/SharePoint + Power Automate que lo manda a la app; (3) tarea programada
+  de Windows en la computadora que genera el reporte; (4) conexión directa de solo lectura al
+  ERP (la columna `Jobs.jmpClosedDate` sugiere ECi M1) o a Power BI. Todas usarían una "puerta"
+  con llave secreta y las mismas reglas de la subida manual. Falta saber de dónde sale el Excel,
+  quién lo genera y qué día.
+- Nombres en pantalla para EPFJS, EPMSL, ELPTM y ELP-S (Equipos).
+- Confirmar el sentido de la eficiencia (más alto = mejor, como el Excel).
+- Opcional: `ANTHROPIC_API_KEY` para que Claude escriba los resúmenes.
