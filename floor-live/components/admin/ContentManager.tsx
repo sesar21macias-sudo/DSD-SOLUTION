@@ -377,7 +377,7 @@ function PhotoSection({ media, scopes, where }: { media: Media[]; scopes: ScopeO
         <div className="flex items-center gap-2">
           {scopes.length > 1 && (
             <select
-              className="field h-8 w-auto py-0 text-sm"
+              className="field !h-8 w-auto !rounded-full !py-0 !pl-3.5 !text-[0.8125rem]"
               aria-label={d.content.where}
               value={teamId === null ? "" : String(teamId)}
               onChange={(e) => setTeamId(e.target.value === "" ? null : Number(e.target.value))}
@@ -468,7 +468,7 @@ function PhotoCard({ m, where, scopes }: { m: Media; where: string; scopes: Scop
       </div>
       <figcaption className="flex flex-col gap-2 p-2.5">
         <input
-          className="field py-1.5 text-sm"
+          className="field !py-1.5 !text-sm"
           placeholder={d.content.captionPlaceholder}
           aria-label={d.content.caption}
           maxLength={140}
@@ -478,7 +478,7 @@ function PhotoCard({ m, where, scopes }: { m: Media; where: string; scopes: Scop
         />
         {scopes.length > 1 && (
           <select
-            className="field py-1.5 text-sm"
+            className="field !py-1.5 !text-sm"
             aria-label={d.content.where}
             value={teamId === null ? "" : String(teamId)}
             onChange={async (e) => {

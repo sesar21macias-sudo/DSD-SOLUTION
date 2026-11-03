@@ -51,8 +51,8 @@ function TeamRow({ t }: { t: Team }) {
   return (
     <li className="grid grid-cols-2 items-center gap-3 px-4 py-3 md:grid-cols-[6rem_1fr_1fr_6rem_5rem]">
       <span className="col-span-2 font-mono text-sm text-ink-soft md:col-span-1">{t.code}</span>
-      <input className="field py-2" aria-label={d.teams.name} value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
-      <input className="field py-2" aria-label={d.teams.leaderName} value={leader} maxLength={60} placeholder={d.teams.leaderName} onChange={(e) => setLeader(e.target.value)} />
+      <input className="field !py-2" aria-label={d.teams.name} value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+      <input className="field !py-2" aria-label={d.teams.leaderName} value={leader} maxLength={60} placeholder={d.teams.leaderName} onChange={(e) => setLeader(e.target.value)} />
       <label className="flex items-center gap-2 text-sm text-ink-soft">
         <input type="checkbox" className="accent-[var(--color-red)]" checked={active} onChange={(e) => setActive(e.target.checked)} />
         {active ? d.teams.active : d.teams.inactive}
