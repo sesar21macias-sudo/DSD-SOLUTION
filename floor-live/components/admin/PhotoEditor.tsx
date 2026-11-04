@@ -217,6 +217,9 @@ export function PhotoEditor({
             />
             {d.content.inRotation}
           </label>
+          <p className={`-mt-2 text-xs ${f.in_rotation ? "text-ink-faint" : "rounded-lg bg-warn-wash px-2 py-1.5 text-warn"}`}>
+            {f.in_rotation ? d.content.inRotationOn : d.content.inRotationOff}
+          </p>
           {scopes.length > 1 && (
             <div>
               <label className="label" htmlFor="ph-where">{d.content.where}</label>

@@ -602,12 +602,12 @@ function PhotoCard({ m, where, onEdit }: { m: Media; where: string; onEdit: () =
         <TvPreview>
           <PhotoFrame src={`/api/media/${m.id}`} look={m} alt={m.caption} />
         </TvPreview>
-        <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[0.7rem] font-medium text-ink-soft">{where}</span>
-        <span className="absolute right-2 top-2">
-          <ScheduleBadge startsAt={m.starts_at} endsAt={m.ends_at} hidden={!m.in_rotation} />
-        </span>
       </button>
       <figcaption className="flex flex-col gap-1.5 p-2.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ScheduleBadge startsAt={m.starts_at} endsAt={m.ends_at} hidden={!m.in_rotation} />
+          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.7rem] font-medium text-ink-soft">{where}</span>
+        </div>
         {m.caption && <div className="line-clamp-2 text-sm text-ink">{m.caption}</div>}
         <div className="text-[0.7rem] text-ink-faint">
           <ScheduleText startsAt={m.starts_at} endsAt={m.ends_at} />
