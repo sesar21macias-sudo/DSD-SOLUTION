@@ -30,6 +30,26 @@ export interface Team {
 export type AnnouncementKind = "news" | "celebration" | "safety" | "reminder";
 export const ANNOUNCEMENT_KINDS: AnnouncementKind[] = ["news", "celebration", "safety", "reminder"];
 
+/** Diseños de anuncio para la tele (ver AnnouncementSlide). */
+export type Template = "classic" | "banner" | "split" | "spotlight" | "celebrate";
+export const TEMPLATES: Template[] = ["classic", "banner", "split", "spotlight", "celebrate"];
+/** Color de acento; "auto" = según el tipo de anuncio. */
+export type Accent = "auto" | "red" | "blue" | "green" | "amber" | "white";
+export const ACCENTS: Accent[] = ["auto", "red", "blue", "green", "amber", "white"];
+
+/** Cómo se acomoda una foto en la tele. */
+export type Fit = "cover" | "contain";
+export type PhotoBg = "black" | "white" | "red" | "blue" | "blur";
+export const PHOTO_BGS: PhotoBg[] = ["black", "white", "red", "blue", "blur"];
+
+export interface PhotoLook {
+  fit: Fit;
+  pos_x: number;
+  pos_y: number;
+  bg: PhotoBg;
+  motion: number;
+}
+
 export interface Announcement {
   id: number;
   team_id: number | null;
@@ -39,13 +59,18 @@ export interface Announcement {
   title_es: string;
   body_es: string;
   media_id: number | null;
+  template: Template;
+  accent: Accent;
+  /** Segundos en pantalla; null = los de la pantalla. */
+  seconds: number | null;
   /** Hora local de planta "YYYY-MM-DDTHH:MM"; null = sin límite. */
   starts_at: string | null;
   ends_at: string | null;
   created_at: string;
 }
 
-export interface Media {
+export interface Media extends PhotoLook {
+  seconds: number | null;
   id: number;
   team_id: number | null;
   width: number | null;

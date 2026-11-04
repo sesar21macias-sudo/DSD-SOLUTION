@@ -22,12 +22,12 @@ export default async function ContentPage() {
   const [announcements, media] = isAdmin
     ? await Promise.all([
         all<Announcement>("SELECT * FROM announcements ORDER BY created_at DESC LIMIT 200"),
-        all<Media>("SELECT id, team_id, width, height, caption, in_rotation, starts_at, ends_at, created_at FROM media ORDER BY created_at DESC LIMIT 200"),
+        all<Media>("SELECT id, team_id, width, height, caption, in_rotation, starts_at, ends_at, fit, pos_x, pos_y, bg, motion, seconds, created_at FROM media ORDER BY created_at DESC LIMIT 200"),
       ])
     : await Promise.all([
         all<Announcement>("SELECT * FROM announcements WHERE team_id = ? ORDER BY created_at DESC LIMIT 200", user.team_id),
         all<Media>(
-          "SELECT id, team_id, width, height, caption, in_rotation, starts_at, ends_at, created_at FROM media WHERE team_id = ? ORDER BY created_at DESC LIMIT 200",
+          "SELECT id, team_id, width, height, caption, in_rotation, starts_at, ends_at, fit, pos_x, pos_y, bg, motion, seconds, created_at FROM media WHERE team_id = ? ORDER BY created_at DESC LIMIT 200",
           user.team_id
         ),
       ]);

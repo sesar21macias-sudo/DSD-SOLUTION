@@ -21,7 +21,7 @@ export const PATCH = handler(async (req: Request, { params }: Ctx) => {
   const teamId = await targetTeam(b, me, row.team_id);
   const f = await announcementInput(b, teamId, me);
   await run(
-    `UPDATE announcements SET team_id = ?, kind = ?, title_en = ?, body_en = ?, title_es = ?, body_es = ?, media_id = ?, starts_at = ?, ends_at = ?
+    `UPDATE announcements SET team_id = ?, kind = ?, title_en = ?, body_en = ?, title_es = ?, body_es = ?, media_id = ?, starts_at = ?, ends_at = ?, template = ?, accent = ?, seconds = ?
       WHERE id = ?`,
     teamId,
     f.kind,
@@ -32,6 +32,9 @@ export const PATCH = handler(async (req: Request, { params }: Ctx) => {
     f.media_id,
     f.starts_at,
     f.ends_at,
+    f.template,
+    f.accent,
+    f.seconds,
     id
   );
   return NextResponse.json({ ok: true });

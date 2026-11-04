@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { DisplaysManager } from "@/components/admin/DisplaysManager";
 import { PageHead } from "@/components/admin/Kpi";
 import { all } from "@/lib/db";
+import { liveContent, type LiveItem } from "@/lib/live";
 import { getDict } from "@/lib/i18n/server";
 import { pageUser } from "@/lib/session";
 import type { Display, Team } from "@/lib/types";
@@ -22,10 +23,16 @@ export default async function DisplaysPage() {
     ),
     all<Team>("SELECT * FROM teams WHERE active = 1 ORDER BY position, name"),
   ]);
+  // Lo que está saliendo ahorita en cada pantalla (planta o equipo), sin repetir consultas.
+  const live: Record<string, LiveItem[]> = {};
+  for (const s of displays) {
+    const key = s.scope === "team" && s.team_id ? String(s.team_id) : "plant";
+    if (!(key in live)) live[key] = await liveContent(key === "plant" ? null : Number(key));
+  }
   return (
     <>
       <PageHead title={d.displays.title} subtitle={d.displays.subtitle} />
-      <DisplaysManager displays={displays} teams={teams} />
+      <DisplaysManager displays={displays} teams={teams} live={live} />
     </>
   );
 }

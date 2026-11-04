@@ -3,18 +3,76 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { preparePhoto } from "@/lib/compress";
-import { ANNOUNCEMENT_KINDS, type Announcement, type AnnouncementKind, type Media } from "@/lib/types";
-import { useDict } from "../I18n";
+import { ACCENTS, ANNOUNCEMENT_KINDS, TEMPLATES, type Accent, type Announcement, type AnnouncementKind, type Media, type Template } from "@/lib/types";
+import { useDict, useLang } from "../I18n";
 import { IconCamera, IconEdit, IconPlus, IconSpark, IconTrash } from "../Icons";
 import { Sheet } from "../Sheet";
 import { send, toast } from "../client";
 import { KindGlyph } from "../tv/glyphs";
 import { ScheduleBadge, ScheduleFields, ScheduleText, type Schedule } from "./ScheduleFields";
+import { PhotoEditor } from "./PhotoEditor";
+import { TvPreview } from "./TvPreview";
+import { AnnouncementSlide, PhotoFrame } from "../tv/slides";
 import { Empty, cx } from "../ui";
 
 interface ScopeOption {
   id: number | null;
   label: string;
+}
+
+const ACCENT_SWATCH: Record<Accent, string> = {
+  auto: "conic-gradient(var(--color-ink), var(--color-warn), var(--color-good), var(--color-red), var(--color-ink))",
+  red: "var(--color-red)",
+  blue: "#28a8e0",
+  green: "var(--color-good)",
+  amber: "var(--color-warn)",
+  white: "var(--color-ink)",
+};
+
+/** Dibujito de cada plantilla para el selector (bloques, no texto). */
+function TemplateIcon({ t }: { t: Template }) {
+  const box = "relative block h-10 w-full overflow-hidden rounded-md bg-black/60";
+  const bar = "absolute rounded-sm bg-ink/80";
+  const acc = "absolute rounded-sm bg-red";
+  if (t === "banner")
+    return (
+      <span className={box}>
+        <span className={acc} style={{ left: "8%", right: "8%", top: "12%", height: "22%" }} />
+        <span className={bar} style={{ left: "20%", right: "20%", top: "50%", height: "14%" }} />
+        <span className={bar} style={{ left: "30%", right: "30%", top: "72%", height: "8%", opacity: 0.5 }} />
+      </span>
+    );
+  if (t === "split")
+    return (
+      <span className={box}>
+        <span className={acc} style={{ left: "6%", width: "38%", top: "12%", bottom: "12%" }} />
+        <span className={bar} style={{ left: "52%", right: "8%", top: "36%", height: "14%" }} />
+        <span className={bar} style={{ left: "52%", right: "20%", top: "58%", height: "8%", opacity: 0.5 }} />
+      </span>
+    );
+  if (t === "spotlight")
+    return (
+      <span className={box} style={{ background: "linear-gradient(135deg, #5b6b7b, #2b2b2b)" }}>
+        <span className={acc} style={{ left: "8%", width: "14%", bottom: "38%", height: "6%" }} />
+        <span className={bar} style={{ left: "8%", width: "50%", bottom: "16%", height: "14%" }} />
+      </span>
+    );
+  if (t === "celebrate")
+    return (
+      <span className={box}>
+        <span className="absolute left-1/2 top-1/2 h-8 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-warn/30 blur-md" />
+        <span className="absolute rounded-sm bg-warn" style={{ left: "22%", right: "22%", top: "40%", height: "16%" }} />
+        <span className={bar} style={{ left: "32%", right: "32%", top: "66%", height: "8%", opacity: 0.5 }} />
+      </span>
+    );
+  return (
+    <span className={box}>
+      <span className="absolute rounded-full border border-ink/70" style={{ left: "8%", width: "26%", top: "18%", height: "14%" }} />
+      <span className={bar} style={{ left: "8%", width: "44%", top: "42%", height: "14%" }} />
+      <span className={bar} style={{ left: "8%", width: "38%", top: "64%", height: "8%", opacity: 0.5 }} />
+      <span className="absolute rounded-sm bg-ink/30" style={{ right: "8%", width: "34%", top: "14%", bottom: "14%" }} />
+    </span>
+  );
 }
 
 const KIND_TONE: Record<AnnouncementKind, string> = {
@@ -88,6 +146,7 @@ export function ContentManager({
         open={editing !== null}
         onClose={() => setEditing(null)}
         title={editing === "new" ? d.content.newAnnouncement : d.content.editAnnouncement}
+        wide
       >
         {editing !== null && (
           <AnnouncementForm
@@ -118,6 +177,7 @@ function AnnouncementForm({
   onDone: () => void;
 }) {
   const d = useDict();
+  const lang = useLang();
   const router = useRouter();
   const [teamId, setTeamId] = useState<number | null>(initial ? initial.team_id : scopes[0]?.id ?? null);
   const [kind, setKind] = useState<AnnouncementKind>(initial?.kind ?? "news");
@@ -129,6 +189,9 @@ function AnnouncementForm({
   });
   const [schedule, setSchedule] = useState<Schedule>({ starts_at: initial?.starts_at ?? "", ends_at: initial?.ends_at ?? "" });
   const [mediaId, setMediaId] = useState<number | null>(initial?.media_id ?? null);
+  const [template, setTemplate] = useState<Template>(initial?.template ?? "classic");
+  const [accent, setAccent] = useState<Accent>(initial?.accent ?? "auto");
+  const [seconds, setSeconds] = useState(initial?.seconds ? String(initial.seconds) : "");
   const [busy, setBusy] = useState<"save" | "polish" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -170,6 +233,9 @@ function AnnouncementForm({
         team_id: teamId,
         starts_at: schedule.starts_at || null,
         ends_at: schedule.ends_at || null,
+        template,
+        accent,
+        seconds: seconds === "" ? null : Number(seconds),
       };
       if (initial) await send(`/api/anuncios/${initial.id}`, "PATCH", payload);
       else await send("/api/anuncios", "POST", payload);
@@ -240,6 +306,88 @@ function AnnouncementForm({
         </div>
       </fieldset>
 
+      <div>
+        <div className="label">{d.content.previewTitle}</div>
+        <TvPreview>
+          <AnnouncementSlide
+            key={`${template}-${accent}-${kind}-${mediaId}`}
+            a={{
+              id: initial?.id ?? 0,
+              kind,
+              title: (lang === "en" ? f.title_en || f.title_es : f.title_es || f.title_en) || d.content.design,
+              body: lang === "en" ? f.body_en || f.body_es : f.body_es || f.body_en,
+              mediaId,
+              look: mediaId ? media.find((m) => m.id === mediaId) ?? null : null,
+              teamName: null,
+              template,
+              accent,
+              seconds: null,
+            }}
+            d={d}
+            mediaUrl={(id) => `/api/media/${id}`}
+          />
+        </TvPreview>
+      </div>
+
+      <fieldset>
+        <legend className="label">{d.content.design}</legend>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {TEMPLATES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={template === t}
+              onClick={() => setTemplate(t)}
+              className={cx(
+                "flex flex-col items-center gap-1.5 rounded-xl border p-2 text-xs font-medium transition-colors",
+                template === t ? "border-red-text bg-red-wash text-ink" : "border-line bg-surface-2 text-ink-soft hover:text-ink"
+              )}
+            >
+              <TemplateIcon t={t} />
+              {d.content.templates[t]}
+            </button>
+          ))}
+        </div>
+        {template === "spotlight" && mediaId === null && <p className="mt-1.5 text-xs text-ink-faint">{d.content.spotlightNeedsPhoto}</p>}
+      </fieldset>
+
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+        <fieldset>
+          <legend className="label">{d.content.accent}</legend>
+          <div className="flex flex-wrap gap-2">
+            {ACCENTS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-pressed={accent === c}
+                onClick={() => setAccent(c)}
+                className={cx(
+                  "flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-medium",
+                  accent === c ? "border-red-text text-ink" : "border-line text-ink-soft hover:text-ink"
+                )}
+              >
+                <span className="h-4 w-4 rounded-full border border-line-strong" style={{ background: ACCENT_SWATCH[c] }} />
+                {d.content.accents[c]}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <div>
+          <label className="label" htmlFor="ann-seconds">{d.content.seconds}</label>
+          <input
+            id="ann-seconds"
+            type="number"
+            min={5}
+            max={300}
+            placeholder="—"
+            className="field w-28"
+            value={seconds}
+            onChange={(e) => setSeconds(e.target.value)}
+          />
+        </div>
+      </div>
+      <p className="-mt-2 text-xs text-ink-faint">{d.content.secondsHint}</p>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-3">
           <div>
@@ -296,8 +444,9 @@ function AnnouncementForm({
                 onClick={() => setMediaId(m.id)}
                 className={cx("h-20 w-24 flex-none overflow-hidden rounded-xl border-2", mediaId === m.id ? "border-red-text" : "border-transparent")}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/media/${m.id}`} alt={m.caption} className="h-full w-full object-cover" loading="lazy" />
+                <span className="relative block h-full w-full">
+                  <PhotoFrame src={`/api/media/${m.id}`} look={{ ...m, motion: 0 }} alt={m.caption} />
+                </span>
               </button>
             ))}
           </div>
@@ -340,17 +489,21 @@ function PhotoSection({ media, scopes, where }: { media: Media[]; scopes: ScopeO
   const [uploading, setUploading] = useState(0);
   const [scheduling, setScheduling] = useState(false);
   const [batch, setBatch] = useState<Schedule>({ starts_at: "", ends_at: "" });
+  // Foto abierta en el editor; tras subir una sola, se abre sola para ajustarla.
+  const [editId, setEditId] = useState<number | null>(null);
+  const editing = editId === null ? null : media.find((m) => m.id === editId) ?? null;
 
   async function upload(files: FileList) {
     const list = Array.from(files).slice(0, 12);
     setUploading(list.length);
     let ok = 0;
+    let lastId: number | null = null;
     for (const file of list) {
       try {
         const p = await preparePhoto(file, d.content.unreadable);
         if (p.blob.size > 8 * 1024 * 1024) throw new Error(d.content.tooBig);
         const form = new FormData();
-        form.set("file", p.blob, "photo.jpg");
+        form.set("file", p.blob, p.blob.type === "image/webp" ? "photo.webp" : "photo.jpg");
         form.set("team_id", teamId === null ? "" : String(teamId));
         form.set("width", String(p.width));
         form.set("height", String(p.height));
@@ -358,7 +511,8 @@ function PhotoSection({ media, scopes, where }: { media: Media[]; scopes: ScopeO
           if (batch.starts_at) form.set("starts_at", batch.starts_at);
           if (batch.ends_at) form.set("ends_at", batch.ends_at);
         }
-        await send("/api/media", "POST", form);
+        const res: { id: number } = await send("/api/media", "POST", form);
+        lastId = res.id;
         URL.revokeObjectURL(p.url);
         ok++;
       } catch (e) {
@@ -366,8 +520,9 @@ function PhotoSection({ media, scopes, where }: { media: Media[]; scopes: ScopeO
       }
       setUploading((n) => n - 1);
     }
-    if (ok) toast(d.content.photosUploaded(ok));
+    if (ok) toast(ok === 1 ? d.content.afterUpload : d.content.photosUploaded(ok));
     router.refresh();
+    if (ok === 1 && lastId !== null) setEditId(lastId);
   }
 
   return (
@@ -420,148 +575,47 @@ function PhotoSection({ media, scopes, where }: { media: Media[]; scopes: ScopeO
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2">
           {media.map((m) => (
-            <PhotoCard key={m.id} m={m} where={where(m.team_id)} scopes={scopes} />
+            <PhotoCard key={m.id} m={m} where={where(m.team_id)} onEdit={() => setEditId(m.id)} />
           ))}
         </div>
       )}
+      <Sheet open={editing !== null} onClose={() => setEditId(null)} title={d.content.editPhoto} wide>
+        {editing && (
+          <PhotoEditor
+            key={editing.id}
+            m={editing}
+            scopes={scopes}
+            teamName={editing.team_id === null ? null : where(editing.team_id)}
+            onDone={() => setEditId(null)}
+          />
+        )}
+      </Sheet>
     </section>
   );
 }
 
-function PhotoCard({ m, where, scopes }: { m: Media; where: string; scopes: ScopeOption[] }) {
+function PhotoCard({ m, where, onEdit }: { m: Media; where: string; onEdit: () => void }) {
   const d = useDict();
-  const router = useRouter();
-  const [caption, setCaption] = useState(m.caption);
-  const [rotation, setRotation] = useState(m.in_rotation === 1);
-  const [confirm, setConfirm] = useState(false);
-  const [schedule, setSchedule] = useState<Schedule>({ starts_at: m.starts_at ?? "", ends_at: m.ends_at ?? "" });
-  const [editSchedule, setEditSchedule] = useState(false);
-  const [teamId, setTeamId] = useState<number | null>(m.team_id);
-
-  const save = async (next: { caption?: string; in_rotation?: boolean; schedule?: Schedule; team?: number | null }): Promise<boolean> => {
-    const sch = next.schedule ?? schedule;
-    const team = next.team !== undefined ? next.team : teamId;
-    try {
-      await send(`/api/media/${m.id}`, "PATCH", {
-        caption: next.caption ?? caption,
-        in_rotation: next.in_rotation ?? rotation,
-        starts_at: sch.starts_at || null,
-        ends_at: sch.ends_at || null,
-        team_id: team,
-      });
-      return true;
-    } catch (e) {
-      toast((e as Error).message, "error");
-      return false;
-    }
-  };
-
   return (
-    <figure className={cx("panel overflow-hidden", !rotation && "opacity-60")}>
-      <div className="relative aspect-[4/3] bg-surface-2">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/api/media/${m.id}`} alt={caption} className="h-full w-full object-cover" loading="lazy" />
+    <figure className={cx("panel overflow-hidden", !m.in_rotation && "opacity-60")}>
+      <button type="button" className="relative block w-full text-left" onClick={onEdit} aria-label={d.content.editPhoto}>
+        <TvPreview>
+          <PhotoFrame src={`/api/media/${m.id}`} look={m} alt={m.caption} />
+        </TvPreview>
         <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[0.7rem] font-medium text-ink-soft">{where}</span>
         <span className="absolute right-2 top-2">
-          <ScheduleBadge startsAt={m.starts_at} endsAt={m.ends_at} hidden={!rotation} />
+          <ScheduleBadge startsAt={m.starts_at} endsAt={m.ends_at} hidden={!m.in_rotation} />
         </span>
-      </div>
-      <figcaption className="flex flex-col gap-2 p-2.5">
-        <input
-          className="field !py-1.5 !text-sm"
-          placeholder={d.content.captionPlaceholder}
-          aria-label={d.content.caption}
-          maxLength={140}
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          onBlur={() => caption !== m.caption && save({ caption })}
-        />
-        {scopes.length > 1 && (
-          <select
-            className="field !py-1.5 !text-sm"
-            aria-label={d.content.where}
-            value={teamId === null ? "" : String(teamId)}
-            onChange={async (e) => {
-              const next = e.target.value === "" ? null : Number(e.target.value);
-              setTeamId(next);
-              if (await save({ team: next })) {
-                toast(d.content.saved);
-                router.refresh();
-              }
-            }}
-          >
-            {scopes.map((s) => (
-              <option key={s.id ?? "plant"} value={s.id === null ? "" : String(s.id)}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        )}
+      </button>
+      <figcaption className="flex flex-col gap-1.5 p-2.5">
+        {m.caption && <div className="line-clamp-2 text-sm text-ink">{m.caption}</div>}
         <div className="text-[0.7rem] text-ink-faint">
           <ScheduleText startsAt={m.starts_at} endsAt={m.ends_at} />
+          {m.seconds ? <span>{m.starts_at || m.ends_at ? " · " : ""}{m.seconds}s</span> : null}
         </div>
-        {editSchedule ? (
-          <div className="flex flex-col gap-2">
-            <ScheduleFields value={schedule} onChange={setSchedule} idPrefix={`m${m.id}`} />
-            <div className="flex justify-end gap-1">
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditSchedule(false)}>
-                {d.common.cancel}
-              </button>
-              <button
-                type="button"
-                className="btn btn-light btn-sm"
-                onClick={async () => {
-                  if (await save({ schedule })) {
-                    toast(d.content.saved);
-                    setEditSchedule(false);
-                    router.refresh();
-                  }
-                }}
-              >
-                {d.common.save}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" className="btn btn-quiet btn-sm self-start" onClick={() => setEditSchedule(true)}>
-            {d.content.schedule}
-          </button>
-        )}
-        <div className="flex items-center justify-between gap-2">
-          <label className="flex items-center gap-2 text-xs text-ink-soft">
-            <input
-              type="checkbox"
-              className="accent-[var(--color-red)]"
-              checked={rotation}
-              onChange={(e) => {
-                setRotation(e.target.checked);
-                save({ in_rotation: e.target.checked });
-              }}
-            />
-            {d.content.inRotation}
-          </label>
-          {confirm ? (
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
-              onClick={async () => {
-                try {
-                  await send(`/api/media/${m.id}`, "DELETE");
-                  toast(d.content.deleted);
-                  router.refresh();
-                } catch (e) {
-                  toast((e as Error).message, "error");
-                }
-              }}
-            >
-              {d.common.yes}
-            </button>
-          ) : (
-            <button type="button" className="btn btn-ghost btn-sm" aria-label={d.common.delete} onClick={() => setConfirm(true)}>
-              <IconTrash size={15} />
-            </button>
-          )}
-        </div>
+        <button type="button" className="btn btn-quiet btn-sm self-start" onClick={onEdit}>
+          {d.content.adjust}
+        </button>
       </figcaption>
     </figure>
   );

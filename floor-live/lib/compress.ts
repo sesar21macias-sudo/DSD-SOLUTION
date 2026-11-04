@@ -1,7 +1,8 @@
 /**
- * Reduce una foto del teléfono (4-12 MB) a ~300 KB antes de subirla:
- * lado mayor de 1600 px, JPEG al 82%. En la planta la señal suele ser mala
- * y nadie necesita la foto original para ver si una costura quedó bien.
+ * Reduce una foto del teléfono (4-12 MB) antes de subirla: lado mayor de 1920 px
+ * (lo de una tele Full HD; una lámina de Canva/PowerPoint exportada a 1920×1080
+ * entra tal cual). Fotos → JPEG al 85%. PNG/WebP → WebP: conserva la transparencia,
+ * y el "Fondo" que elijan en el editor es lo que se ve detrás.
  */
 export interface Prepared {
   blob: Blob;
@@ -10,7 +11,7 @@ export interface Prepared {
   url: string;
 }
 
-const MAX_SIDE = 1600;
+const MAX_SIDE = 1920;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 
 /** `unreadable` es el mensaje de error, ya traducido por quien llama. */
@@ -27,7 +28,10 @@ export async function preparePhoto(file: File, unreadable: string): Promise<Prep
     if (!ctx) throw new Error("sin canvas");
     ctx.drawImage(bitmap, 0, 0, width, height);
     bitmap.close();
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.82));
+    const keepAlpha = file.type === "image/png" || file.type === "image/webp";
+    const blob = await new Promise<Blob | null>((r) =>
+      keepAlpha ? canvas.toBlob(r, "image/webp", 0.9) : canvas.toBlob(r, "image/jpeg", 0.85)
+    );
     if (!blob) throw new Error("sin blob");
     return { blob, width, height, url: URL.createObjectURL(blob) };
   } catch {

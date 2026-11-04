@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Feed, FeedAnnouncement, FeedPhoto, JobRow, RankRow, ScopeStats, WeekPoint } from "@/lib/feed-types";
+import type { Accent, AnnouncementKind, PhotoBg, PhotoLook } from "@/lib/types";
 import type { Dict } from "@/lib/i18n/dict";
 import { monthName } from "@/lib/dates";
 import { pct, pointsDelta, toneFor, type Tone } from "@/lib/status";
@@ -538,48 +539,276 @@ export function JobsSlide({ jobs, feed, d, kicker }: { jobs: JobRow[]; feed: Fee
   );
 }
 
-const KIND_COLOR: Record<string, string> = {
-  news: "var(--color-ink)",
-  celebration: "var(--color-warn)",
-  safety: "var(--color-good)",
-  reminder: "var(--color-red-text)",
+/* ---------- Fotos con ajustes (llenar / completa, enfoque, fondo, movimiento) ---------- */
+
+const BG: Record<PhotoBg, string> = {
+  black: "#050505",
+  white: "#f4f4f2",
+  red: "oklch(0.45 0.18 26)",
+  blue: "#1d6f9a",
+  blur: "#050505",
 };
+
+/** Una foto acomodada según sus ajustes. Llena a su contenedor (que debe ser relative/absolute). */
+export function PhotoFrame({
+  src,
+  look,
+  alt = "",
+  seconds,
+}: {
+  src: string;
+  look: PhotoLook | null;
+  alt?: string;
+  seconds?: number;
+}) {
+  const l: PhotoLook = look ?? { fit: "cover", pos_x: 50, pos_y: 50, bg: "black", motion: 1 };
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={{ background: BG[l.bg] }}>
+      {l.bg === "blur" && (
+        // Fondo desenfocado con la misma foto: rellena los costados cuando va "completa".
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className={`absolute inset-0 h-full w-full ${l.motion ? "kenburns" : ""}`}
+        style={
+          {
+            objectFit: l.fit,
+            objectPosition: `${l.pos_x}% ${l.pos_y}%`,
+            transformOrigin: `${l.pos_x}% ${l.pos_y}%`,
+            "--kb-s": `${(seconds ?? 15) + 2}s`,
+          } as React.CSSProperties
+        }
+      />
+    </div>
+  );
+}
+
+/* ---------- Anuncios: 5 plantillas ---------- */
+
+type AccentColor = Exclude<Accent, "auto">;
+
+const KIND_ACCENT: Record<AnnouncementKind, AccentColor> = {
+  news: "white",
+  celebration: "amber",
+  safety: "green",
+  reminder: "red",
+};
+const ACCENT_FILL: Record<AccentColor, string> = {
+  red: "var(--color-red)",
+  blue: "#28a8e0",
+  green: "var(--color-good)",
+  amber: "var(--color-warn)",
+  white: "var(--color-ink)",
+};
+const ACCENT_TEXT: Record<AccentColor, string> = {
+  red: "var(--color-red-text)",
+  blue: "#5cc4ee",
+  green: "var(--color-good)",
+  amber: "var(--color-warn)",
+  white: "var(--color-ink)",
+};
+/** Texto encima de un relleno del color de acento. */
+const ON_ACCENT: Record<AccentColor, string> = {
+  red: "#ffffff",
+  blue: "#06121a",
+  green: "#06140b",
+  amber: "#140f02",
+  white: "#0a0a0a",
+};
+
+export function accentOf(a: { accent: Accent; kind: AnnouncementKind }): AccentColor {
+  return a.accent === "auto" ? KIND_ACCENT[a.kind] : a.accent;
+}
+
+function KindChip({ a, d, i, filled }: { a: FeedAnnouncement; d: Dict; i: number; filled?: boolean }) {
+  const acc = accentOf(a);
+  return (
+    <div
+      data-in
+      className="inline-flex items-center rounded-full font-stencil font-extrabold uppercase"
+      style={{
+        ...delay(i),
+        color: filled ? ON_ACCENT[acc] : ACCENT_TEXT[acc],
+        background: filled ? ACCENT_FILL[acc] : undefined,
+        border: filled ? undefined : "2px solid currentColor",
+        gap: u(0.8),
+        padding: `${u(0.5)} ${u(1.4)}`,
+        fontSize: u(1.8),
+        letterSpacing: "0.1em",
+      }}
+    >
+      <KindGlyph kind={a.kind} />
+      {d.content.kinds[a.kind]}
+      {a.teamName && <span style={{ opacity: 0.75 }}>· {a.teamName}</span>}
+    </div>
+  );
+}
+
+const titleSize = (t: string, big: number, small: number) => u(t.length > 40 ? small : big);
+const bodySize = (t: string) => u(t.length > 160 ? 2.6 : 3.1);
 
 export function AnnouncementSlide({ a, d, mediaUrl }: { a: FeedAnnouncement; d: Dict; mediaUrl: (id: number) => string }) {
   const hasPhoto = a.mediaId !== null;
-  return (
-    <div className="grid h-full items-center" style={{ gridTemplateColumns: hasPhoto ? "1.1fr 1fr" : "1fr", gap: u(4) }}>
-      <div className={hasPhoto ? "" : "mx-auto max-w-[80%] text-center"}>
+  const acc = accentOf(a);
+  const photo = hasPhoto ? <PhotoFrame src={mediaUrl(a.mediaId!)} look={a.look} seconds={a.seconds ?? undefined} /> : null;
+  // "Foto grande" sin foto no tiene sentido: cae a "Aviso".
+  const template = a.template === "spotlight" && !hasPhoto ? "banner" : a.template;
+
+  if (template === "banner") {
+    return (
+      <div className="flex h-full flex-col">
         <div
           data-in
-          className={`inline-flex items-center rounded-full font-stencil font-extrabold uppercase ${hasPhoto ? "" : "mx-auto"}`}
+          className="flex items-center rounded-2xl"
+          style={{ ...delay(0), background: ACCENT_FILL[acc], color: ON_ACCENT[acc], padding: `${u(1.6)} ${u(2.6)}`, gap: u(1.4) }}
+        >
+          <KindGlyph kind={a.kind} style={{ fontSize: u(4) }} />
+          <span className="font-stencil font-extrabold uppercase" style={{ fontSize: u(3), letterSpacing: "0.12em" }}>
+            {d.content.kinds[a.kind]}
+            {a.teamName ? ` · ${a.teamName}` : ""}
+          </span>
+        </div>
+        <div className="grid min-h-0 flex-1 items-center" style={{ gridTemplateColumns: hasPhoto ? "1.3fr 1fr" : "1fr", gap: u(3), marginTop: u(2.4) }}>
+          <div className={hasPhoto ? "" : "text-center"}>
+            <h2 data-in className="font-display" style={{ ...delay(1), fontSize: titleSize(a.title, 8.4, 6.4), lineHeight: 0.98, letterSpacing: "-0.015em" }}>
+              {a.title}
+            </h2>
+            {a.body && (
+              <p data-in className="text-ink-soft" style={{ ...delay(2), fontSize: bodySize(a.body), lineHeight: 1.3, marginTop: u(2) }}>
+                {a.body}
+              </p>
+            )}
+          </div>
+          {photo && (
+            <div data-in className="tv-card relative h-full" style={delay(2)}>
+              {photo}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "split") {
+    return (
+      <div className="grid h-full" style={{ gridTemplateColumns: "1fr 1.25fr", gap: u(3.4) }}>
+        <div data-in className="relative overflow-hidden rounded-3xl" style={{ ...delay(0), background: ACCENT_FILL[acc], color: ON_ACCENT[acc] }}>
+          {photo ? (
+            <>
+              {photo}
+              <div className="absolute inset-x-0 bottom-0" style={{ height: u(1.2), background: ACCENT_FILL[acc] }} />
+            </>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center" style={{ gap: u(2) }}>
+              <KindGlyph kind={a.kind} style={{ fontSize: u(16) }} />
+              <span className="font-stencil font-extrabold uppercase" style={{ fontSize: u(3), letterSpacing: "0.14em" }}>
+                {d.content.kinds[a.kind]}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col justify-center">
+          <KindChip a={a} d={d} i={1} />
+          <h2 data-in className="font-display" style={{ ...delay(2), fontSize: titleSize(a.title, 7.4, 5.8), lineHeight: 0.98, marginTop: u(2), letterSpacing: "-0.015em" }}>
+            {a.title}
+          </h2>
+          {a.body && (
+            <p data-in className="text-ink-soft" style={{ ...delay(3), fontSize: bodySize(a.body), lineHeight: 1.3, marginTop: u(2) }}>
+              {a.body}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "spotlight") {
+    return (
+      <div className="absolute inset-0 overflow-hidden">
+        {photo}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, oklch(0.06 0 0 / 0.92) 0%, oklch(0.06 0 0 / 0.55) 45%, transparent 75%)" }} />
+        <div className="absolute flex flex-col justify-end" style={{ left: u(3), bottom: u(3.4), width: u(52), top: u(3) }}>
+          <div>
+            <KindChip a={a} d={d} i={0} filled />
+          </div>
+          <div data-in style={{ ...delay(1), width: u(8), height: u(0.6), background: ACCENT_FILL[acc], marginTop: u(2.4) }} />
+          <h2 data-in className="font-display" style={{ ...delay(2), fontSize: titleSize(a.title, 7.6, 6), lineHeight: 0.98, marginTop: u(1.6), letterSpacing: "-0.015em" }}>
+            {a.title}
+          </h2>
+          {a.body && (
+            <p data-in style={{ ...delay(3), fontSize: bodySize(a.body), lineHeight: 1.3, marginTop: u(1.8), color: "var(--color-ink-soft)" }}>
+              {a.body}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "celebrate") {
+    return (
+      <div className="relative flex h-full flex-col items-center justify-center text-center">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{ width: u(70), height: u(40), background: `radial-gradient(closest-side, color-mix(in oklch, ${ACCENT_FILL[acc]} 35%, transparent), transparent)` }}
+        />
+        {photo && (
+          <div
+            data-in
+            className="relative overflow-hidden rounded-full"
+            style={{ ...delay(0), width: u(14), height: u(14), boxShadow: `0 0 0 ${u(0.5)} ${ACCENT_FILL[acc]}`, marginBottom: u(2) }}
+          >
+            {photo}
+          </div>
+        )}
+        <KindChip a={a} d={d} i={1} />
+        <h2
+          data-in
+          className="relative font-display"
           style={{
-            ...delay(0),
-            color: KIND_COLOR[a.kind],
-            border: "2px solid currentColor",
-            gap: u(0.8),
-            padding: `${u(0.5)} ${u(1.4)}`,
-            fontSize: u(1.8),
-            letterSpacing: "0.1em",
+            ...delay(2),
+            fontSize: titleSize(a.title, 9, 6.6),
+            lineHeight: 0.96,
+            marginTop: u(2),
+            letterSpacing: "-0.015em",
+            color: ACCENT_TEXT[acc],
+            textShadow: `0 0 ${u(4)} color-mix(in oklch, ${ACCENT_FILL[acc]} 45%, transparent)`,
+            maxWidth: u(84),
           }}
         >
-          <KindGlyph kind={a.kind} />
-          {d.content.kinds[a.kind]}
-          {a.teamName && <span className="text-ink-soft">· {a.teamName}</span>}
-        </div>
-        <h2 data-in className="font-display" style={{ ...delay(1), fontSize: u(a.title.length > 40 ? 6 : 7.6), lineHeight: 0.98, marginTop: u(2), letterSpacing: "-0.015em" }}>
           {a.title}
         </h2>
         {a.body && (
-          <p data-in className="text-ink-soft" style={{ ...delay(2), fontSize: u(a.body.length > 160 ? 2.6 : 3.1), lineHeight: 1.3, marginTop: u(2.2) }}>
+          <p data-in className="relative text-ink-soft" style={{ ...delay(3), fontSize: bodySize(a.body), lineHeight: 1.3, marginTop: u(2), maxWidth: u(70) }}>
             {a.body}
           </p>
         )}
       </div>
-      {hasPhoto && (
-        <div data-in className="tv-card h-full" style={{ ...delay(2) }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={mediaUrl(a.mediaId!)} alt="" className="kenburns h-full w-full object-cover" />
+    );
+  }
+
+  // "classic": insignia, título grande y foto a la derecha si la hay.
+  return (
+    <div className="grid h-full items-center" style={{ gridTemplateColumns: hasPhoto ? "1.1fr 1fr" : "1fr", gap: u(4) }}>
+      <div className={hasPhoto ? "" : "mx-auto max-w-[80%] text-center"}>
+        <KindChip a={a} d={d} i={0} />
+        <h2 data-in className="font-display" style={{ ...delay(1), fontSize: titleSize(a.title, 7.6, 6), lineHeight: 0.98, marginTop: u(2), letterSpacing: "-0.015em" }}>
+          {a.title}
+        </h2>
+        {a.body && (
+          <p data-in className="text-ink-soft" style={{ ...delay(2), fontSize: bodySize(a.body), lineHeight: 1.3, marginTop: u(2.2) }}>
+            {a.body}
+          </p>
+        )}
+      </div>
+      {photo && (
+        <div data-in className="tv-card relative h-full" style={delay(2)}>
+          {photo}
         </div>
       )}
     </div>
@@ -589,25 +818,21 @@ export function AnnouncementSlide({ a, d, mediaUrl }: { a: FeedAnnouncement; d: 
 export function PhotoSlide({ p, d, mediaUrl, seconds }: { p: FeedPhoto; d: Dict; mediaUrl: (id: number) => string; seconds: number }) {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={mediaUrl(p.id)}
-        alt={p.caption}
-        className="kenburns absolute inset-0 h-full w-full object-cover"
-        style={{ "--kb-s": `${seconds + 2}s` } as React.CSSProperties}
-      />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, oklch(0.08 0 0 / 0.92), transparent 55%)" }} />
-      <div className="absolute" style={{ left: u(3), right: u(3), bottom: u(3) }}>
-        <div data-in className="tv-kicker" style={delay(1)}>
-          {d.tv.photoKicker}
-          {p.teamName ? ` · ${p.teamName}` : ""}
-        </div>
-        {p.caption && (
-          <p data-in className="font-display" style={{ ...delay(2), fontSize: u(5.2), lineHeight: 1, marginTop: u(1) }}>
-            {p.caption}
-          </p>
-        )}
-      </div>
+      <PhotoFrame src={mediaUrl(p.id)} look={p} alt={p.caption} seconds={seconds} />
+      {p.caption && (
+        <>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, oklch(0.08 0 0 / 0.92), transparent 45%)" }} />
+          <div className="absolute" style={{ left: u(3), right: u(3), bottom: u(3) }}>
+            <div data-in className="tv-kicker" style={delay(1)}>
+              {d.tv.photoKicker}
+              {p.teamName ? ` · ${p.teamName}` : ""}
+            </div>
+            <p data-in className="font-display" style={{ ...delay(2), fontSize: u(5.2), lineHeight: 1, marginTop: u(1) }}>
+              {p.caption}
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 }

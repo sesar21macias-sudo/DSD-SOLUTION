@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Display, Team } from "@/lib/types";
+import type { LiveItem } from "@/lib/live";
+import { formatLocal } from "@/lib/dates";
+import { IconMegaphone, IconPhoto } from "../Icons";
 import { useDict } from "../I18n";
 import { IconPlay, IconTrash, IconTv } from "../Icons";
 import { RelTime, send, toast } from "../client";
@@ -32,7 +35,7 @@ function ScopeSelect({ value, onChange, teams, id }: { value: Choice; onChange: 
   );
 }
 
-export function DisplaysManager({ displays, teams }: { displays: Display[]; teams: Team[] }) {
+export function DisplaysManager({ displays, teams, live }: { displays: Display[]; teams: Team[]; live: Record<string, LiveItem[]> }) {
   const d = useDict();
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -147,9 +150,9 @@ export function DisplaysManager({ displays, teams }: { displays: Display[]; team
         {displays.length === 0 ? (
           <Empty title={d.displays.none} />
         ) : (
-          <ul className="grid gap-3 xl:grid-cols-2">
+          <ul className="grid gap-3">
             {displays.map((s) => (
-              <DisplayCard key={s.id} s={s} teams={teams} teamName={teamName(s.team_id)} />
+              <DisplayCard key={s.id} s={s} teams={teams} teamName={teamName(s.team_id)} live={live[s.scope === "team" && s.team_id ? String(s.team_id) : "plant"] ?? []} />
             ))}
           </ul>
         )}
@@ -158,7 +161,7 @@ export function DisplaysManager({ displays, teams }: { displays: Display[]; team
   );
 }
 
-function DisplayCard({ s, teams, teamName }: { s: Display; teams: Team[]; teamName: string }) {
+function DisplayCard({ s, teams, teamName, live }: { s: Display; teams: Team[]; teamName: string; live: LiveItem[] }) {
   const d = useDict();
   const router = useRouter();
   const [edit, setEdit] = useState(false);
@@ -196,6 +199,26 @@ function DisplayCard({ s, teams, teamName }: { s: Display; teams: Team[]; teamNa
           {online && <span className="live-dot" />}
           {online ? d.displays.online : s.last_seen ? <span>{d.displays.offline("")}<RelTime iso={s.last_seen} /></span> : d.displays.never}
         </span>
+      </div>
+
+      <div className="rounded-xl bg-surface-2/60 px-3 py-2.5">
+        <div className="text-[0.7rem] font-medium uppercase tracking-[0.06em] text-ink-faint">{d.displays.nowShowing}</div>
+        {live.length === 0 ? (
+          <p className="mt-1 text-xs text-ink-faint">{d.displays.onlyMetrics}</p>
+        ) : (
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {live.map((it) => (
+              <li key={`${it.type}${it.id}`} className="flex items-center gap-2 text-xs">
+                {it.type === "news" ? <IconMegaphone size={14} className="flex-none text-ink-faint" /> : <IconPhoto size={14} className="flex-none text-ink-faint" />}
+                <span className="min-w-0 flex-1 truncate text-ink-soft">{it.label || (it.type === "photo" ? d.displays.photoNoCaption : "—")}</span>
+                <span className="flex-none text-ink-faint">
+                  {it.seconds ? `${it.seconds}s · ` : ""}
+                  {it.ends_at ? d.displays.untilT(formatLocal(it.ends_at, d.locale)) : d.displays.noEndShort}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {edit ? (

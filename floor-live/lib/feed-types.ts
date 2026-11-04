@@ -1,5 +1,5 @@
 import type { Tone } from "./status";
-import type { AnnouncementKind, Defect, Lang } from "./types";
+import type { Accent, AnnouncementKind, Defect, Lang, PhotoLook, Template } from "./types";
 
 /** Formas que viajan del servidor a la tele y al panel (sin "server-only"). */
 
@@ -70,13 +70,19 @@ export interface FeedAnnouncement {
   title: string;
   body: string;
   mediaId: number | null;
+  /** Ajustes de la foto del anuncio (si tiene). */
+  look: PhotoLook | null;
   teamName: string | null;
+  template: Template;
+  accent: Accent;
+  seconds: number | null;
 }
 
-export interface FeedPhoto {
+export interface FeedPhoto extends PhotoLook {
   id: number;
   caption: string;
   teamName: string | null;
+  seconds: number | null;
 }
 
 export interface Feed {

@@ -5,7 +5,7 @@ import type { Feed, FeedAnnouncement, FeedPhoto } from "./feed-types";
 import { loadYear, rankings, statsFor, teamJobs } from "./metrics";
 import { getSettings } from "./settings";
 import { ruleSummary } from "./summary";
-import type { Announcement, Lang, Team } from "./types";
+import type { Announcement, Lang, PhotoLook, Team } from "./types";
 
 export interface FeedTarget {
   kind: "plant" | "team";
@@ -64,6 +64,16 @@ export async function buildFeed(t: FeedTarget): Promise<Feed> {
     ...(team ? [now, now, team.id] : [now, now])
   );
   const other: Lang = t.lang === "en" ? "es" : "en";
+  // Ajustes de las fotos que usan los anuncios (enfoque, fondo, etc.).
+  const mediaIds = [...new Set(rows.map((a) => a.media_id).filter((x): x is number => x !== null))];
+  const looks = new Map<number, PhotoLook>();
+  if (mediaIds.length) {
+    const lr = await all<PhotoLook & { id: number }>(
+      `SELECT id, fit, pos_x, pos_y, bg, motion FROM media WHERE id IN (${mediaIds.map(() => "?").join(",")})`,
+      ...mediaIds
+    );
+    lr.forEach(({ id, ...look }) => looks.set(id, look));
+  }
   const announcements: FeedAnnouncement[] = rows
     .map((a) => {
       const title = a[`title_${t.lang}`] || a[`title_${other}`];
@@ -74,13 +84,17 @@ export async function buildFeed(t: FeedTarget): Promise<Feed> {
         title,
         body,
         mediaId: a.media_id,
+        look: a.media_id ? looks.get(a.media_id) ?? null : null,
         teamName: a.team_id ? teamName.get(a.team_id) ?? null : null,
+        template: a.template,
+        accent: a.accent,
+        seconds: a.seconds,
       };
     })
     .filter((a) => a.title || a.body);
 
-  const photoRows = await all<{ id: number; caption: string; team_id: number | null }>(
-    `SELECT id, caption, team_id FROM media
+  const photoRows = await all<PhotoLook & { id: number; caption: string; team_id: number | null; seconds: number | null }>(
+    `SELECT id, caption, team_id, fit, pos_x, pos_y, bg, motion, seconds FROM media
       WHERE in_rotation = 1 AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at > ?)
         AND (team_id IS NULL ${team ? "OR team_id = ?" : ""})
       ORDER BY created_at DESC LIMIT 12`,
@@ -90,6 +104,12 @@ export async function buildFeed(t: FeedTarget): Promise<Feed> {
     id: p.id,
     caption: p.caption,
     teamName: p.team_id ? teamName.get(p.team_id) ?? null : null,
+    fit: p.fit,
+    pos_x: p.pos_x,
+    pos_y: p.pos_y,
+    bg: p.bg,
+    motion: p.motion,
+    seconds: p.seconds,
   }));
 
   return {

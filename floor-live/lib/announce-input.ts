@@ -1,7 +1,7 @@
 import "server-only";
 import { first } from "./db";
-import { bad, localDateTimeOrNull, oneOf, text } from "./http";
-import { ANNOUNCEMENT_KINDS, type User } from "./types";
+import { bad, intOrNull, localDateTimeOrNull, oneOf, text } from "./http";
+import { ACCENTS, ANNOUNCEMENT_KINDS, TEMPLATES, type User } from "./types";
 
 /** Valida el cuerpo de un anuncio (alta o edición). El equipo se decide afuera, con permisos. */
 export async function announcementInput(b: Record<string, unknown>, teamId: number | null, me: User) {
@@ -14,6 +14,9 @@ export async function announcementInput(b: Record<string, unknown>, teamId: numb
     starts_at: localDateTimeOrNull(b.starts_at),
     ends_at: localDateTimeOrNull(b.ends_at),
     media_id: null as number | null,
+    template: oneOf(b.template, TEMPLATES, "classic"),
+    accent: oneOf(b.accent, ACCENTS, "auto"),
+    seconds: intOrNull(b.seconds, 5, 300),
   };
   if (!fields.title_en && !fields.body_en && !fields.title_es && !fields.body_es) bad("textRequired");
   if (fields.starts_at && fields.ends_at && fields.ends_at <= fields.starts_at) bad("endsBeforeStarts");

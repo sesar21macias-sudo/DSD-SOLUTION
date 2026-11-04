@@ -268,3 +268,41 @@
   .tv-glow, .ticker, .kenburns, .led, .tv-sweep { animation: none !important; }
   .ticker { padding-left: 0; }
 }
+
+/* ---------- Vista previa de la tele dentro del panel ----------
+ * El mismo componente de la lámina, a escala: --u sale del ancho del recuadro
+ * (unidades de contenedor), igual que en la tele sale del ancho del escenario. */
+.tv-preview {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 100 / 45.45;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line-strong);
+  isolation: isolate;
+}
+.tv-preview-u {
+  --u: 1cqw;
+  position: absolute;
+  inset: 0;
+  font-size: calc(var(--u) * 1.6);
+  color: var(--color-ink);
+}
+.tv-preview[data-pick="true"] { cursor: crosshair; }
+.tv-preview-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 999px;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px oklch(0 0 0 / 0.5), 0 0 12px oklch(0 0 0 / 0.6);
+  pointer-events: none;
+  z-index: 3;
+}
+
+@media (min-width: 768px) {
+  .sheet.sheet-wide { max-width: 60rem; }
+}

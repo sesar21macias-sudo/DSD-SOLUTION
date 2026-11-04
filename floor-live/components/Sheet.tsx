@@ -10,11 +10,14 @@ export function Sheet({
   onClose,
   title,
   children,
+  wide,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /** Más ancho en escritorio (editores con vista previa). */
+  wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const d = useDict();
@@ -42,7 +45,7 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      className="sheet"
+      className={wide ? "sheet sheet-wide" : "sheet"}
       aria-label={title}
       style={{ zIndex: "var(--z-modal)" }}
       onClose={onClose}

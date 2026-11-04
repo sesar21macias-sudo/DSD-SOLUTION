@@ -79,10 +79,15 @@ function buildSlides(feed: Feed, d: Dict, mediaUrl: (id: number) => string): Sli
   }
 
   const content: Slide[] = [
-    ...feed.announcements.map((a) => ({ id: `a${a.id}`, render: () => <AnnouncementSlide a={a} d={d} mediaUrl={mediaUrl} /> })),
+    ...feed.announcements.map((a) => ({
+      id: `a${a.id}`,
+      seconds: a.seconds ?? undefined,
+      render: () => <AnnouncementSlide a={a} d={d} mediaUrl={mediaUrl} />,
+    })),
     ...feed.photos.map((p) => ({
       id: `p${p.id}`,
-      render: () => <PhotoSlide p={p} d={d} mediaUrl={mediaUrl} seconds={feed.slideSeconds} />,
+      seconds: p.seconds ?? undefined,
+      render: () => <PhotoSlide p={p} d={d} mediaUrl={mediaUrl} seconds={p.seconds ?? feed.slideSeconds} />,
     })),
   ];
 

@@ -11,8 +11,8 @@ export const POST = handler(async (req: Request) => {
   const me = await requireScope(teamId);
   const f = await announcementInput(b, teamId, me);
   const res = await run(
-    `INSERT INTO announcements (team_id, kind, title_en, body_en, title_es, body_es, media_id, starts_at, ends_at, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO announcements (team_id, kind, title_en, body_en, title_es, body_es, media_id, starts_at, ends_at, template, accent, seconds, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     teamId,
     f.kind,
     f.title_en,
@@ -22,6 +22,9 @@ export const POST = handler(async (req: Request) => {
     f.media_id,
     f.starts_at,
     f.ends_at,
+    f.template,
+    f.accent,
+    f.seconds,
     me.id
   );
   return NextResponse.json({ ok: true, id: Number(res.meta.last_row_id) });
