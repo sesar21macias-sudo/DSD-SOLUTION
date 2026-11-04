@@ -3,6 +3,9 @@ import { ImportPanel } from "@/components/admin/ImportPanel";
 import { PageHead } from "@/components/admin/Kpi";
 import { RelTime } from "@/components/client";
 import { UndoImport } from "@/components/admin/UndoImport";
+import { JobsEditor } from "@/components/admin/JobsEditor";
+import { getSettings } from "@/lib/settings";
+import type { Team } from "@/lib/types";
 import { aiAvailable } from "@/lib/ai";
 import { all } from "@/lib/db";
 import { getDict } from "@/lib/i18n/server";
@@ -34,6 +37,7 @@ export default async function DataPage() {
       WHERE i.rows_in > 0 ORDER BY i.created_at DESC LIMIT 12`
   );
 
+  const [teams, s] = await Promise.all([all<Team>("SELECT * FROM teams ORDER BY position, name"), getSettings()]);
   return (
     <>
       <PageHead title={d.data.title} subtitle={d.data.subtitle} />
@@ -70,6 +74,9 @@ export default async function DataPage() {
             )}
           </div>
         </aside>
+      </div>
+      <div className="mt-10">
+        <JobsEditor teams={teams} goals={{ goalFpy: s.goalFpy, goalEff: s.goalEff, warnFpy: s.warnFpy, warnEff: s.warnEff }} />
       </div>
     </>
   );

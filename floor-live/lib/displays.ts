@@ -56,6 +56,7 @@ export interface DisplayRow {
   team_id: number | null;
   lang: "en" | "es";
   slide_seconds: number;
+  hidden_slides: string;
   pair_code: string | null;
   pair_expires: string | null;
   last_seen: string | null;

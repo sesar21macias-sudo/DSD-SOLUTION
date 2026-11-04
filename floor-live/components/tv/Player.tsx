@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Feed } from "@/lib/feed-types";
+import type { SlideKey } from "@/lib/types";
 import { dicts, type Dict, type Lang } from "@/lib/i18n/dict";
 import { PLANT_TZ } from "@/lib/dates";
 import { BeaufortLogo } from "../BrandMark";
@@ -25,7 +26,7 @@ import {
  * métricas se intercalan con anuncios y fotos para que la gente voltee a ver.
  */
 
-type Mode = { source: "tv" } | { source: "preview"; team: number | null; lang: Lang; back: string | null; kiosk?: boolean };
+type Mode = { source: "tv" } | { source: "preview"; team: number | null; lang: Lang; back: string | null; kiosk?: boolean; display?: number | null };
 
 type State =
   | { phase: "loading" }
@@ -104,7 +105,22 @@ function buildSlides(feed: Feed, d: Dict, mediaUrl: (id: number) => string): Sli
     out.push(m);
     if (k < content.length) out.push(content[k++]);
   }
-  return [...out, ...content.slice(k)];
+  const all = [...out, ...content.slice(k)];
+  if (!feed.hidden?.length) return all;
+  const hidden = new Set(feed.hidden);
+  return all.filter((s) => !hidden.has(slideKey(s.id)));
+}
+
+/** De qué tipo es cada lámina (para poder apagarlas por pantalla). */
+function slideKey(id: string): SlideKey {
+  if (id === "brand") return "brand";
+  if (id === "safety") return "safety";
+  if (id === "rankings") return "rankings";
+  if (id.endsWith("-kpi") || id.endsWith("-empty")) return "kpi";
+  if (id.endsWith("-trend")) return "trend";
+  if (id.endsWith("-defects")) return "defects";
+  if (id.endsWith("-jobs")) return "jobs";
+  return id.startsWith("p") ? "photos" : "news";
 }
 
 function useClock(locale: string) {
@@ -142,6 +158,7 @@ export function Player({ mode, initialLang }: { mode: Mode; initialLang: Lang })
       if (mode.source === "preview") {
         const qs = new URLSearchParams({ lang: mode.lang });
         if (mode.team) qs.set("team", String(mode.team));
+        if (mode.display) qs.set("display", String(mode.display));
         const res = await fetch(`/api/vista?${qs}`, { cache: "no-store" });
         if (res.status === 401) {
           window.location.href = "/entrar";
@@ -233,6 +250,7 @@ export function Player({ mode, initialLang }: { mode: Mode; initialLang: Lang })
   const mediaUrl = useCallback((id: number) => `/api/media/${id}`, []);
   const slides = useMemo(() => (feed ? buildSlides(feed, d, mediaUrl) : []), [feed, d, mediaUrl]);
   const current = slides.length ? slides[index % slides.length] : null;
+  const empty = feed !== null && slides.length === 0;
   const seconds = current?.seconds ?? feed?.slideSeconds ?? 15;
 
   useEffect(() => {
@@ -331,6 +349,11 @@ export function Player({ mode, initialLang }: { mode: Mode; initialLang: Lang })
             </div>
           )}
           {state.phase === "pairing" && <PairingScreen code={state.code} d={d} />}
+          {empty && (
+            <div className="slide">
+              <BrandMotion line="Beaufort Texas" sub="Floor Live" />
+            </div>
+          )}
           {current && (
             <div key={`${current.id}-${index}`} className="slide">
               <div className="tv-sweep" aria-hidden="true" />

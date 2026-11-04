@@ -3,6 +3,7 @@ import { all, first, getD1, run } from "@/lib/db";
 import { bad, handler } from "@/lib/http";
 import { requireAdmin } from "@/lib/session";
 import { DEFECTS, type JobInput } from "@/lib/types";
+import { cleanJob, defaultName, teamOrder } from "@/lib/job-input";
 
 /*
  * Recibe los renglones del Excel ya leídos en el navegador (el archivo nunca
@@ -16,65 +17,6 @@ import { DEFECTS, type JobInput } from "@/lib/types";
 
 const MAX_ROWS = 1000;
 const MAX_BODY = 2_000_000;
-
-function int(v: unknown, max = 1_000_000): number {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n < 0 || n > max) throw new Error("bad");
-  return Math.round(n);
-}
-function num(v: unknown, max = 1_000_000): number {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n < 0 || n > max) throw new Error("bad");
-  return Math.round(n * 100) / 100;
-}
-function str(v: unknown, max: number, required = false): string {
-  const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
-  if (required && !s) throw new Error("bad");
-  // Sin caracteres de control: estos textos acaban en la tele.
-  return s.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, max);
-}
-
-function clean(raw: Partial<JobInput>): JobInput {
-  const closed = typeof raw.closed_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw.closed_on) ? raw.closed_on : null;
-  const inspected = int(raw.inspected);
-  const passed = Math.min(int(raw.passed), inspected);
-  const defects = Object.fromEntries(
-    DEFECTS.map((d) => [d, int((raw.defects as Record<string, unknown> | undefined)?.[d] ?? 0)])
-  ) as JobInput["defects"];
-  const week = int(raw.week, 53);
-  if (week < 1) throw new Error("bad");
-  return {
-    week,
-    job: str(raw.job, 40, true),
-    team: str(raw.team, 20, true).toUpperCase(),
-    part: str(raw.part, 80),
-    units: int(raw.units),
-    inspected,
-    rejected: int(raw.rejected),
-    passed,
-    est_hours: num(raw.est_hours),
-    act_hours: num(raw.act_hours),
-    rework_hours: num(raw.rework_hours),
-    defects,
-    closed_on: closed,
-  };
-}
-
-/** Equipos numerados primero (ELP01, ELP02…), luego el resto en orden alfabético. */
-function teamOrder(a: string, b: string): number {
-  const na = /^ELP0*(\d{1,2})$/.exec(a)?.[1];
-  const nb = /^ELP0*(\d{1,2})$/.exec(b)?.[1];
-  if (na && nb) return Number(na) - Number(nb);
-  if (na) return -1;
-  if (nb) return 1;
-  return a.localeCompare(b);
-}
-
-/** Nombre inicial para un código nuevo: ELP01 → "Team 1"; los demás, tal cual. */
-function defaultName(code: string): string {
-  const m = /^ELP0*(\d{1,2})$/.exec(code);
-  return m ? `Team ${Number(m[1])}` : code;
-}
 
 export const POST = handler(async (req: Request) => {
   const me = await requireAdmin();
@@ -97,7 +39,7 @@ export const POST = handler(async (req: Request) => {
   const rows: JobInput[] = [];
   rawRows.forEach((r, i) => {
     try {
-      rows.push(clean(r));
+      rows.push(cleanJob(r));
     } catch {
       bad("importBadRow", i + 2);
     }

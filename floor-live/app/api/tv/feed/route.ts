@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { TV_COOKIE, displayBySecret, touch } from "@/lib/displays";
-import { buildFeed } from "@/lib/feed";
+import { buildFeed, parseHidden } from "@/lib/feed";
 import { handler } from "@/lib/http";
 
 /** Lo que muestra una tele conectada. 401 = sin alta (la tele pide código); 202 = esperando al admin. */
@@ -21,6 +21,7 @@ export const GET = handler(async () => {
     lang: d.lang,
     displayName: d.name,
     slideSeconds: d.slide_seconds,
+    hidden: parseHidden(d.hidden_slides),
   });
   return NextResponse.json({ status: "active", feed }, { headers: { "Cache-Control": "no-store" } });
 });

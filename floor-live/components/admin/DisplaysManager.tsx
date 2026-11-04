@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Display, Team } from "@/lib/types";
 import type { LiveItem } from "@/lib/live";
+import { SLIDE_KEYS, type SlideKey } from "@/lib/types";
 import { formatLocal } from "@/lib/dates";
 import { IconMegaphone, IconPhoto } from "../Icons";
 import { useDict } from "../I18n";
@@ -170,11 +171,19 @@ function DisplayCard({ s, teams, teamName, live }: { s: Display; teams: Team[]; 
   const [lang, setLang] = useState(s.lang);
   const [seconds, setSeconds] = useState(s.slide_seconds);
   const [confirm, setConfirm] = useState(false);
+  const [hidden, setHidden] = useState<SlideKey[]>(() => {
+    try {
+      const v = JSON.parse(s.hidden_slides || "[]");
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  });
   const online = s.last_seen !== null && Date.now() - Date.parse(s.last_seen) < 15 * 60_000;
 
   async function save() {
     try {
-      await send(`/api/pantallas/${s.id}`, "PATCH", { name, scope: choice.scope, teamId: choice.teamId, lang, seconds });
+      await send(`/api/pantallas/${s.id}`, "PATCH", { name, scope: choice.scope, teamId: choice.teamId, lang, seconds, hidden });
       toast(d.content.saved);
       setEdit(false);
       router.refresh();
@@ -182,6 +191,30 @@ function DisplayCard({ s, teams, teamName, live }: { s: Display; teams: Team[]; 
       toast((e as Error).message, "error");
     }
   }
+
+  // Prender/apagar una lámina se guarda al instante, con la configuración guardada de la tele.
+  async function toggle(k: SlideKey) {
+    const next = hidden.includes(k) ? hidden.filter((x) => x !== k) : [...hidden, k];
+    setHidden(next);
+    try {
+      await send(`/api/pantallas/${s.id}`, "PATCH", {
+        name: s.name,
+        scope: s.scope,
+        teamId: s.team_id,
+        lang: s.lang,
+        seconds: s.slide_seconds,
+        hidden: next,
+      });
+      toast(d.displays.slidesSaved);
+      router.refresh();
+    } catch (e) {
+      setHidden(hidden);
+      toast((e as Error).message, "error");
+    }
+  }
+  const shown = live.filter((it) => !hidden.includes(it.type === "news" ? "news" : "photos"));
+  // "Trabajos" solo existe en pantallas de equipo.
+  const keys = SLIDE_KEYS.filter((k) => k !== "jobs" || s.scope === "team");
 
   return (
     <li className="panel lit flex flex-col gap-3 p-4">
@@ -201,13 +234,39 @@ function DisplayCard({ s, teams, teamName, live }: { s: Display; teams: Team[]; 
         </span>
       </div>
 
+      <div>
+        <div className="text-[0.7rem] font-medium uppercase tracking-[0.06em] text-ink-faint">{d.displays.slides}</div>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {keys.map((k) => {
+            const on = !hidden.includes(k);
+            return (
+              <button
+                key={k}
+                type="button"
+                role="switch"
+                aria-checked={on}
+                onClick={() => toggle(k)}
+                className={cx(
+                  "flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+                  on ? "border-good/40 bg-good-wash text-ink" : "border-line text-ink-faint line-through decoration-ink-faint/60"
+                )}
+              >
+                <span className={cx("h-2 w-2 rounded-full", on ? "bg-good" : "bg-ink-faint/50")} />
+                {d.displays.slideNames[k]}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-1 text-[0.7rem] text-ink-faint">{d.displays.slidesHint}</p>
+      </div>
+
       <div className="rounded-xl bg-surface-2/60 px-3 py-2.5">
         <div className="text-[0.7rem] font-medium uppercase tracking-[0.06em] text-ink-faint">{d.displays.nowShowing}</div>
-        {live.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="mt-1 text-xs text-ink-faint">{d.displays.onlyMetrics}</p>
         ) : (
           <ul className="mt-1.5 flex flex-col gap-1">
-            {live.map((it) => (
+            {shown.map((it) => (
               <li key={`${it.type}${it.id}`} className="flex items-center gap-2 text-xs">
                 {it.type === "news" ? <IconMegaphone size={14} className="flex-none text-ink-faint" /> : <IconPhoto size={14} className="flex-none text-ink-faint" />}
                 <span className="min-w-0 flex-1 truncate text-ink-soft">{it.label || (it.type === "photo" ? d.displays.photoNoCaption : "—")}</span>
@@ -244,11 +303,11 @@ function DisplayCard({ s, teams, teamName, live }: { s: Display; teams: Team[]; 
       ) : (
         <div className="flex items-center justify-between gap-2">
           <Link
-            href={`/vista?${s.team_id && s.scope === "team" ? `team=${s.team_id}&` : ""}lang=${s.lang}&s=${s.slide_seconds}&back=/pantallas`}
+            href={`/vista?display=${s.id}&back=/pantallas`}
             className="btn btn-quiet btn-sm"
           >
             <IconPlay size={14} />
-            {d.common.preview}
+            {d.displays.previewThis}
           </Link>
           <div className="flex gap-1">
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEdit(true)}>

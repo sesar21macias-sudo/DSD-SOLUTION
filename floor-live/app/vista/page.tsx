@@ -17,5 +17,6 @@ export default async function PreviewPage({ searchParams }: { searchParams: Prom
   const back = internalPath(sp.back) ?? "/";
   // Cuenta de pantalla: se comporta como tele (sin botón de salir, no se duerme, recarga sola).
   const kiosk = user.display_only === 1;
-  return <Player mode={{ source: "preview", team, lang, back: kiosk ? null : back, kiosk }} initialLang={lang} />;
+  const display = sp.display && user.role === "admin" && !kiosk ? Number(sp.display) || null : null;
+  return <Player mode={{ source: "preview", team, lang, back: kiosk ? null : back, kiosk, display }} initialLang={lang} />;
 }

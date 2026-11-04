@@ -5,7 +5,7 @@ import type { Feed, FeedAnnouncement, FeedPhoto } from "./feed-types";
 import { loadYear, rankings, statsFor, teamJobs } from "./metrics";
 import { getSettings } from "./settings";
 import { ruleSummary } from "./summary";
-import type { Announcement, Lang, PhotoLook, Team } from "./types";
+import { SLIDE_KEYS, type Announcement, type Lang, type PhotoLook, type SlideKey, type Team } from "./types";
 
 export interface FeedTarget {
   kind: "plant" | "team";
@@ -13,6 +13,17 @@ export interface FeedTarget {
   lang: Lang;
   displayName: string;
   slideSeconds: number;
+  hidden?: SlideKey[];
+}
+
+/** Lee la lista guardada de láminas apagadas; ignora lo que no reconozca. */
+export function parseHidden(raw: string | null | undefined): SlideKey[] {
+  try {
+    const v = JSON.parse(raw ?? "[]");
+    return Array.isArray(v) ? (v.filter((x) => SLIDE_KEYS.includes(x)) as SlideKey[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Todo lo que una pantalla necesita para su rotación, en una sola respuesta. */
@@ -130,6 +141,7 @@ export async function buildFeed(t: FeedTarget): Promise<Feed> {
     plantInsight,
     announcements,
     photos,
+    hidden: t.hidden ?? [],
     generatedAt: new Date().toISOString(),
   };
 }

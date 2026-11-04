@@ -1,5 +1,5 @@
 import type { Tone } from "./status";
-import type { Accent, AnnouncementKind, Defect, Lang, PhotoLook, Template } from "./types";
+import type { Accent, AnnouncementKind, Defect, Lang, PhotoLook, SlideKey, Template } from "./types";
 
 /** Formas que viajan del servidor a la tele y al panel (sin "server-only"). */
 
@@ -104,5 +104,7 @@ export interface Feed {
   plantInsight: string | null;
   announcements: FeedAnnouncement[];
   photos: FeedPhoto[];
+  /** Láminas que esta pantalla no muestra. */
+  hidden: SlideKey[];
   generatedAt: string;
 }

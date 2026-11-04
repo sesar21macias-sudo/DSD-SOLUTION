@@ -30,6 +30,10 @@ export interface Team {
 export type AnnouncementKind = "news" | "celebration" | "safety" | "reminder";
 export const ANNOUNCEMENT_KINDS: AnnouncementKind[] = ["news", "celebration", "safety", "reminder"];
 
+/** Tipos de lámina de la tele; cada pantalla puede apagar las que no quiera. */
+export type SlideKey = "brand" | "safety" | "kpi" | "rankings" | "trend" | "defects" | "jobs" | "news" | "photos";
+export const SLIDE_KEYS: SlideKey[] = ["brand", "safety", "kpi", "rankings", "trend", "defects", "jobs", "news", "photos"];
+
 /** Diseños de anuncio para la tele (ver AnnouncementSlide). */
 export type Template = "classic" | "banner" | "split" | "spotlight" | "celebrate";
 export const TEMPLATES: Template[] = ["classic", "banner", "split", "spotlight", "celebrate"];
@@ -90,6 +94,8 @@ export interface Display {
   team_id: number | null;
   lang: Lang;
   slide_seconds: number;
+  /** JSON con las láminas apagadas, p. ej. '["rankings"]'. */
+  hidden_slides: string;
   last_seen: string | null;
   created_at: string;
 }

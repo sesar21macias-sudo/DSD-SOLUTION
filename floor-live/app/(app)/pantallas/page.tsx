@@ -19,7 +19,7 @@ export default async function DisplaysPage() {
   const d = await getDict();
   const [displays, teams] = await Promise.all([
     all<Display>(
-      "SELECT id, name, status, scope, team_id, lang, slide_seconds, last_seen, created_at FROM displays WHERE status = 'active' ORDER BY name, id"
+      "SELECT id, name, status, scope, team_id, lang, slide_seconds, hidden_slides, last_seen, created_at FROM displays WHERE status = 'active' ORDER BY name, id"
     ),
     all<Team>("SELECT * FROM teams WHERE active = 1 ORDER BY position, name"),
   ]);
