@@ -23,7 +23,7 @@ export const DEFECT_NAMES: Record<Lang, Record<Defect, string>> = {
     majors: "Mayores",
     stitching: "Costura",
     seams: "Costuras de unión",
-    binding: "Ribete",
+    binding: "Binding",
     webbing: "Cinta",
     labeling: "Etiquetas",
     hardware: "Herrajes",
